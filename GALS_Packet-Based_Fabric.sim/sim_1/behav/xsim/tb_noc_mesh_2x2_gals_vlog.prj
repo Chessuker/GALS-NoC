@@ -1,0 +1,27 @@
+# compile verilog/system verilog design source files
+sv xil_defaultlib  --include "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo_fwft.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/axis_perf_mon.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/dual_port_ram.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/dual_port_ram_ecc.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/ecc_secded_decode_8b.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/ecc_secded_encode_8b.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/fwft_wrapper.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/gals_node_wrapper.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/gray_counter.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/noc_mesh_2x2_vc.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/packet_arbiter.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/router_5port_mesh_vc.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_2stage.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_fifo.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/traffic_gen.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_input_buffer.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_port_arbiter.sv" \
+"../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

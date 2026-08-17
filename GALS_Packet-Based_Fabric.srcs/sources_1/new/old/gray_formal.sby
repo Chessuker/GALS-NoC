@@ -1,0 +1,18 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode prove
+cover: mode cover
+cover: depth 40
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal gray_counter.sv
+prep -top gray_counter
+
+[files]
+gray_counter.sv

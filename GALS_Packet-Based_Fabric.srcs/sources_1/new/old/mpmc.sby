@@ -1,0 +1,37 @@
+[tasks]
+bmc
+prove
+cover
+
+[options]
+bmc: mode bmc
+prove: mode prove
+cover: mode cover
+bmc: depth 40
+prove: depth 40
+cover: depth 50
+multiclock on
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION async_fifo.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION sync_2stage.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION gray_counter.sv
+read_verilog -sv -formal dual_port_ram.sv
+read_verilog -sv -formal hw_queue_descriptor.sv
+read_verilog -sv -formal gals_mpmc_scalable.sv
+read_verilog -sv -formal gals_mpmc_formal.sv
+
+chparam -set NUM_PRODUCERS 4 -set ADDR_WIDTH 3 gals_mpmc_scalable
+prep -top gals_mpmc_scalable
+
+[files]
+sync_2stage.sv
+gray_counter.sv
+dual_port_ram.sv
+async_fifo.sv
+hw_queue_descriptor.sv
+gals_mpmc_scalable.sv
+gals_mpmc_formal.sv

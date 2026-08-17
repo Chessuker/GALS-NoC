@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Thu Jul 30 23:04:38 2026
+# Process ID         : 31920
+# Current directory  : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/clk_wiz_0_synth_1
+# Command line       : vivado.exe -log clk_wiz_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source clk_wiz_0.tcl
+# Log file           : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/clk_wiz_0_synth_1/clk_wiz_0.vds
+# Journal file       : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/clk_wiz_0_synth_1\vivado.jou
+# Running On         : LAPTOP-QOCHRTAO
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : AMD Ryzen 5 7640HS w/ Radeon 760M Graphics     
+# CPU Frequency      : 4292 MHz
+# CPU Physical cores : 6
+# CPU Logical cores  : 12
+# Host memory        : 16309 MB
+# Swap memory        : 42949 MB
+# Total Virtual      : 59259 MB
+# Available Virtual  : 30183 MB
+#-----------------------------------------------------------
+source clk_wiz_0.tcl -notrace

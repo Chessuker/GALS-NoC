@@ -1,0 +1,8 @@
+verilog xil_defaultlib -i "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../ipstatic" \
+"../../../../GALS_Packet-Based_Fabric.gen/sources_1/ip/clk_wiz_0/clk_wiz_0_clk_wiz.v" \
+"../../../../GALS_Packet-Based_Fabric.gen/sources_1/ip/clk_wiz_0/clk_wiz_0.v" \
+
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

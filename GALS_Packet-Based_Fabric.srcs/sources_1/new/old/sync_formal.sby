@@ -1,0 +1,17 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode prove
+cover: mode cover
+
+[engines]
+smtbmc z3
+
+[script]
+read -formal sync_2stage.sv
+prep -top sync_2stage
+
+[files]
+sync_2stage.sv

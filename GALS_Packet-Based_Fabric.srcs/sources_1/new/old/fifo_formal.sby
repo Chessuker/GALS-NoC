@@ -1,0 +1,28 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode bmc
+prove: depth 15
+prove: multiclock on
+cover: mode cover
+cover: depth 20
+cover: multiclock on
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read -sv dual_port_ram.sv
+read -sv gray_counter.sv
+read -sv sync_2stage.sv
+read -formal async_fifo.sv
+chparam -set DATA_WIDTH 1 -set ADDR_WIDTH 2 async_fifo
+prep -top async_fifo
+
+[files]
+dual_port_ram.sv
+gray_counter.sv
+sync_2stage.sv
+async_fifo.sv

@@ -1,0 +1,27 @@
+[tasks]
+bmc
+prove
+cover
+
+[options]
+bmc: mode bmc
+prove: mode prove
+cover: mode cover
+depth 20
+multiclock on
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv -formal dual_port_ram.sv
+read_verilog -sv -formal ecc_secded_encode_8b.sv
+read_verilog -sv -formal ecc_secded_decode_8b.sv
+read_verilog -sv -formal dual_port_ram_ecc.sv
+prep -top dual_port_ram_ecc
+
+[files]
+dual_port_ram.sv
+ecc_secded_encode_8b.sv  
+ecc_secded_decode_8b.sv
+dual_port_ram_ecc.sv
