@@ -93,7 +93,15 @@ module packet_arbiter #(
                             state            <= LOCKED;
                             locked_grant     <= next_grant;
                             locked_from_mask <= (masked_req != '0); // บันทึกไว้ว่าลัดคิวมาหรือไม่
-                            has_transferred  <= 1'b0;  // 🟢 เพิ่ง lock ใหม่ ยังไม่เคย transfer
+
+                            // 🔴 จุดที่เคยพลาด: ตอน IDLE ตัว grant ก็ทำงานอยู่แล้ว
+                            //    (ดู assign grant ด้านบน) ถ้าไซเคิลนี้ ready=1 และ valid=1
+                            //    flit แรกของแพ็กเกจ "ออกไปแล้ว" พร้อมกับที่เรากำลังจะ lock
+                            //    ถ้าตั้ง has_transferred <= 0 ตรงๆ ไซเคิลถัดไปที่ valid หลุด
+                            //    (FIFO แห้ง ซึ่งเกิดประจำใน GALS) เงื่อนไขปลดล็อคฉุกเฉิน
+                            //    จะเข้าใจผิดว่า "ยังไม่เคยส่งอะไรเลย" แล้วปล่อยพอร์ตกลางแพ็กเกจ
+                            //    ทำให้แพ็กเกจจากอินพุตอื่นแทรกเข้ามาใน VC เดียวกัน
+                            has_transferred  <= (ready && |(next_grant & valid));
                         end
                     end
                 end
@@ -116,14 +124,19 @@ module packet_arbiter #(
             endcase
 
             // --- Persistent Round Robin Mask Update ---
-            // อัปเดต Mask "เฉพาะ" เมื่อ:
-            // 1. คนที่เพิ่งส่งเสร็จ เป็นเจ้าของคิวตัวจริง (current_from_mask)
-            // 2. หรือ Mask ทะลุกลายเป็น 0000 ไปแล้ว (ต้องรีเซ็ต)
+            // เลื่อน mask ทุกครั้งที่ส่งจบแพ็กเกจ (round-robin มาตรฐาน)
+            // 🔴 เดิมมีเงื่อนไข if (current_from_mask || mask == '0) ครอบอยู่
+            //    เจตนาคือ "ถ้าชนะมาแบบลัดคิว อย่าเลื่อน mask ไปลงโทษเขา"
+            //    แต่ผลจริงคือ starvation ถาวร:
+            //      หลังพอร์ตสูงชนะ mask จะเลื่อนไปชี้พอร์ตที่ไม่มีใครขอ
+            //      -> masked_req = 0 -> ตกไปใช้ unmasked_grant ซึ่งเลือกบิตต่ำสุดเสมอ
+            //      -> current_from_mask = 0 -> mask ไม่ถูกอัปเดตอีกเลย
+            //      -> พอร์ตหมายเลขต่ำสุดยึดช่องไว้ตลอดกาล
+            //    round-robin ที่ถูกต้องต้องเลื่อน mask ทุกครั้งที่จบแพ็กเกจ
+            //    (bug นี้ไม่โผล่ตอนทุกพอร์ตขอพร้อมกัน เพราะ mask มีคนขออยู่เสมอ
+            //     จะเห็นก็ต่อเมื่อมีแค่บางพอร์ตแย่งกัน ซึ่งคือกรณีจริงทั้งหมด)
             if (eop_transfer) begin
-                if (current_from_mask || mask == '0) begin
-                    // แทนค่าสมการลงไปตรงๆ เพื่อเลี่ยงการประกาศตัวแปร automatic
-                    mask <= (~(grant | (grant - 1'b1)) == '0) ? {PORTS{1'b1}} : ~(grant | (grant - 1'b1));
-                end
+                mask <= (~(grant | (grant - 1'b1)) == '0) ? {PORTS{1'b1}} : ~(grant | (grant - 1'b1));
             end            
         end
     end

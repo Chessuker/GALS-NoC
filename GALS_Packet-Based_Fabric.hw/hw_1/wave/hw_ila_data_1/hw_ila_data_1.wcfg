@@ -10,76 +10,203 @@
    </db_ref_list>
    <zoom_setting>
       <ZoomStartTime time="0"></ZoomStartTime>
-      <ZoomEndTime time="1,114"></ZoomEndTime>
-      <Cursor1Time time="468"></Cursor1Time>
+      <ZoomEndTime time="723"></ZoomEndTime>
+      <Cursor1Time time="0"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="220"></NameColumnWidth>
-      <ValueColumnWidth column_width="102"></ValueColumnWidth>
+      <ValueColumnWidth column_width="97"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="8" />
+   <WVObjectSize size="24" />
    <wave_markers>
    </wave_markers>
-   <wvobject fp_name="u_stress/agent_10/rx_err_cnt" type="array">
+   <wvobject fp_name="uut_noc_top/mon_active_cnt" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/rx_err_cnt[31:0]</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_active_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_active_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_flit_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_flit_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_flit_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_pkt_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_pkt_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_pkt_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_active_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_active_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_active_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_flit_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_flit_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_flit_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_pkt_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_pkt_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_pkt_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_stall_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_stall_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_stall_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_stall_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_stall_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_stall_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="u_stress/agent_00/rx_err_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/rx_err_cnt[31:0]</obj_property>
       <obj_property name="ObjectShortName">rx_err_cnt[31:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/rx_tdest_dbg" type="array">
+   <wvobject fp_name="u_stress/agent_00/rx_tdest_dbg" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/rx_tdest_dbg[3:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/rx_tdest_dbg[3:0]</obj_property>
       <obj_property name="ObjectShortName">rx_tdest_dbg[3:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/rx_vc0_cnt" type="array">
+   <wvobject fp_name="u_stress/agent_00/rx_vc0_cnt" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/rx_vc0_cnt[31:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/rx_vc0_cnt[31:0]</obj_property>
       <obj_property name="ObjectShortName">rx_vc0_cnt[31:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/rx_vc1_cnt" type="array">
+   <wvobject fp_name="u_stress/agent_00/rx_vc1_cnt" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/rx_vc1_cnt[31:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/rx_vc1_cnt[31:0]</obj_property>
       <obj_property name="ObjectShortName">rx_vc1_cnt[31:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/state_dbg" type="array">
+   <wvobject fp_name="u_stress/agent_00/state_dbg" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/state_dbg[1:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/state_dbg[1:0]</obj_property>
       <obj_property name="ObjectShortName">state_dbg[1:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
-      <obj_property name="isExpanded"></obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/test_done" type="logic">
+   <wvobject fp_name="u_stress/agent_00/test_done" type="logic">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/test_done</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/test_done</obj_property>
       <obj_property name="ObjectShortName">test_done</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/tx_flit_cnt" type="array">
+   <wvobject fp_name="u_stress/agent_00/tx_flit_cnt" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/tx_flit_cnt[31:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/tx_flit_cnt[31:0]</obj_property>
       <obj_property name="ObjectShortName">tx_flit_cnt[31:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
    </wvobject>
-   <wvobject fp_name="u_stress/agent_10/tx_stall_cnt" type="array">
+   <wvobject fp_name="u_stress/agent_00/tx_stall_cnt" type="array">
       <obj_property name="DisplayName">FullPathName</obj_property>
-      <obj_property name="ElementShortName">u_stress/agent_10/tx_stall_cnt[31:0]</obj_property>
+      <obj_property name="ElementShortName">u_stress/agent_00/tx_stall_cnt[31:0]</obj_property>
       <obj_property name="ObjectShortName">tx_stall_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_active_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_active_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_active_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_flit_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_flit_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_flit_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_pkt_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_pkt_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_pkt_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_active_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_active_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_active_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_flit_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_flit_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_flit_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_pkt_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_pkt_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_pkt_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_rx_stall_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_rx_stall_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_rx_stall_cnt[31:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+      <obj_property name="LABELRADIX">true</obj_property>
+      <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>
+   </wvobject>
+   <wvobject fp_name="uut_noc_top/mon_stall_cnt" type="array">
+      <obj_property name="DisplayName">FullPathName</obj_property>
+      <obj_property name="ElementShortName">uut_noc_top/mon_stall_cnt[31:0]</obj_property>
+      <obj_property name="ObjectShortName">mon_stall_cnt[31:0]</obj_property>
       <obj_property name="Radix">HEXRADIX</obj_property>
       <obj_property name="LABELRADIX">true</obj_property>
       <obj_property name="WaveformStyle">STYLE_DIGITAL</obj_property>

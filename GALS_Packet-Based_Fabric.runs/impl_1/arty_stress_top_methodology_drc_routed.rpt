@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (win64) Build 6299465 Fri Nov 14 19:35:11 GMT 2025
-| Date         : Tue Aug 11 14:45:27 2026
+| Date         : Tue Aug 18 19:01:29 2026
 | Host         : LAPTOP-QOCHRTAO running 64-bit major release  (build 9200)
 | Command      : report_methodology -file arty_stress_top_methodology_drc_routed.rpt -pb arty_stress_top_methodology_drc_routed.pb -rpx arty_stress_top_methodology_drc_routed.rpx
 | Design       : arty_stress_top
@@ -20,17 +20,17 @@ Table of Contents
 1. REPORT SUMMARY
 -----------------
             Netlist: netlist
-          Floorplan: design_1
+          Floorplan: checkpoint_arty_stress_top
       Design limits: <entire design considered>
              Max checks: <unlimited>
-             Checks found: 36
+             Checks found: 34
 +-----------+----------+-------------------------------------------------------------------------------------------------------+--------+
 | Rule      | Severity | Description                                                                                           | Checks |
 +-----------+----------+-------------------------------------------------------------------------------------------------------+--------+
 | LUTAR-1   | Warning  | LUT drives async reset alert                                                                          | 6      |
 | TIMING-9  | Warning  | Unknown CDC Logic                                                                                     | 1      |
 | TIMING-18 | Warning  | Missing input or output delay                                                                         | 5      |
-| TIMING-47 | Warning  | False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks | 16     |
+| TIMING-47 | Warning  | False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks | 14     |
 | XDCB-5    | Warning  | Runtime inefficient way to find pin objects                                                           | 8      |
 +-----------+----------+-------------------------------------------------------------------------------------------------------+--------+
 
@@ -66,7 +66,7 @@ Related violations: <none>
 
 LUTAR-1#5 Warning
 LUT drives async reset alert  
-LUT cell u_stress/agent_00_i_1, with 2 or more inputs, drives asynchronous preset/clear pin(s) u_stress/agent_10/win_cnt_reg[18]/CLR,
+LUT cell u_stress/ingress_perf_mon_i_1, with 2 or more inputs, drives asynchronous preset/clear pin(s) u_stress/agent_10/win_cnt_reg[18]/CLR,
 u_stress/agent_10/win_cnt_reg[19]/CLR,
 u_stress/agent_10/win_cnt_reg[1]/CLR,
 u_stress/agent_10/win_cnt_reg[20]/CLR,
@@ -77,19 +77,19 @@ u_stress/agent_10/win_cnt_reg[2]/CLR, u_stress/agent_10/win_cnt_reg[3]/CLR,
 u_stress/agent_10/win_cnt_reg[4]/CLR, u_stress/agent_10/win_cnt_reg[5]/CLR,
 u_stress/agent_10/win_cnt_reg[6]/CLR, u_stress/agent_10/win_cnt_reg[7]/CLR,
 u_stress/agent_10/win_cnt_reg[8]/CLR, u_stress/agent_10/win_cnt_reg[9]/CLR
- (the first 15 of 1144 listed). The LUT may glitch and trigger an unexpected reset, even if it is a properly timed path.
+ (the first 15 of 1255 listed). The LUT may glitch and trigger an unexpected reset, even if it is a properly timed path.
 Related violations: <none>
 
 LUTAR-1#6 Warning
 LUT drives async reset alert  
-LUT cell uut_noc_top/uut_noc/locked_grant[4]_i_3, with 2 or more inputs, drives asynchronous preset/clear pin(s) heartbeat_cnt_reg[20]/CLR, heartbeat_cnt_reg[21]/CLR,
+LUT cell uut_noc_top/uut_noc/state_i_3, with 2 or more inputs, drives asynchronous preset/clear pin(s) heartbeat_cnt_reg[20]/CLR, heartbeat_cnt_reg[21]/CLR,
 heartbeat_cnt_reg[22]/CLR, heartbeat_cnt_reg[23]/CLR,
 heartbeat_cnt_reg[24]/CLR, heartbeat_cnt_reg[25]/CLR,
 heartbeat_cnt_reg[26]/CLR, heartbeat_cnt_reg[2]/CLR,
 heartbeat_cnt_reg[3]/CLR, heartbeat_cnt_reg[4]/CLR,
 heartbeat_cnt_reg[5]/CLR, heartbeat_cnt_reg[6]/CLR,
 heartbeat_cnt_reg[7]/CLR, heartbeat_cnt_reg[8]/CLR,
-heartbeat_cnt_reg[9]/CLR (the first 15 of 1671 listed). The LUT may glitch and trigger an unexpected reset, even if it is a properly timed path.
+heartbeat_cnt_reg[9]/CLR (the first 15 of 1526 listed). The LUT may glitch and trigger an unexpected reset, even if it is a properly timed path.
 Related violations: <none>
 
 TIMING-9#1 Warning
@@ -149,105 +149,95 @@ Related violations: <none>
 
 TIMING-47#6 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out2_clk_wiz_0 and clk_out4_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out2_clk_wiz_0 and clk_out3_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#7 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out3_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out2_clk_wiz_0 and clk_out4_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#8 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out3_clk_wiz_0 and clk_out2_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out2_clk_wiz_0 and clk_out5_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#9 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out3_clk_wiz_0 and clk_out4_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out3_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#10 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out3_clk_wiz_0 and clk_out2_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#11 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out2_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#12 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out3_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out2_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#13 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out4_clk_wiz_0 and clk_out5_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
+A Clock Group timing constraint is set between synchronous clocks clk_out5_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 TIMING-47#14 Warning
 False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out5_clk_wiz_0 and clk_out1_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
-Related violations: <none>
-
-TIMING-47#15 Warning
-False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
 A Clock Group timing constraint is set between synchronous clocks clk_out5_clk_wiz_0 and clk_out2_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
-Related violations: <none>
-
-TIMING-47#16 Warning
-False path, asynchronous clock group or max delay datapath only constraint between synchronous clocks  
-A Clock Group timing constraint is set between synchronous clocks clk_out5_clk_wiz_0 and clk_out4_clk_wiz_0 (see constraint position 3 in the Timing Constraint window in Vivado IDE). Masking entire synchronous clock domains via  set_false_path, set_clock_groups or set_max_delay -datapath_only may result in failure in hardware.
 Related violations: <none>
 
 XDCB-5#1 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '152' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#2 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '207' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#3 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '42' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#4 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '97' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#5 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '152' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#6 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '207' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#7 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '42' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#8 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '97' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-5800-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 

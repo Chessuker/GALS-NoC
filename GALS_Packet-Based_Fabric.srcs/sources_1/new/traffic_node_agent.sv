@@ -27,7 +27,9 @@ module traffic_node_agent #(
     parameter int         VC_MODE    = 2,        // 0=VC0 only, 1=VC1 only, 2=สลับ
     parameter int         WINDOW_LOG = 24,       // 2^24 cycle ~ 0.24 s ที่ 70 MHz
     parameter int         WARMUP_LOG = 10,
-    parameter int         DRAIN_LOG  = 12
+    parameter int         DRAIN_LOG  = 12,
+    parameter bit         TX_EN      = 1'b1      // 0 = ปิดขาส่ง ทำหน้าที่เป็น sink อย่างเดียว
+                                                 //     ใช้ตอนทดสอบ hot-spot ที่ node ปลายทาง
 )(
     input  logic clk,
     input  logic rst_n,
@@ -72,7 +74,9 @@ module traffic_node_agent #(
     assign gen_en    = (state == S_RUN);
     assign last_flit = (flit_idx == PKT_FLITS-1);
 
-    assign tx_tvalid = gen_en;
+    // TX_EN=0 -> ไม่ยิงเลย ตัวนับ tx_flit_cnt/tx_stall_cnt จะค้างที่ 0
+    // แต่ state machine กับฝั่ง rx ยังทำงานปกติ ยังรายงาน done/err ได้
+    assign tx_tvalid = gen_en && TX_EN;
     assign tx_tdest  = DEST_ID;
     assign tx_tid    = vc_sel ? 2'b10 : 2'b01;
     assign tx_tdata  = {SRC_TAG, tx_seq[vc_sel]};

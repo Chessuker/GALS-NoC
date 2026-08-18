@@ -1,7 +1,7 @@
 Vivado Simulator v2025.2
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
 Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
-Running: C:/AMDDesignTools/2025.2/Vivado/bin/unwrapped/win64.o/xelab.exe --incr --debug typical --relax --mt 2 -L xil_defaultlib -L uvm -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_noc_mesh_2x2_gals_behav xil_defaultlib.tb_noc_mesh_2x2_gals xil_defaultlib.glbl -log elaborate.log 
+Running: C:/AMDDesignTools/2025.2/Vivado/bin/unwrapped/win64.o/xelab.exe --incr --debug typical --relax --mt 2 -L xil_defaultlib -L uvm -L unisims_ver -L unimacro_ver -L secureip -L xpm --snapshot tb_noc_mesh_2x2_gals_behav xil_defaultlib.tb_noc_mesh_2x2_gals xil_defaultlib.glbl -log elaborate.log 
 Using 2 slave threads.
 Starting static elaboration
 Pass Through NonSizing Optimizer
@@ -9,6 +9,8 @@ Completed static elaboration
 Starting simulation data flow analysis
 WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 336 : Sensitivity on input argument "node_idx" of task "random_traffic_node" may never get triggered.
 WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 338 : Sensitivity on input argument "node_idx" of task "random_traffic_node" may never get triggered.
+WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 361 : Sensitivity on input argument "node_idx" of task "hotspot_loop" may never get triggered.
+WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 363 : Sensitivity on input argument "node_idx" of task "hotspot_loop" may never get triggered.
 Completed simulation data flow analysis
 Time Resolution for simulation is 1ps
 Compiling module xil_defaultlib.axis_perf_mon

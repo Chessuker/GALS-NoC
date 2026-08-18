@@ -27,7 +27,13 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module arty_stress_top (
+module arty_stress_top #(
+    // 0 = permutation (ผลอ้างอิงเดิม 285.8 MB/s / link util 89.3%)
+    // 1 = hot-spot ยิงรวมเข้า node 00 เพื่อบีบให้ arbiter ทำงานจริง
+    // เปลี่ยนตรงนี้แล้ว re-synthesize หรือ override ผ่าน
+    //   set_property generic {PATTERN=1} [get_filesets sources_1]
+    parameter int PATTERN = 0
+)(
     input  logic clk_100mhz,
     input  logic rst_n_btn,
 
@@ -102,7 +108,7 @@ module arty_stress_top (
     // =========================================================
     logic pass_g1, pass_g2, any_fail;
 
-    noc_stress_tester u_stress (
+    noc_stress_tester #(.PATTERN(PATTERN)) u_stress (
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
         .rst_n(global_rst_n),
 
@@ -130,9 +136,11 @@ module arty_stress_top (
         else               heartbeat_cnt <= heartbeat_cnt + 1'b1;
     end
 
+    // PATTERN 0 : led1 = คู่ 00<->11 ผ่าน, led2 = คู่ 01<->10 ผ่าน
+    // PATTERN 1 : led1 = ทุก agent จบ window, led2 = จบครบและ node 00 ไม่เจอ error
     assign led[0] = heartbeat_cnt[26];   // ยังมีชีวิต
-    assign led[1] = pass_g1;             // คู่ 00 <-> 11 ผ่าน
-    assign led[2] = pass_g2;             // คู่ 01 <-> 10 ผ่าน
+    assign led[1] = pass_g1;
+    assign led[2] = pass_g2;
     assign led[3] = any_fail;            // เจอ sequence error
 
 endmodule

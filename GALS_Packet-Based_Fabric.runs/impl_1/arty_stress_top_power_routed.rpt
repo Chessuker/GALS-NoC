@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2025.2 (win64) Build 6299465 Fri Nov 14 19:35:11 GMT 2025
-| Date             : Tue Aug 11 14:45:39 2026
+| Date             : Tue Aug 18 19:01:42 2026
 | Host             : LAPTOP-QOCHRTAO running 64-bit major release  (build 9200)
 | Command          : report_power -file arty_stress_top_power_routed.rpt -pb arty_stress_top_power_summary_routed.pb -rpx arty_stress_top_power_routed.rpx
 | Design           : arty_stress_top
@@ -30,10 +30,10 @@ Table of Contents
 ----------
 
 +--------------------------+--------------+
-| Total On-Chip Power (W)  | 0.319        |
+| Total On-Chip Power (W)  | 0.326        |
 | Design Power Budget (W)  | Unspecified* |
 | Power Budget Margin (W)  | NA           |
-| Dynamic (W)              | 0.220        |
+| Dynamic (W)              | 0.227        |
 | Device Static (W)        | 0.099        |
 | Effective TJA (C/W)      | 4.6          |
 | Max Ambient (C)          | 83.5         |
@@ -52,21 +52,21 @@ Table of Contents
 +--------------------------+-----------+----------+-----------+-----------------+
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
-| Clocks                   |     0.049 |       10 |       --- |             --- |
-| Slice Logic              |     0.018 |    24917 |       --- |             --- |
-|   LUT as Logic           |     0.015 |     6847 |     63400 |           10.80 |
-|   Register               |     0.001 |    11955 |    126800 |            9.43 |
-|   LUT as Shift Register  |     0.001 |      956 |     19000 |            5.03 |
-|   LUT as Distributed RAM |    <0.001 |      440 |     19000 |            2.32 |
-|   CARRY4                 |    <0.001 |      383 |     15850 |            2.42 |
-|   F7/F8 Muxes            |    <0.001 |      100 |     63400 |            0.16 |
-|   Others                 |     0.000 |     1173 |       --- |             --- |
-| Signals                  |     0.021 |    18614 |       --- |             --- |
-| Block RAM                |     0.007 |       20 |       135 |           14.81 |
+| Clocks                   |     0.056 |       10 |       --- |             --- |
+| Slice Logic              |     0.015 |    27243 |       --- |             --- |
+|   LUT as Logic           |     0.012 |     7087 |     63400 |           11.18 |
+|   Register               |     0.001 |    13277 |    126800 |           10.47 |
+|   LUT as Shift Register  |     0.001 |     1224 |     19000 |            6.44 |
+|   LUT as Distributed RAM |    <0.001 |      400 |     19000 |            2.11 |
+|   CARRY4                 |    <0.001 |      440 |     15850 |            2.78 |
+|   F7/F8 Muxes            |    <0.001 |      114 |     63400 |            0.18 |
+|   Others                 |     0.000 |     1322 |       --- |             --- |
+| Signals                  |     0.020 |    20143 |       --- |             --- |
+| Block RAM                |     0.011 |       27 |       135 |           20.00 |
 | MMCM                     |     0.123 |        1 |         6 |           16.67 |
-| I/O                      |    <0.001 |        7 |       210 |            3.33 |
+| I/O                      |     0.002 |        7 |       210 |            3.33 |
 | Static Power             |     0.099 |          |           |                 |
-| Total                    |     0.319 |          |           |                 |
+| Total                    |     0.326 |          |           |                 |
 +--------------------------+-----------+----------+-----------+-----------------+
 
 
@@ -76,7 +76,7 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) | Powerup (A) | Budget (A)  | Margin (A) |
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
-| Vccint    |       1.000 |     0.112 |       0.096 |      0.016 |       NA    | Unspecified | NA         |
+| Vccint    |       1.000 |     0.119 |       0.103 |      0.016 |       NA    | Unspecified | NA         |
 | Vccaux    |       1.800 |     0.086 |       0.068 |      0.018 |       NA    | Unspecified | NA         |
 | Vcco33    |       3.300 |     0.004 |       0.000 |      0.004 |       NA    | Unspecified | NA         |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
@@ -85,7 +85,7 @@ Table of Contents
 | Vcco135   |       1.350 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vcco12    |       1.200 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vccaux_io |       1.800 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
-| Vccbram   |       1.000 |     0.001 |       0.000 |      0.001 |       NA    | Unspecified | NA         |
+| Vccbram   |       1.000 |     0.002 |       0.001 |      0.001 |       NA    | Unspecified | NA         |
 | MGTAVcc   |       1.000 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | MGTAVtt   |       1.200 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
 | Vccadc    |       1.800 |     0.020 |       0.000 |      0.020 |       NA    | Unspecified | NA         |
@@ -152,44 +152,41 @@ Table of Contents
 +----------------------------+-----------+
 | Name                       | Power (W) |
 +----------------------------+-----------+
-| arty_stress_top            |     0.220 |
+| arty_stress_top            |     0.227 |
 |   clk_gen                  |     0.124 |
 |     inst                   |     0.124 |
 |   dbg_hub                  |     0.003 |
 |     inst                   |     0.003 |
 |       BSCANID.u_xsdbm_id   |     0.003 |
-|   u_ila_0                  |     0.013 |
+|   u_ila_0                  |     0.028 |
+|     inst                   |     0.028 |
+|       ila_core_inst        |     0.028 |
+|   u_ila_1                  |     0.013 |
 |     inst                   |     0.013 |
 |       ila_core_inst        |     0.013 |
-|   u_ila_1                  |     0.012 |
-|     inst                   |     0.012 |
-|       ila_core_inst        |     0.012 |
-|   u_ila_2                  |     0.015 |
-|     inst                   |     0.015 |
-|       ila_core_inst        |     0.015 |
-|   u_ila_3                  |     0.012 |
-|     inst                   |     0.012 |
-|       ila_core_inst        |     0.012 |
-|   u_stress                 |     0.007 |
+|   u_ila_2                  |     0.013 |
+|     inst                   |     0.013 |
+|       ila_core_inst        |     0.013 |
+|   u_ila_3                  |     0.014 |
+|     inst                   |     0.014 |
+|       ila_core_inst        |     0.014 |
+|   u_stress                 |     0.008 |
 |     agent_00               |     0.002 |
 |     agent_01               |     0.002 |
 |     agent_10               |     0.002 |
 |     agent_11               |     0.002 |
-|   uut_noc_top              |     0.033 |
-|     uut_noc                |     0.018 |
-|       ROW[0].COL[0].router |     0.005 |
-|       ROW[0].COL[1].router |     0.004 |
-|       ROW[1].COL[0].router |     0.004 |
-|       ROW[1].COL[1].router |     0.004 |
-|     wrap_00                |     0.004 |
-|       TX_VC[0].tx_fifo     |     0.001 |
-|       TX_VC[1].tx_fifo     |     0.002 |
-|     wrap_01                |     0.004 |
-|       TX_VC[1].tx_fifo     |     0.002 |
+|   uut_noc_top              |     0.023 |
+|     uut_noc                |     0.010 |
+|       ROW[0].COL[0].router |     0.003 |
+|       ROW[0].COL[1].router |     0.002 |
+|       ROW[1].COL[0].router |     0.003 |
+|       ROW[1].COL[1].router |     0.002 |
+|     wrap_00                |     0.002 |
+|     wrap_01                |     0.003 |
+|       TX_VC[1].tx_fifo     |     0.001 |
 |     wrap_10                |     0.003 |
 |       TX_VC[1].tx_fifo     |     0.001 |
-|     wrap_11                |     0.004 |
-|       TX_VC[0].tx_fifo     |     0.001 |
+|     wrap_11                |     0.003 |
 |       TX_VC[1].tx_fifo     |     0.001 |
 +----------------------------+-----------+
 
