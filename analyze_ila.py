@@ -93,6 +93,26 @@ def main(folder):
               f'{r["rate_tx"]:>9.4f}{stall_pct:>9.1f}{r["rate_rx"]:>9.4f}'
               f'{r["tx_mfs"]:>10.2f}{r["err"]:>8}{str(r["dest"]):>6}')
 
+    # ---- VC split: ยืนยันว่า build ที่จับมาใช้ VC_MODE ตัวไหนจริง
+    print()
+    print('  VC split ของ flit ที่รับได้:')
+    for a in sorted(res):
+        r = res[a]
+        trx = r['vc0'] + r['vc1']
+        if trx == 0:
+            print(f'    {a}: (ไม่ได้รับ flit)')
+        else:
+            print(f'    {a}: VC0 {r["vc0"]:>10,} ({100.0*r["vc0"]/trx:5.1f}%)   '
+                  f'VC1 {r["vc1"]:>10,} ({100.0*r["vc1"]/trx:5.1f}%)')
+    tot_vc1 = sum(res[a]['vc1'] for a in res)
+    tot_vc0 = sum(res[a]['vc0'] for a in res)
+    if tot_vc1 == 0 and tot_vc0 > 0:
+        print('    -> VC1 เป็น 0 ทุกตัว : build นี้คือ VC_MODE=0 (VC0 อย่างเดียว)')
+    elif tot_vc0 == 0 and tot_vc1 > 0:
+        print('    -> VC0 เป็น 0 ทุกตัว : build นี้คือ VC_MODE=1 (VC1 อย่างเดียว)')
+    elif tot_vc0 > 0 and tot_vc1 > 0:
+        print('    -> มีทั้งสอง VC : build นี้คือ VC_MODE=2 (สลับทุกแพ็กเกจ)')
+
     total_tx = sum(res[a]['tx_mfs'] for a in res)
     total_rx = sum(res[a]['rx_mfs'] for a in res)
     print('-'*85)

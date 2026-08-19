@@ -379,22 +379,16 @@ module tb_noc_mesh_2x2_gals;
 
     task automatic hotspot_loop(input int node_idx, input int target_idx);
         automatic logic [3:0] my_id = NODE_MY_ID[node_idx];
-        automatic int         vc    = 0;
         while (hs_run) begin
             gen_tx [node_idx] = NODE_TX[target_idx];
             gen_ty [node_idx] = NODE_TY[target_idx];
             gen_len[node_idx] = HS_LEN;
-            gen_tid[node_idx] = (vc == 1) ? 2'b10 : 2'b01;
-            // vc_idx ที่ส่งให้ scoreboard ต้องตรงกับ VC ที่ใช้จริง
-            // ไม่งั้น sb_check จะไปหยิบของผิดคิวแล้ว $fatal
-            sb_predict(my_id, target_idx, vc, HS_LEN);
+            gen_tid[node_idx] = 2'b01;    // VC0 อย่างเดียว บีบให้ชนที่ packet_arbiter ตรงๆ
+            sb_predict(my_id, target_idx, 0, HS_LEN);
             gen_start[node_idx] = 1;
             wait(gen_rdy[node_idx] == 0);
             gen_start[node_idx] = 0;
             wait(gen_rdy[node_idx] == 1);
-`ifdef HS_VC_ALT
-            vc = 1 - vc;   // สลับ VC ทุกแพ็กเกจ เลียนแบบ VC_MODE=2 ของ traffic_node_agent บนบอร์ด
-`endif
         end
     endtask
 
@@ -536,11 +530,6 @@ module tb_noc_mesh_2x2_gals;
         //=============================================================
         $display("");
         $display("[TB] --- Start GALS Test 6: Sustained Hot-Spot Contention ---");
-`ifdef HS_VC_ALT
-        $display("[TB]     VC mode: ALTERNATING VC0/VC1 ทุกแพ็กเกจ (เหมือนบอร์ด VC_MODE=2)");
-`else
-        $display("[TB]     VC mode: VC0 only (แยก packet_arbiter ออกมาตัวเดียว)");
-`endif
         perf_clear = 1; #10; perf_clear = 0; perf_en = 1;
 
         hs_run = 1;

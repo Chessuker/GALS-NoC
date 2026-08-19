@@ -32,7 +32,10 @@ module arty_stress_top #(
     // 1 = hot-spot ยิงรวมเข้า node 00 เพื่อบีบให้ arbiter ทำงานจริง
     // เปลี่ยนตรงนี้แล้ว re-synthesize หรือ override ผ่าน
     //   set_property generic {PATTERN=1} [get_filesets sources_1]
-    parameter int PATTERN = 0
+    parameter int PATTERN = 0,
+
+    // 0 = VC0 อย่างเดียว, 1 = VC1 อย่างเดียว, 2 = สลับทุกแพ็กเกจ (ค่าเดิม)
+    parameter int VC_MODE = 2
 )(
     input  logic clk_100mhz,
     input  logic rst_n_btn,
@@ -108,7 +111,7 @@ module arty_stress_top #(
     // =========================================================
     logic pass_g1, pass_g2, any_fail;
 
-    noc_stress_tester #(.PATTERN(PATTERN)) u_stress (
+    noc_stress_tester #(.PATTERN(PATTERN), .VC_MODE(VC_MODE)) u_stress (
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
         .rst_n(global_rst_n),
 

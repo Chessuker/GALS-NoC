@@ -37,9 +37,14 @@ foreach f {traffic_node_agent.sv noc_stress_tester.sv} {
 #         PATTERN 1 = hot-spot 01/10/11 -> node 00 (บีบให้ arbiter ทำงานจริง)
 if {![info exists PATTERN]} { set PATTERN 0 }
 
+#         VC_MODE 0 = VC0 อย่างเดียว  1 = VC1 อย่างเดียว  2 = สลับ (ค่าเดิม)
+#         ใน sim การสลับ VC ทำให้ NoC ค้าง (ส่งไม่ออกเลยหลังผ่านไปพักหนึ่ง)
+#         ส่วน VC0 อย่างเดียวได้ 95-99% -> ใช้ VC_MODE 0 เทียบว่าบนบอร์ดเป็นแบบเดียวกันไหม
+if {![info exists VC_MODE]} { set VC_MODE 2 }
+
 set_property top arty_stress_top [current_fileset]
 set_property top_auto_set 0 [current_fileset]
-set_property generic "PATTERN=$PATTERN" [current_fileset]
+set_property generic "PATTERN=$PATTERN VC_MODE=$VC_MODE" [current_fileset]
 
 if {$PATTERN == 1} {
     set pat_desc "hot-spot: 01/10/11 -> node 00, agent_00 เป็น sink"
@@ -47,7 +52,13 @@ if {$PATTERN == 1} {
     set pat_desc "permutation: 00<->11, 01<->10"
 }
 puts "INFO: top     = [get_property top [current_fileset]]"
+switch $VC_MODE {
+    0 { set vc_desc "VC0 อย่างเดียว" }
+    1 { set vc_desc "VC1 อย่างเดียว" }
+    default { set vc_desc "สลับ VC ทุกแพ็กเกจ (ค่าเดิม)" }
+}
 puts "INFO: PATTERN = $PATTERN  ($pat_desc)"
+puts "INFO: VC_MODE = $VC_MODE  ($vc_desc)"
 
 # ---- 4. เอา debug.xdc เก่าออกจาก project
 #         (เนื้อในอ้าง echo_01/echo_10/echo_11 ของ UART build ซึ่งไม่มีใน top นี้)
