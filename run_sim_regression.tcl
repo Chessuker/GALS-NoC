@@ -57,6 +57,9 @@ set_property -name {xsim.simulate.runtime} -value {all} -objects [get_filesets s
 #         ไม่ตั้งค่า                     = ค่าเดิมของ TB (เทียบ baseline ก.ค. ได้)
 if {![info exists HW_CLOCKS]} { set HW_CLOCKS 0 }
 if {![info exists HS_VC_ALT]} { set HS_VC_ALT 0 }
+# SIM_DEBUG 1 = เปิด $display ใน vc_port_arbiter (override trigger/release)
+#               ใช้ไล่ดูว่า vc0_override ค้างหรือไม่ตอน NoC หยุดส่ง
+if {![info exists SIM_DEBUG]} { set SIM_DEBUG 0 }
 
 set sim_defs {}
 if {$HW_CLOCKS} {
@@ -71,18 +74,26 @@ if {$HS_VC_ALT} {
 } else {
     set vc_desc  "VC0 only - แยก packet_arbiter ออกมาทดสอบตัวเดียว"
 }
+if {$SIM_DEBUG} {
+    lappend sim_defs SIM_DEBUG
+    set dbg_desc "on - vc_port_arbiter override tracing"
+} else {
+    set dbg_desc "off"
+}
 set_property verilog_define $sim_defs [get_filesets sim_1]
 
 # ชื่อไฟล์ล็อกบอก config ในตัว จะได้ไม่ทับกันเวลารันหลายแบบ
 file mkdir $log_dir
 set tag [expr {$HW_CLOCKS ? "hwclk" : "tbclk"}]
 if {$HS_VC_ALT} { append tag "_vcalt" }
+if {$SIM_DEBUG} { append tag "_dbg" }
 set stamp   [clock format [clock seconds] -format "%Y%m%d_%H%M%S"]
 set out_log "$log_dir/regress_${tag}_${stamp}.log"
 
 puts "INFO: sim top      = [get_property top [get_filesets sim_1]]"
 puts "INFO: clocks       = $clk_desc"
 puts "INFO: Test6 VC     = $vc_desc"
+puts "INFO: SIM_DEBUG    = $dbg_desc"
 puts "INFO: sim runtime  = [get_property xsim.simulate.runtime [get_filesets sim_1]]"
 
 # ---- 4. ลบ log เก่าทิ้ง เพื่อไม่ให้อ่านผลรันก่อนหน้าปนมา
