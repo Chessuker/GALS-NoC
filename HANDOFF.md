@@ -1,6 +1,6 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-08-19. Branch `feature/1-testbenchs`, last commit `04cd562`.
+Last updated: 2026-08-19. Branch `feature/1-testbenchs`, last commit `3baabaf`.
 
 Read this first if you're picking the project up cold.
 
@@ -8,15 +8,16 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Three real RTL bugs were found. **Two are fixed and verified. One is diagnosed but NOT fixed.**
+Three real RTL bugs were found. **All three are fixed and verified in simulation.**
+Bug #3's fix has NOT yet been confirmed on the board.
 
 | # | bug | status |
 |---|-----|--------|
 | 1 | `packet_arbiter` released an output port mid-packet, corrupting packets | **fixed** |
 | 2 | `packet_arbiter` round-robin mask latched; one input took 100% of a contended port | **fixed** |
-| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | **OPEN** |
+| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | **fixed in sim — needs a board run** |
 
-Bugs 1 and 2 both predate this work and would have shipped. Neither was caught by the
+All three predate this work and would have shipped. None was caught by the
 five original simulation tests or by the permutation hardware stress run.
 
 ---
@@ -39,7 +40,23 @@ Each run writes a self-describing log to `sim_logs/regress_<tag>_<stamp>.log`
 (config header + full xsim output + summary).
 
 Pass criteria: 6/6 tests, `Mismatched=0`, `Pending=0`.
-**Known-failing by design:** any run with `HS_VC_ALT 1` fails on `Pending` — that is bug #3.
+All four switch combinations now pass; `HS_VC_ALT 1` used to fail on `Pending` (bug #3).
+
+### Simulation without Vivado's project flow
+
+`launch_simulation` is not required. The same regression runs straight off the sources with
+`xvlog`/`xelab`/`xsim` from `C:/AMDDesignTools/2025.2/Vivado/bin`, which is much faster and
+leaves no project state behind. Compile order that elaborates cleanly:
+
+    sync_fifo dual_port_ram dual_port_ram_ecc ecc_secded_encode_8b ecc_secded_decode_8b
+    gray_counter sync_2stage async_fifo async_fifo_fwft fwft_wrapper axis_perf_mon
+    traffic_gen packet_arbiter vc_port_arbiter vc_input_buffer router_5port_mesh_vc
+    noc_mesh_2x2_vc gals_node_wrapper gals_noc_top tb_noc_mesh_2x2_gals
+
+Elaborate `work.tb_noc_mesh_2x2_gals` (not `xil_defaultlib.…` — that library only exists
+inside the project), pass the switches as `-d HW_CLOCKS -d HS_VC_ALT -d SIM_DEBUG`, and
+drive xsim with a `run all; quit` tclbatch. Verified to reproduce
+`regress_hwclk_vcalt_dbg_20260819_150653.log` number-for-number before the fix went in.
 
 ### Hardware build (~5 min synth + impl)
 
@@ -56,9 +73,9 @@ up (gotcha 6). 0 means the top module isn't `arty_stress_top`.
 
 ---
 
-## 3. Bug #3 — diagnosed, not fixed
+## 3. Bug #3 — fixed in simulation, not yet on hardware
 
-### Symptom
+### Symptom (before the fix)
 
 | config | node 00 local port utilisation |
 |---|---|
@@ -74,49 +91,84 @@ Fairness is identical in both VC modes (48/28/24), so bug #2's fix is independen
     assign vc1_is_active = |raw_grant_vc1 && !vc0_override;
     assign ready_vc0     = !vc1_is_active ? ready_out_vc0 : 1'b0;
 
-`vc1_is_active` keys off *"VC1's packet_arbiter holds a grant"*, **not** *"VC1 can actually
+`vc1_is_active` keyed off *"VC1's packet_arbiter holds a grant"*, **not** *"VC1 can actually
 move a flit"*. The two VCs have genuinely independent downstream credits
 (`ready_out_vc0` = `m_ready[out_p][0]`, `ready_out_vc1` = `m_ready[out_p][1]`), so gating
-`ready_vc0` on VC1's grant re-couples resources the VC design deliberately separated.
-A VC1 packet stalled on a full downstream VC1 buffer blocks VC0 even when VC0's own
-downstream buffer has room.
+`ready_vc0` on VC1's grant re-coupled resources the VC design deliberately separated.
+A VC1 packet stalled on a full downstream VC1 buffer blocked VC0 even when VC0's own
+downstream buffer had room.
 
-The anti-starvation override is the intended mitigation but has two problems:
+The anti-starvation override was the intended mitigation but had two problems:
 
-1. Costs `STARVE_LIMIT` (64) idle cycles before firing, every episode.
-2. Exit requires VC0 to complete a **whole packet**:
+1. It cost `STARVE_LIMIT` (64) idle cycles before firing, every episode.
+2. Exit required VC0 to complete a **whole packet**:
    `if (|raw_grant_vc0 && ready_out_vc0 && |(tlast_vc0 & raw_grant_vc0))`.
-   If VC0's packet then stalls, `vc0_override` latches and now **VC1** is blocked
-   indefinitely. Blocking in both directions is the circular wait.
+   If VC0's packet then stalled, `vc0_override` latched and now **VC1** was blocked
+   indefinitely. Blocking in both directions was the circular wait.
 
-### Evidence — `sim_logs/regress_hwclk_vcalt_dbg_20260819_150653.log`
+### The fix
 
-With `SIM_DEBUG` on: 51 override triggers, 47 releases -> **4 latched**. The four are
-exactly the arbiters forming the converging tree into node 00:
+Two changes, both in `vc_port_arbiter.sv`:
 
-    router idx1 out=WEST    (agent_01 -> idx0)
-    router idx3 out=WEST    (agent_11 -> idx2)
-    router idx2 out=SOUTH   (agent_10 + agent_11 -> idx0)
-    router idx0 out=LOCAL   (delivery into node 00)
+    assign vc1_can_move  = (|raw_grant_vc1) && ready_out_vc1;
+    assign vc0_can_move  = (|raw_grant_vc0) && ready_out_vc0;
+    assign vc1_is_active = vc1_can_move && !(vc0_override && vc0_can_move);
 
-Last trigger 31.98 us; last flit delivered 32.13 us; nothing after. Non-latched episodes
-last a median ~1.1 us (~88 NoC cycles) with VC1 fully blocked — that recurring tax is
-what produces the board's 57.5%.
+1. **VC1 only owns the shared output link on cycles it can actually move a flit.** The
+   moment its downstream credit runs out it yields, and VC0 takes the link that same cycle
+   instead of waiting 64. The two VCs share one physical link (`m_valid[out_p]` is a single
+   wire), so the mutex itself is genuinely required — what was wrong was deciding it on
+   grant-held rather than can-transfer.
+2. **The override only blocks VC1 while VC0 is itself making progress** (`&& vc0_can_move`).
+   If VC0 is also stuck, VC1 gets the link back. That is the edge that closed the circular
+   wait; `vc0_override` can no longer block in both directions at once.
 
-### Proposed fix (NOT applied — verify before trusting)
+Plus a second override release path — `if (!(|valid_vc0))` — so an override can't outlive
+the VC0 request that raised it. In practice this never fires in the regression (all 36
+episodes release via normal packet completion); it's a safety net, not the fix.
 
-Make the gate depend on VC1 actually being able to transfer, roughly:
+Interleaving VC0 and VC1 flits on one physical link is legal by construction: the
+downstream `vc_input_buffer` demuxes on `m_tid` into per-VC FIFOs. Packet continuity
+*within* a VC is still held by `packet_arbiter`'s `LOCKED` state, which the fix doesn't
+touch — `raw_grant_*` is unchanged, only which VC drives the link.
 
-    assign vc1_is_active = |raw_grant_vc1 && ready_out_vc1 && !vc0_override;
+### Results
 
-so a stalled VC1 yields the port immediately instead of after 64 cycles or never. This may
-also make the whole `starve_cnt` / `vc0_override` machinery unnecessary.
+Regression, all four switch combinations, 6/6 tests, `Mismatched=0`, `Pending=0`:
 
-**Do not apply this blind.** Two independent bugs already came out of the adjacent arbiter.
-Run the regression with `HS_VC_ALT 1` before and after; `Pending` and Test 6's utilisation
-line are the pass/fail signal.
+| config | node 00 ingress, before | after | min fairness share |
+|---|---|---|---|
+| TB clocks, VC0 only    | 94.9% (Pending 0)  | **95.0%** | 26% |
+| TB clocks, alternating | 9.5%  (Pending 13) | **77.8%** | 26% |
+| HW clocks, VC0 only    | 99.5% (Pending 0)  | **99.5%** | 25% |
+| HW clocks, alternating | 44.5% (Pending 11) | **97.2%** | 25% |
 
----
+The VC0-only columns are unchanged to within run-to-run noise — the fix only touches
+behaviour when both VCs contend. Test 2 (VC1 preemption) is byte-identical to the pre-fix
+log, so VC1 keeps strict priority whenever it can actually move.
+
+`SIM_DEBUG` override accounting, HW clocks + alternating:
+
+| | before | after |
+|---|---|---|
+| triggers | 51 | 36 |
+| releases | 47 | 36 |
+| **latched (never released)** | **4** | **0** |
+| median episode with VC1 blocked | 1.10 us | 0.39 us |
+| total time VC1 blocked | 45.2 us | 19.2 us |
+
+Logs: `sim_logs/regress_*_FIXED.log` (all five runs, headers say which switches).
+
+Out-of-context synthesis of `router_5port_mesh_vc` (xc7a35ticsg324-1L, 80 MHz):
+no latches, no combinational loops, WNS 3.207 ns -> **3.131 ns** (76 ps cost — `m_valid`
+now depends on `m_ready`, one extra level), 866 -> **967 LUTs** per router, registers
+unchanged at 199. About 400 extra LUTs across the 4-router mesh, ~2% of the part.
+
+### Still to do
+
+**Rebuild the board and confirm.** `set PATTERN 1 ; set VC_MODE 2` should now read close to
+the `VC_MODE=0` number (100.0%) instead of 57.5%. That is the one claim here that
+simulation cannot make for you.
 
 ## 4. Gotchas that cost real time
 
@@ -146,10 +198,14 @@ line are the pass/fail signal.
 
 ## 5. Still open, beyond bug #3
 
+- **Bug #3 has not been confirmed on hardware** — see the end of section 3.
 - ECC (`ecc_secded_*`, `dual_port_ram_ecc`) has never been exercised — no error injection.
 - Seven formal `.sby` files sit unused in `sources_1/new/old/`. `arbiter_formal.sby` claims
   to prove "channel cannot be stolen mid-packet" — plausibly catches bug #1 at source, and
-  a liveness property would catch bug #2.
+  a liveness property would catch bug #2. The `FORMAL` block in `vc_port_arbiter.sv` was
+  updated alongside the bug #3 fix (`assert_no_vc1_during_override` is now conditioned on
+  `vc0_can_move`, plus new `assert_vc1_yields_when_stalled` and two covers), but **none of
+  it has been run** — no solver is installed here.
 - UART build (`arty_gals_noc_wrapper`) not rebuilt since `debug.xdc` was dropped (gotcha 5).
 - `final_src/` diverges from `sources_1/new/` in 16 of 19 shared files. Stale July snapshot,
   historical reference only. Do not build from it.
