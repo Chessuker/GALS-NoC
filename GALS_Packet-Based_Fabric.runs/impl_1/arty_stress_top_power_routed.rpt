@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2025.2 (win64) Build 6299465 Fri Nov 14 19:35:11 GMT 2025
-| Date             : Tue Aug 18 19:01:42 2026
+| Date             : Tue Sep  1 16:27:40 2026
 | Host             : LAPTOP-QOCHRTAO running 64-bit major release  (build 9200)
 | Command          : report_power -file arty_stress_top_power_routed.rpt -pb arty_stress_top_power_summary_routed.pb -rpx arty_stress_top_power_routed.rpx
 | Design           : arty_stress_top
@@ -53,15 +53,15 @@ Table of Contents
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
 | Clocks                   |     0.056 |       10 |       --- |             --- |
-| Slice Logic              |     0.015 |    27243 |       --- |             --- |
-|   LUT as Logic           |     0.012 |     7087 |     63400 |           11.18 |
+| Slice Logic              |     0.015 |    27156 |       --- |             --- |
+|   LUT as Logic           |     0.012 |     7035 |     63400 |           11.10 |
 |   Register               |     0.001 |    13277 |    126800 |           10.47 |
 |   LUT as Shift Register  |     0.001 |     1224 |     19000 |            6.44 |
 |   LUT as Distributed RAM |    <0.001 |      400 |     19000 |            2.11 |
 |   CARRY4                 |    <0.001 |      440 |     15850 |            2.78 |
 |   F7/F8 Muxes            |    <0.001 |      114 |     63400 |            0.18 |
 |   Others                 |     0.000 |     1322 |       --- |             --- |
-| Signals                  |     0.020 |    20143 |       --- |             --- |
+| Signals                  |     0.020 |    20048 |       --- |             --- |
 | Block RAM                |     0.011 |       27 |       135 |           20.00 |
 | MMCM                     |     0.123 |        1 |         6 |           16.67 |
 | I/O                      |     0.002 |        7 |       210 |            3.33 |
@@ -76,7 +76,7 @@ Table of Contents
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
 | Source    | Voltage (V) | Total (A) | Dynamic (A) | Static (A) | Powerup (A) | Budget (A)  | Margin (A) |
 +-----------+-------------+-----------+-------------+------------+-------------+-------------+------------+
-| Vccint    |       1.000 |     0.119 |       0.103 |      0.016 |       NA    | Unspecified | NA         |
+| Vccint    |       1.000 |     0.118 |       0.102 |      0.016 |       NA    | Unspecified | NA         |
 | Vccaux    |       1.800 |     0.086 |       0.068 |      0.018 |       NA    | Unspecified | NA         |
 | Vcco33    |       3.300 |     0.004 |       0.000 |      0.004 |       NA    | Unspecified | NA         |
 | Vcco25    |       2.500 |     0.000 |       0.000 |      0.000 |       NA    | Unspecified | NA         |
@@ -164,19 +164,19 @@ Table of Contents
 |   u_ila_1                  |     0.013 |
 |     inst                   |     0.013 |
 |       ila_core_inst        |     0.013 |
-|   u_ila_2                  |     0.013 |
-|     inst                   |     0.013 |
-|       ila_core_inst        |     0.013 |
-|   u_ila_3                  |     0.014 |
+|   u_ila_2                  |     0.014 |
 |     inst                   |     0.014 |
 |       ila_core_inst        |     0.014 |
+|   u_ila_3                  |     0.013 |
+|     inst                   |     0.013 |
+|       ila_core_inst        |     0.013 |
 |   u_stress                 |     0.008 |
 |     agent_00               |     0.002 |
 |     agent_01               |     0.002 |
 |     agent_10               |     0.002 |
 |     agent_11               |     0.002 |
 |   uut_noc_top              |     0.023 |
-|     uut_noc                |     0.010 |
+|     uut_noc                |     0.011 |
 |       ROW[0].COL[0].router |     0.003 |
 |       ROW[0].COL[1].router |     0.002 |
 |       ROW[1].COL[0].router |     0.003 |

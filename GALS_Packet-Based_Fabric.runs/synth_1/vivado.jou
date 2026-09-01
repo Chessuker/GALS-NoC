@@ -3,8 +3,8 @@
 # SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
 # IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
 # SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
-# Start of session at: Tue Aug 18 18:32:13 2026
-# Process ID         : 7984
+# Start of session at: Tue Sep  1 16:02:00 2026
+# Process ID         : 31368
 # Current directory  : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/synth_1
 # Command line       : vivado.exe -log arty_stress_top.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source arty_stress_top.tcl
 # Log file           : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/synth_1/arty_stress_top.vds
@@ -17,8 +17,8 @@
 # CPU Physical cores : 6
 # CPU Logical cores  : 12
 # Host memory        : 16309 MB
-# Swap memory        : 40802 MB
-# Total Virtual      : 57112 MB
-# Available Virtual  : 27188 MB
+# Swap memory        : 45097 MB
+# Total Virtual      : 61407 MB
+# Available Virtual  : 24483 MB
 #-----------------------------------------------------------
 source arty_stress_top.tcl -notrace

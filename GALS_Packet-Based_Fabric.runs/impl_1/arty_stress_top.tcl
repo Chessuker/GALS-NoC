@@ -105,10 +105,8 @@ start_step write_bitstream
 set ACTIVE_STEP write_bitstream
 set rc [catch {
   create_msg_db write_bitstream.pb
-  set_param tcl.collectionResultDisplayLimit 0
   set_param general.usePosixSpawnForFork 1
   set_param chipscope.maxJobs 3
-  set_param xicom.use_bs_reader 1
   set_param runs.launchOptions { -jobs 12  }
   open_checkpoint arty_stress_top_routed.dcp
   set_property webtalk.parent_dir D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.cache/wt [current_project]

@@ -1,9 +1,9 @@
 # compile verilog/system verilog design source files
-verilog xil_defaultlib  --include "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../GALS_Packet-Based_Fabric.ip_user_files/ipstatic" \
+verilog xil_defaultlib  --include "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../GALS_Packet-Based_Fabric.ip_user_files/ipstatic" -d "HW_CLOCKS" -d "HS_VC_ALT" \
 "../../../../GALS_Packet-Based_Fabric.gen/sources_1/ip/clk_wiz_0/clk_wiz_0_clk_wiz.v" \
 "../../../../GALS_Packet-Based_Fabric.gen/sources_1/ip/clk_wiz_0/clk_wiz_0.v" \
 
-sv xil_defaultlib  --include "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../GALS_Packet-Based_Fabric.ip_user_files/ipstatic" \
+sv xil_defaultlib  --include "C:/AMDDesignTools/2025.2/Vivado/data/rsb/busdef" --include "../../../../GALS_Packet-Based_Fabric.ip_user_files/ipstatic" -d "HW_CLOCKS" -d "HS_VC_ALT" \
 "../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/uart_transceiver.sv" \
 "../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/traffic_gen.sv" \
 "../../../../GALS_Packet-Based_Fabric.srcs/sources_1/new/axis_perf_mon.sv" \

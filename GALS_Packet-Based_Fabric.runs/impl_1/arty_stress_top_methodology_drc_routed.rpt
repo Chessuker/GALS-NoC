@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (win64) Build 6299465 Fri Nov 14 19:35:11 GMT 2025
-| Date         : Tue Aug 18 19:01:29 2026
+| Date         : Tue Sep  1 16:27:22 2026
 | Host         : LAPTOP-QOCHRTAO running 64-bit major release  (build 9200)
 | Command      : report_methodology -file arty_stress_top_methodology_drc_routed.rpt -pb arty_stress_top_methodology_drc_routed.pb -rpx arty_stress_top_methodology_drc_routed.rpx
 | Design       : arty_stress_top
@@ -195,49 +195,49 @@ Related violations: <none>
 XDCB-5#1 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '152' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#2 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '207' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#3 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '42' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#4 Warning
 Runtime inefficient way to find pin objects  
 The option '-from : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/allx_typeA_match_detection.ltlib_v1_0_3_allx_typeA_inst/DUT/u_srl_drive/CLK}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '97' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#5 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '152' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_2_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#6 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '207' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_3_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#7 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '42' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_0_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 XDCB-5#8 Warning
 Runtime inefficient way to find pin objects  
 The option '-to : [get_pins -hierarchical -filter {NAME =~ *ila_core_inst/u_trig/N_DDR_TC.N_DDR_TC_INST[*].U_TC/yes_output_reg.dout_reg_reg/D}]' of constraint 'set_false_path' uses inefficient query to find pin objects (see constraint position '97' in the Timing Constraint window in Vivado IDE). To reduce runtime, it is recommended to get the pins through the cell objects. Please refer to Using Constraints Guide (Constraints Efficiency). An example of optimal query is: get_pins -filter {REF_PIN_NAME=~yy*} -of_objects [get_cells -hierarchical xx*].
-Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-29724-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
+Current XDC: d:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/.Xil/Vivado-35020-LAPTOP-QOCHRTAO/u_ila_1_CV.0/out/ila_early.xdc (Line: 72)
 Related violations: <none>
 
 
