@@ -28,11 +28,12 @@ module traffic_node_agent #(
     parameter int         WINDOW_LOG = 24,       // 2^24 cycle ~ 0.24 s ที่ 70 MHz
     parameter int         WARMUP_LOG = 10,
     parameter int         DRAIN_LOG  = 12,
-    parameter int         STUCK_LOG  = 16,       // 2^16 cycle ~ 0.8 ms ที่ 80 MHz
-                                                 // ไม่มี flit ขยับเลยนานขนาดนี้ = ตาย
-                                                 // ช่องว่างตอน contention หนักที่วัดได้
-                                                 // จริงยาวสุดหลักร้อย cycle จึงเหลือ margin
-                                                 // ~750 เท่า ไม่มีทาง false trip
+    parameter int         STUCK_LOG  = 16,       // เกณฑ์ตัดสิน: เงียบเกิน 2^STUCK_LOG
+                                                 // cycle ระหว่าง S_RUN = ถือว่าตาย
+    parameter int         GAP_W      = 24,       // ความกว้างของตัวจับช่องว่าง
+                                                 // ต้องกว้างกว่าเกณฑ์ เพื่อให้ max_gap
+                                                 // รายงานของจริงได้แม้ทะลุเกณฑ์ไปแล้ว
+                                                 // ไม่งั้นจะรู้แค่ "เกิน" ไม่รู้ "เกินเท่าไร"
     parameter bit         TX_EN      = 1'b1      // 0 = ปิดขาส่ง ทำหน้าที่เป็น sink อย่างเดียว
                                                  //     ใช้ตอนทดสอบ hot-spot ที่ node ปลายทาง
 )(
@@ -131,11 +132,23 @@ module traffic_node_agent #(
     // sender  พิสูจน์ตัวเองด้วย tx_fire
     // sink    (TX_EN=0) ไม่เคยส่ง จึงพิสูจน์ด้วย rx_fire แทน
     //         ถ้าใช้ tx_fire กับ sink มันจะ false-fail ทุกครั้งโดยอัตโนมัติ
-    logic [STUCK_LOG-1:0] stuck_cnt;
+    localparam logic [GAP_W-1:0] STUCK_LIMIT = (1 << STUCK_LOG);
+
+    logic [GAP_W-1:0] stuck_cnt;
+
+    // max_gap = ช่องว่างที่ยาวที่สุดที่เคยเจอตลอด S_RUN
+    //   นี่คือ "ตัววัด" ส่วน stuck_seen เป็นแค่ "คำตัดสิน"
+    //   มีตัววัดแล้วถึงจะตั้งเกณฑ์จากข้อมูลจริงได้ ไม่ใช่เดา
+    //   (เกณฑ์แรกตั้งไว้ 2^16 โดยเดาจาก traffic_gen ซึ่งเป็นคนละโมดูล คนละภาระงาน
+    //    ผลคือ agent_01/agent_11 false-trip บนบอร์ดทั้งที่ fabric วิ่ง 97%)
+    (* mark_debug = "true", dont_touch = "true" *) logic [GAP_W-1:0] max_gap;
     (* mark_debug = "true", dont_touch = "true" *) logic stuck_seen;
 
     logic live_fire;
     assign live_fire = TX_EN ? tx_fire : rx_fire;
+
+    // หน้าต่างนับครบแล้วหรือยัง (แยกจากการ "ออกจาก S_RUN" เพราะต้องรอขอบแพ็กเกจ)
+    logic win_full;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) test_done <= 1'b0;
@@ -147,6 +160,7 @@ module traffic_node_agent #(
             state        <= S_WARMUP;
             warm_cnt     <= '0;
             win_cnt      <= '0;
+            win_full     <= 1'b0;
             drain_cnt    <= '0;
             flit_idx     <= '0;
             vc_sel       <= (VC_MODE == 1);
@@ -155,6 +169,7 @@ module traffic_node_agent #(
             tx_flit_cnt  <= '0;
             tx_stall_cnt <= '0;
             stuck_cnt    <= '0;
+            max_gap      <= '0;
             stuck_seen   <= 1'b0;
             rx_vc0_cnt   <= '0;
             rx_vc1_cnt   <= '0;
@@ -188,8 +203,11 @@ module traffic_node_agent #(
             if (state == S_RUN) begin
                 if (live_fire)          stuck_cnt <= '0;
                 else if (!(&stuck_cnt)) stuck_cnt <= stuck_cnt + 1'b1;
-                // ค้างครบรอบ = ติดธงถาวร ต่อให้หลังจากนั้นจะกลับมาวิ่งได้ก็ตาม
-                if (&stuck_cnt)         stuck_seen <= 1'b1;
+
+                // เก็บสถิติช่องว่างที่ยาวที่สุดไว้เสมอ ไม่ว่าจะถึงเกณฑ์หรือไม่
+                if (stuck_cnt > max_gap)       max_gap    <= stuck_cnt;
+                // เกินเกณฑ์ = ติดธงถาวร ต่อให้หลังจากนั้นจะกลับมาวิ่งได้ก็ตาม
+                if (stuck_cnt >= STUCK_LIMIT)  stuck_seen <= 1'b1;
             end
 
             //---- ตัวชี้ของ generator
@@ -210,8 +228,25 @@ module traffic_node_agent #(
                     if (&warm_cnt) state <= S_RUN;
                 end
                 S_RUN: begin
-                    win_cnt <= win_cnt + 1'b1;
-                    if (&win_cnt) state <= S_DRAIN;
+                    // 🔴 เดิม: พอ win_cnt เต็มก็ออกทันที ทำให้ tx_tvalid ตกกลางแพ็กเกจ
+                    //    แพ็กเกจครึ่งท่อนค้างใน fabric แล้ว packet_arbiter ปลายทาง
+                    //    ล็อกพอร์ตรอ tlast ที่ไม่มีวันมา -> พอร์ตนั้นตายถาวร
+                    //    (วัดได้จริง: idx0 LOCAL ล็อกที่ NORTH ทั้งที่ NORTH ไม่มีของ
+                    //     ส่วน EAST ที่มีของรออยู่ก็อดใช้ ทั้ง fabric เงียบ ~37k cycle)
+                    //    ปลดล็อกฉุกเฉินใน packet_arbiter ช่วยไม่ได้ เพราะมันยิงเฉพาะ
+                    //    ตอน has_transferred=0 เท่านั้น (เงื่อนไขที่ใส่ไว้แก้ bug #1)
+                    //
+                    // ใหม่: นับครบแล้วยังส่งต่อจนจบแพ็กเกจปัจจุบันก่อน ค่อยออก
+                    //    ยืดหน้าต่างออกไปอย่างมาก PKT_FLITS flit ซึ่งเทียบกับ 2^24 แล้วไม่มีผล
+                    if (!win_full) begin
+                        win_cnt <= win_cnt + 1'b1;
+                        if (&win_cnt) win_full <= 1'b1;
+                    end
+                    // sink ไม่มีแพ็กเกจค้าง ออกได้เลย
+                    // ถ้า fabric ตายจริงจน tx_fire ไม่มาเลย stuck_seen จะพาออกเอง
+                    // ไม่งั้นจะค้างใน S_RUN ตลอดกาลแล้วไม่มีใครได้รายงานผล
+                    if (win_full && (!TX_EN || (tx_fire && last_flit) || stuck_seen))
+                        state <= S_DRAIN;
                 end
                 S_DRAIN: begin                  // หยุดยิง รอ flit ที่ค้างในท่อ
                     drain_cnt <= drain_cnt + 1'b1;

@@ -95,7 +95,12 @@ module tb_traffic_node_agent;
     always_ff @(posedge clk) if (k_rxvalid) k_seq <= k_seq + 1'b1;
 
     // รอจน agent ทั้งสองตัวพ้น S_DONE (เผื่อเวลาไว้เหลือเฟือ)
-    localparam int RUN_NS = 10 * ((1<<WARMUP_LOG) + (1<<WINDOW_LOG) + (1<<DRAIN_LOG) + 200);
+    //   +PKT_FLITS*STUCK_CYC : agent ไม่ออกจาก S_RUN กลางแพ็กเกจอีกแล้ว
+    //   หน้าต่างนับครบแล้วมันยังส่งต่อจนจบแพ็กเกจ ซึ่งตอน backpressure หนัก
+    //   (เคส 5) กินได้ถึง 16 flit x 64 cycle ถ้าไม่เผื่อไว้ เช็คจะไปอ่านตอนยังไม่จบ
+    localparam int PKT_FLITS = 16;
+    localparam int RUN_NS = 10 * ((1<<WARMUP_LOG) + (1<<WINDOW_LOG) + (1<<DRAIN_LOG)
+                                  + PKT_FLITS*STUCK_CYC + 500);
 
     //=====================================================================
     initial begin
