@@ -28,6 +28,11 @@ module traffic_node_agent #(
     parameter int         WINDOW_LOG = 24,       // 2^24 cycle ~ 0.24 s ที่ 70 MHz
     parameter int         WARMUP_LOG = 10,
     parameter int         DRAIN_LOG  = 12,
+    parameter int         STUCK_LOG  = 16,       // 2^16 cycle ~ 0.8 ms ที่ 80 MHz
+                                                 // ไม่มี flit ขยับเลยนานขนาดนี้ = ตาย
+                                                 // ช่องว่างตอน contention หนักที่วัดได้
+                                                 // จริงยาวสุดหลักร้อย cycle จึงเหลือ margin
+                                                 // ~750 เท่า ไม่มีทาง false trip
     parameter bit         TX_EN      = 1'b1      // 0 = ปิดขาส่ง ทำหน้าที่เป็น sink อย่างเดียว
                                                  //     ใช้ตอนทดสอบ hot-spot ที่ node ปลายทาง
 )(
@@ -116,6 +121,22 @@ module traffic_node_agent #(
 
     // ทำเป็นรีจิสเตอร์ ไม่ใช่ assign combinational เพื่อให้ trigger ของ ILA สะอาด
     (* mark_debug = "true", dont_touch = "true" *) logic test_done;
+
+    //========================================================== liveness watchdog
+    // 🔴 state machine เดินตาม win_cnt อย่างเดียว ไม่เคยถาม fabric สักคำ
+    //    มันจึงไปถึง S_DONE แล้วชู done ขึ้นได้ ต่อให้ไม่มี flit ขยับเลยแม้แต่ตัวเดียว
+    //    (รัน VC_MODE=2 ก่อนแก้ bug #3 ไฟเขียวติดบน fabric ที่ deadlock สนิทมาแล้ว)
+    //    done จึงต้องมีหลักฐานว่า "ของเดินจริง" ไม่ใช่แค่ "นับครบ"
+    //
+    // sender  พิสูจน์ตัวเองด้วย tx_fire
+    // sink    (TX_EN=0) ไม่เคยส่ง จึงพิสูจน์ด้วย rx_fire แทน
+    //         ถ้าใช้ tx_fire กับ sink มันจะ false-fail ทุกครั้งโดยอัตโนมัติ
+    logic [STUCK_LOG-1:0] stuck_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic stuck_seen;
+
+    logic live_fire;
+    assign live_fire = TX_EN ? tx_fire : rx_fire;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) test_done <= 1'b0;
         else        test_done <= (state == S_DONE);
@@ -133,6 +154,8 @@ module traffic_node_agent #(
             tx_seq[1]    <= '0;
             tx_flit_cnt  <= '0;
             tx_stall_cnt <= '0;
+            stuck_cnt    <= '0;
+            stuck_seen   <= 1'b0;
             rx_vc0_cnt   <= '0;
             rx_vc1_cnt   <= '0;
             rx_err_cnt   <= '0;
@@ -157,6 +180,16 @@ module traffic_node_agent #(
 
                 if (tx_fire)                tx_flit_cnt  <= tx_flit_cnt  + 1'b1;
                 if (tx_tvalid && !tx_fire)  tx_stall_cnt <= tx_stall_cnt + 1'b1;
+            end
+
+            //---- นาฬิกาจับตาย: เฝ้าเฉพาะช่วง S_RUN
+            //     S_WARMUP ยังไม่มีอะไรวิ่ง / S_DRAIN ปิดขาส่งเองอยู่แล้ว
+            //     ถ้าเฝ้าสองสถานะนั้นด้วยจะ false-fail ทันที
+            if (state == S_RUN) begin
+                if (live_fire)          stuck_cnt <= '0;
+                else if (!(&stuck_cnt)) stuck_cnt <= stuck_cnt + 1'b1;
+                // ค้างครบรอบ = ติดธงถาวร ต่อให้หลังจากนั้นจะกลับมาวิ่งได้ก็ตาม
+                if (&stuck_cnt)         stuck_seen <= 1'b1;
             end
 
             //---- ตัวชี้ของ generator
@@ -191,7 +224,12 @@ module traffic_node_agent #(
     end
 
     //========================================================== สรุปผลออก port
-    assign done = test_done;
+    // done = "จบ window แล้ว และมีของเดินจริงตลอดทาง"
+    // ต่อตรงไป pass_group1/2 -> led[1]/led[2] ใน arty_stress_top
+    // ดังนั้นไฟเขียวจะไม่ติดบน fabric ที่ตายอีกต่อไป
+    // ILA ยังอ่าน test_done / state_dbg ดิบได้ตามเดิม ไว้แยกว่า
+    // "ยังไม่จบ" กับ "จบแต่ตาย" ออกจากกัน ส่วน stuck_seen บอกว่า node ไหนตาย
+    assign done = test_done && !stuck_seen;
     assign err  = (rx_err_cnt != 32'd0);
 
     //========================================================== ILA taps

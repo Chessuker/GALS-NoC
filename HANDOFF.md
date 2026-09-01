@@ -1,6 +1,6 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-01. Branch `feature/1-testbenchs`, last commit `e1571ba`.
+Last updated: 2026-09-01. Branch `feature/1-testbenchs`, last commit `0ef5d90`.
 
 Read this first if you're picking the project up cold.
 
@@ -68,8 +68,11 @@ drive xsim with a `run all; quit` tclbatch. Verified to reproduce
 Then: Set Up Debug -> Run Implementation -> bitstream -> program -> Hardware Manager ->
 **Trigger Immediately** -> export each ILA to CSV -> `python analyze_ila.py <csv-folder>`.
 
-Expect ~924 `MARK_DEBUG` nets. 668 means the `mon_*` perf-monitor probes weren't picked
-up (gotcha 6). 0 means the top module isn't `arty_stress_top`.
+Expect **928** `MARK_DEBUG` nets (924 before the liveness watchdog added one `stuck_seen`
+per agent). 924 means you're on a pre-watchdog build, or Set Up Debug hasn't been re-run
+since (gotcha 6) — the four `stuck_seen` probes won't be in the ILA and `analyze_ila.py`
+will say so rather than claiming a pass. 668 means the `mon_*` perf-monitor probes weren't
+picked up (gotcha 6). 0 means the top module isn't `arty_stress_top`.
 
 ---
 
@@ -166,7 +169,8 @@ unchanged at 199. About 400 extra LUTs across the 4-router mesh, ~2% of the part
 
 ### Confirmed on hardware — 2026-09-01
 
-`PATTERN=1 ; VC_MODE=2`, rebuilt from the fixed RTL, 924 `MARK_DEBUG` nets,
+`PATTERN=1 ; VC_MODE=2`, rebuilt from the fixed RTL, 924 `MARK_DEBUG` nets (this run
+predates the liveness watchdog, which takes it to 928),
 synthesis clean (0 errors, 0 critical warnings):
 
 | | before | after |
@@ -186,10 +190,25 @@ what "the two VCs no longer cross-block" was supposed to mean.
 
 1. **`mark_debug` does not prevent sweeping.** A register with no fanout is removed before
    Set Up Debug ever sees it. Use `dont_touch` too, or give it a real load.
-2. **The pass LEDs can lie.** `traffic_node_agent` advances its FSM on a free-running cycle
-   counter, so it reaches `S_DONE` and asserts pass whether or not traffic is moving. The
-   `VC_MODE=2` hardware run lit green on a deadlocked fabric. A liveness check
-   (`tx_flit_cnt` still advancing near the end of the window) is still missing.
+2. **The pass LEDs used to lie — fixed, but mind the rebuild.** `traffic_node_agent`
+   advances its FSM on a free-running cycle counter, so it reached `S_DONE` and asserted
+   pass whether or not traffic was moving. The `VC_MODE=2` hardware run lit green on a
+   deadlocked fabric.
+
+   There is now a liveness watchdog: `stuck_cnt` resets on every transfer during `S_RUN`
+   and latches `stuck_seen` after `2**STUCK_LOG` (default 16, ~0.8 ms at 80 MHz) silent
+   cycles. `done` is gated on it, so `pass_group1/2` and `led[1]/led[2]` can no longer go
+   green on a dead fabric. A sender proves liveness with `tx_fire`; a sink (`TX_EN=0`,
+   i.e. agent_00 under `PATTERN=1`) has no TX by design and proves it with `rx_fire`
+   instead — watching `tx_fire` there would false-fail every run.
+
+   `stuck_seen` is a `mark_debug` net, and `analyze_ila.py` prints a `liveness:` verdict
+   from it. **Until you re-run Set Up Debug, the probe isn't in the ILA** and the analyzer
+   will say the green light is unprovable rather than pass it.
+
+   Covered by `tb_traffic_node_agent.sv` (10 checks: healthy, dead, dies-midway,
+   dies-then-revives, and heavy-backpressure-but-alive to catch a too-tight threshold).
+   Reverting just the `done` gating fails 6 of the 10, so the test has real teeth.
 3. **Node naming is inconsistent.** The testbench calls mesh idx1 "10" and idx2 "01";
    `gals_noc_top` calls idx1 "h01" and idx2 "h10". Map through the **index**
    (`idx = y*2 + x`, `tdest = {x[1:0], y[1:0]}`), never the label.
@@ -210,6 +229,10 @@ what "the two VCs no longer cross-block" was supposed to mean.
 
 ## 5. Still open, beyond bug #3
 
+- **The liveness watchdog has not been on the board yet.** It passes simulation and
+  synthesises clean (928 nets, 0 latches), but no ILA run has read a real `stuck_seen`.
+  Next hardware build should confirm `liveness : ... PASS` and that nothing false-trips
+  under real contention — that's the one thing `tb_traffic_node_agent` can't prove.
 - **Fairness is still 48/28/24 (spread 50%) on hardware.** Unchanged by the bug #3 fix,
   and identical in `VC_MODE=0` and `VC_MODE=2`, so it is not a side effect of this work —
   but it is the one number the fix did not move. Simulation agrees (min share 25-26%,

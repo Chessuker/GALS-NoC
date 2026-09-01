@@ -78,7 +78,11 @@ def main(folder):
                       err=max(d['rx_err_cnt']), dest=sorted(set(d['rx_tdest_dbg'])),
                       vc0=g('rx_vc0_cnt'), vc1=g('rx_vc1_cnt'),
                       tot_rx=d['rx_vc0_cnt'][-1]+d['rx_vc1_cnt'][-1],
-                      tot_tx=d['tx_flit_cnt'][-1], tot_stall=d['tx_stall_cnt'][-1])
+                      tot_tx=d['tx_flit_cnt'][-1], tot_stall=d['tx_stall_cnt'][-1],
+                      # stuck_seen: liveness watchdog ใน traffic_node_agent
+                      #   1 = node นี้เงียบสนิทเกิน 2^STUCK_LOG cycle ระหว่าง S_RUN
+                      #   None = CSV เก่าที่จับก่อนจะมี watchdog (ไม่มีคอลัมน์นี้)
+                      stuck=(max(d['stuck_seen']) if d.get('stuck_seen') else None))
 
     senders = [a for a in res if res[a]['rate_tx'] > 1e-9]
     hotspot = len(senders) == 3 and 'agent_00' not in senders
@@ -177,6 +181,24 @@ def main(folder):
 
     tot_err = sum(res[a]['err'] for a in res)
     print(f'\nsequence errors รวมทุก agent : {tot_err}   ->  {"PASS" if tot_err==0 else "FAIL"}')
+
+    # ---- liveness: node ไหนเคยเงียบสนิทจนนับว่าตายบ้าง
+    # ที่มา: state machine เดินตาม win_cnt อย่างเดียว มันจึงชู done ได้แม้ fabric ตาย
+    #        (VC_MODE=2 ก่อนแก้ bug #3 เคยติดไฟเขียวบน fabric ที่ deadlock)
+    #        watchdog ใน traffic_node_agent จับตรงนี้ แล้วกด done ลง
+    stuck_nodes = [a for a in sorted(res) if res[a]['stuck'] == 1]
+    have_probe  = [a for a in res if res[a]['stuck'] is not None]
+    print('')
+    if not have_probe:
+        print('liveness : ไม่มีคอลัมน์ stuck_seen ใน CSV ชุดนี้')
+        print('           = จับมาจาก build ก่อนจะมี watchdog หรือยังไม่ได้ re-run Set Up Debug')
+        print('           ไฟเขียวของรันนั้นพิสูจน์ไม่ได้ว่า fabric เดินจริง')
+    elif stuck_nodes:
+        print(f'liveness : {", ".join(stuck_nodes)}   ->  FAIL')
+        print('           node เหล่านี้เงียบสนิทเกินเกณฑ์ระหว่าง S_RUN = ตายกลางรัน')
+        print('           ตัวเลข throughput ข้างบนจึงเชื่อไม่ได้ ให้ไล่ที่ arbiter ก่อน')
+    else:
+        print(f'liveness : ทุก node ({len(have_probe)}) มี flit ขยับตลอด S_RUN   ->  PASS')
     if any(res[a]['mode']=='delta' for a in res):
         print('\nหมายเหตุ: บาง agent จับกลางรัน (mode=delta) ค่าที่ได้คืออัตรา ณ ช่วงนั้น')
         print('          ห้ามเอายอดสะสมของคนละ agent มาเทียบกันตรงๆ เพราะ trigger คนละจังหวะ')
