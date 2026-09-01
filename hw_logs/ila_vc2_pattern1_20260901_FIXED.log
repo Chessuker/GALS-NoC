@@ -1,0 +1,54 @@
+===================================================
+ GALS NoC - hardware ILA run (analyze_ila.py)
+ date     : 2026-09-01
+ build    : PATTERN=1 (hot-spot 01/10/11 -> node 00), VC_MODE=2 (alternating)
+ RTL      : commit e1571ba — bug #3 fix in vc_port_arbiter.sv
+ purpose  : confirm the bug #3 fix on the board (was 57.5% before the fix)
+ csv      : GALS_Packet-Based_Fabric.runs/impl_1/ila_vc2_pattern1
+ synth    : 0 errors, 0 critical warnings, 924 MARK_DEBUG nets (expected 924)
+===================================================
+
+python analyze_ila.py D:\OpalFolder\MyOwnProject\FPGA\GALS_Packet-Based_Fabric\GALS_Packet-Based_Fabric.runs\impl_1\ila_vc2_pattern1
+พบ 4 agent: agent_00, agent_01, agent_10, agent_11
+
+agent       clk MHz   mode   state   TX/cyc   stall%   RX/cyc   TX MB/s  errors  dest
+-------------------------------------------------------------------------------------
+agent_00     100.00  final     [3]   0.0000      0.0   0.7759      0.00       0   [0]
+agent_01      71.43  final     [3]   0.4655     53.5   0.0000     33.25       0   [0]
+agent_10      83.33  final     [3]   0.2327     76.7   0.0000     19.39       0   [0]
+agent_11      71.43  final     [3]   0.2327     76.7   0.0000     16.62       0   [0]
+
+  VC split ของ flit ที่รับได้:
+    agent_00: VC0  6,508,933 ( 50.0%)   VC1  6,509,066 ( 50.0%)
+    agent_01: (ไม่ได้รับ flit)
+    agent_10: (ไม่ได้รับ flit)
+    agent_11: (ไม่ได้รับ flit)
+    -> มีทั้งสอง VC : build นี้คือ VC_MODE=2 (สลับทุกแพ็กเกจ)
+-------------------------------------------------------------------------------------
+
+รวม injected :    69.3 Mflit/s =    69.3 MB/s (flit ละ 8 บิต)
+(ยอด RX รวม 77.6 MB/s เอามาเทียบกับ TX ตรงๆ ไม่ได้ เพราะแต่ละ agent ปิดหน้าต่างคนละเวลา ดูตาราง conservation ข้างล่างแทน)
+
+รูปแบบทราฟฟิก : HOT-SPOT (3 -> node 00)
+  local output port ของ node 00 : 77.6 / 80 Mflit/s = 97.0% utilisation
+
+  ความยุติธรรมของ arbiter (ยิ่งใกล้กันยิ่งแฟร์):
+    agent_01:  33.25 Mflit/s  ( 48.0% ของทั้งหมด)
+    agent_10:  19.39 Mflit/s  ( 28.0% ของทั้งหมด)
+    agent_11:  16.62 Mflit/s  ( 24.0% ของทั้งหมด)
+    spread = 50.0%   (0% = แบ่งเท่ากันเป๊ะ)
+
+sequence errors รวมทุก agent : 0   ->  PASS
+
+===================================================
+ RESULT
+===================================================
+  node 00 local port : 57.5% -> 97.0%   (bug #3 fix confirmed on hardware)
+  matching sim       : 97.2% (regress_hwclk_vcalt_20260901_170559.log)
+  sequence errors    : 0
+  VC split           : 50.0 / 50.0 — both VCs flowing, no starvation either way
+
+  ยังเหมือนเดิม: fairness 48/28/24 (spread 50%) ไม่ได้ดีขึ้น
+  ตัวเลขนี้เท่ากันทั้ง VC_MODE=0 และ 2 มาตั้งแต่ก่อนแก้ bug #3
+  จึงไม่ใช่ผลข้างเคียงของการแก้ครั้งนี้ — ดู HANDOFF.md ข้อ 5
+===================================================

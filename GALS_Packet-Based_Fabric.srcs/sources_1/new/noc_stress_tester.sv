@@ -28,7 +28,25 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module noc_stress_tester (
+module noc_stress_tester #(
+    // PATTERN = 0 : permutation (00<->11, 01<->10)
+    //               ทุก flow ใช้ลิงก์คนละเส้น ไม่มีการแย่ง output port เลย
+    //               วัด GALS throughput ล้วนๆ (ผลอ้างอิง: 285.8 MB/s, link util 89.3%)
+    //
+    // PATTERN = 1 : hot-spot ยิงรวมเข้า node 00 จาก 01/10/11 พร้อมกัน
+    //               agent_00 ปิดขาส่ง เป็น sink อย่างเดียว
+    //               บังคับให้เกิดการแย่ง output port จริง 2 ชั้น:
+    //                 router idx2 : local ของ agent_10 ปะทะ transit จาก idx3
+    //                 router idx0 : ขา EAST (agent_01) ปะทะขา NORTH (agent_10+11)
+    //               เป็นเทสต์ที่ตรงกับ sim Test 4 (Multi-Port Contention)
+    parameter int PATTERN = 0,
+
+    // ส่งต่อให้ traffic_node_agent ทุกตัว
+    //   0 = VC0 อย่างเดียว   1 = VC1 อย่างเดียว   2 = สลับทุกแพ็กเกจ (ค่าเดิม)
+    // ใช้ทดสอบว่าการสลับ VC คือสาเหตุที่ hot-spot บนบอร์ดได้แค่ 57.5%
+    // (ใน sim การสลับ VC ทำให้ NoC ค้าง ส่วน VC0 อย่างเดียวได้ 95-99%)
+    parameter int VC_MODE = 2
+)(
     input logic clk_h00, input logic clk_h01,
     input logic clk_h10, input logic clk_h11,
     input logic rst_n,
@@ -54,32 +72,45 @@ module noc_stress_tester (
 
     logic d00, e00, d01, e01, d10, e10, d11, e11;
 
-    // Node 00 ยิงไปหา 11
-    traffic_node_agent #(.DEST_ID(4'b0101), .SRC_TAG(2'b00)) agent_00 (
+    // ---- เลือกปลายทางตาม PATTERN
+    //      SRC_TAG ต้องไม่ซ้ำกันทั้ง 4 ตัวเสมอ ไม่งั้นตัวเช็ค sequence ที่ปลายทาง
+    //      (exp_seq[rx_src][rx_vc]) จะปนกันแล้วนับ error มั่ว
+    localparam logic [3:0] DEST_00 = 4'b0101;                        // -> h11 (ใช้เฉพาะ PATTERN 0)
+    localparam logic [3:0] DEST_01 = (PATTERN == 1) ? 4'b0000        // -> h00
+                                                    : 4'b0001;       // -> h10
+    localparam logic [3:0] DEST_10 = (PATTERN == 1) ? 4'b0000        // -> h00
+                                                    : 4'b0100;       // -> h01
+    localparam logic [3:0] DEST_11 = 4'b0000;                        // -> h00 ทั้งสอง pattern
+
+    // PATTERN 1: node 00 เป็นเป้า ต้องปิดขาส่งของมัน ไม่งั้นจะยิงใส่ตัวเอง
+    localparam bit TXEN_00 = (PATTERN == 1) ? 1'b0 : 1'b1;
+
+    // Node 00 -> h11 (PATTERN 0) / sink อย่างเดียว (PATTERN 1)
+    traffic_node_agent #(.DEST_ID(DEST_00), .SRC_TAG(2'b00), .TX_EN(TXEN_00), .VC_MODE(VC_MODE)) agent_00 (
         .clk(clk_h00), .rst_n(rst_n),
         .tx_tdata(t00_tx_tdata), .tx_tdest(t00_tx_tdest), .tx_tid(t00_tx_tid), .tx_tlast(t00_tx_tlast), .tx_tvalid(t00_tx_tvalid), .tx_tready(t00_tx_tready),
         .rx_tdata(t00_rx_tdata), .rx_tdest(t00_rx_tdest), .rx_tid(t00_rx_tid), .rx_tlast(t00_rx_tlast), .rx_tvalid(t00_rx_tvalid), .rx_tready(t00_rx_tready),
         .done(d00), .err(e00)
     );
 
-    // Node 11 ยิงไปหา 00
-    traffic_node_agent #(.DEST_ID(4'b0000), .SRC_TAG(2'b11)) agent_11 (
+    // Node 11 -> h00 (ทั้งสอง pattern)
+    traffic_node_agent #(.DEST_ID(DEST_11), .SRC_TAG(2'b11), .VC_MODE(VC_MODE)) agent_11 (
         .clk(clk_h11), .rst_n(rst_n),
         .tx_tdata(t11_tx_tdata), .tx_tdest(t11_tx_tdest), .tx_tid(t11_tx_tid), .tx_tlast(t11_tx_tlast), .tx_tvalid(t11_tx_tvalid), .tx_tready(t11_tx_tready),
         .rx_tdata(t11_rx_tdata), .rx_tdest(t11_rx_tdest), .rx_tid(t11_rx_tid), .rx_tlast(t11_rx_tlast), .rx_tvalid(t11_rx_tvalid), .rx_tready(t11_rx_tready),
         .done(d11), .err(e11)
     );
 
-    // Node 01 ยิงไปหา 10
-    traffic_node_agent #(.DEST_ID(4'b0001), .SRC_TAG(2'b01)) agent_01 (
+    // Node 01 -> h10 (PATTERN 0) / h00 (PATTERN 1)
+    traffic_node_agent #(.DEST_ID(DEST_01), .SRC_TAG(2'b01), .VC_MODE(VC_MODE)) agent_01 (
         .clk(clk_h01), .rst_n(rst_n),
         .tx_tdata(t01_tx_tdata), .tx_tdest(t01_tx_tdest), .tx_tid(t01_tx_tid), .tx_tlast(t01_tx_tlast), .tx_tvalid(t01_tx_tvalid), .tx_tready(t01_tx_tready),
         .rx_tdata(t01_rx_tdata), .rx_tdest(t01_rx_tdest), .rx_tid(t01_rx_tid), .rx_tlast(t01_rx_tlast), .rx_tvalid(t01_rx_tvalid), .rx_tready(t01_rx_tready),
         .done(d01), .err(e01)
     );
 
-    // Node 10 ยิงไปหา 01
-    traffic_node_agent #(.DEST_ID(4'b0100), .SRC_TAG(2'b10)) agent_10 (
+    // Node 10 -> h01 (PATTERN 0) / h00 (PATTERN 1)
+    traffic_node_agent #(.DEST_ID(DEST_10), .SRC_TAG(2'b10), .VC_MODE(VC_MODE)) agent_10 (
         .clk(clk_h10), .rst_n(rst_n),
         .tx_tdata(t10_tx_tdata), .tx_tdest(t10_tx_tdest), .tx_tid(t10_tx_tid), .tx_tlast(t10_tx_tlast), .tx_tvalid(t10_tx_tvalid), .tx_tready(t10_tx_tready),
         .rx_tdata(t10_rx_tdata), .rx_tdest(t10_rx_tdest), .rx_tid(t10_rx_tid), .rx_tlast(t10_rx_tlast), .rx_tvalid(t10_rx_tvalid), .rx_tready(t10_rx_tready),
@@ -100,8 +131,20 @@ module noc_stress_tester (
     logic s_d00, s_e00, s_d01, s_e01, s_d10, s_e10, s_d11, s_e11;
     assign {s_e11, s_d11, s_e10, s_d10, s_e01, s_d01, s_e00, s_d00} = flags_s;
 
-    assign pass_group1 = s_d00 & s_d11 & ~s_e00 & ~s_e11;
-    assign pass_group2 = s_d01 & s_d10 & ~s_e01 & ~s_e10;
-    assign any_fail    = s_e00 | s_e01 | s_e10 | s_e11;
+    // ความหมายของไฟต้องเปลี่ยนตาม pattern ด้วย
+    // PATTERN 1 ไม่มีใครส่งไปหา 01/10/11 เลย ตัว err ของสามตัวนั้นจึงเป็น 0
+    // โดยปริยาย ถ้ายังใช้สูตรเดิม pass_group2 จะติดฟรีทั้งที่ไม่ได้พิสูจน์อะไร
+    generate
+        if (PATTERN == 1) begin : G_HOTSPOT
+            // node 00 เป็นตัวเดียวที่รับของ จึงเป็นตัวเดียวที่ตัดสิน error ได้
+            assign pass_group1 = s_d00 & s_d01 & s_d10 & s_d11;            // ครบ window แล้ว
+            assign pass_group2 = s_d00 & s_d01 & s_d10 & s_d11 & ~s_e00;   // ครบ + ไม่มี error
+            assign any_fail    = s_e00;
+        end else begin : G_PERMUTATION
+            assign pass_group1 = s_d00 & s_d11 & ~s_e00 & ~s_e11;
+            assign pass_group2 = s_d01 & s_d10 & ~s_e01 & ~s_e10;
+            assign any_fail    = s_e00 | s_e01 | s_e10 | s_e11;
+        end
+    endgenerate
 
 endmodule

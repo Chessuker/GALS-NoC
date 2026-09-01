@@ -197,12 +197,21 @@ module gals_noc_top (
     // ==========================================
     // Hardware Performance Monitor
     // ==========================================
-    `ifdef DEBUG_BUILD
-        (* mark_debug = "true" *) logic [31:0] mon_flit_cnt;
-        (* mark_debug = "true" *) logic [31:0] mon_pkt_cnt;
-        (* mark_debug = "true" *) logic [31:0] mon_stall_cnt;
-        (* mark_debug = "true" *) logic [31:0] mon_active_cnt;
-    `endif
+    // ห้ามเอา `ifdef DEBUG_BUILD ครอบไว้อีก
+    // ถ้า define หลุดไป (ซึ่งเคยเกิดมาแล้วตอน reset_run) ตัวแปรพวกนี้จะหายไปเงียบๆ
+    // แล้ว SystemVerilog จะสร้าง implicit wire 1 บิตมาแทน พอร์ต 32 บิตของ
+    // axis_perf_mon เลยถูกตัดเหลือบิตเดียวและถูกทิ้ง โดยขึ้นแค่ warning
+    // ประกาศตรงๆ พร้อม dont_touch ปลอดภัยกว่าและ fanout ไม่เป็นศูนย์
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_flit_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_pkt_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_stall_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_active_cnt;
+
+    // ฝั่งขาเข้าของ node 00 — ทิศทางที่จะแออัดจริงตอนทดสอบ hot-spot
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_rx_flit_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_rx_pkt_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_rx_stall_cnt;
+    (* mark_debug = "true", dont_touch = "true" *) logic [31:0] mon_rx_active_cnt;
 
     // 2. เรียกใช้โมดูลและต่อสายขนานไปกับ AXI4-Stream ของ Host 00
     axis_perf_mon ingress_perf_mon (
@@ -210,17 +219,41 @@ module gals_noc_top (
         .rst_n(rst_n),             // ใช้ Global Reset ปกติ
         
         // 🔴 แอบดักฟังสายไฟที่วิ่งจาก Host 00 เข้าสู่เครือข่าย
-        .valid(h00_tx_tvalid),     //
-        .ready(h00_tx_tready[0]),  // ดักดูคิวของ VC0 (Video Stream)[cite: 2]
-        .last(h00_tx_tlast),       //[cite: 2]
-        
+        .valid(h00_tx_tvalid),
+        // เดิมผูกไว้ที่ h00_tx_tready[0] คือดูแต่ ready ของ VC0
+        // ทำให้ flit ที่วิ่งบน VC1 ถูกนับเป็น stall ทั้งที่จริงผ่านไปแล้ว
+        // เงื่อนไขที่ถูกคือ "VC ที่ flit นี้ใช้ พร้อมหรือไม่" = |(tid & tready)
+        // (ตรงกับที่ tb_noc_mesh_2x2_gals ใช้อยู่)
+        .ready(|(h00_tx_tid & h00_tx_tready)),
+        .last(h00_tx_tlast),
+
         .clear(1'b0),              // บังคับปิด Manual Clear ไปเลย
         .en(1'b1),                 // บังคับเปิดวงจรตลอดเวลา
-        
-        .flit_cnt(mon_flit_cnt),   
-        .pkt_cnt(mon_pkt_cnt),     
-        .stall_cnt(mon_stall_cnt), 
+
+        .flit_cnt(mon_flit_cnt),
+        .pkt_cnt(mon_pkt_cnt),
+        .stall_cnt(mon_stall_cnt),
         .active_cnt(mon_active_cnt)
+    );
+
+    // 3. ตัวที่สอง ดักฝั่งขาเข้าของ node 00
+    //    ตอนทดสอบ hot-spot ตัว agent_00 จะเป็น sink อย่างเดียว ไม่ยิงออก
+    //    monitor ตัวบนจึงอ่านได้ 0 ตลอด ต้องมีตัวนี้ถึงจะเห็น throughput ฝั่ง NoC
+    axis_perf_mon egress_perf_mon (
+        .clk(clk_h00),
+        .rst_n(rst_n),
+
+        .valid(h00_rx_tvalid),
+        .ready(|(h00_rx_tid & h00_rx_tready)),
+        .last(h00_rx_tlast),
+
+        .clear(1'b0),
+        .en(1'b1),
+
+        .flit_cnt(mon_rx_flit_cnt),
+        .pkt_cnt(mon_rx_pkt_cnt),
+        .stall_cnt(mon_rx_stall_cnt),
+        .active_cnt(mon_rx_active_cnt)
     );
 
 endmodule

@@ -1,0 +1,4 @@
+Running: xsim.dir/tb_noc_mesh_2x2_gals_behav/xsimk.exe -simmode gui -wdb tb_noc_mesh_2x2_gals_behav.wdb -simrunnum 0 -socket 65312
+Design successfully loaded
+Design Loading Memory Usage: 12924 KB (Peak: 12924 KB)
+Design Loading CPU Usage: 108 ms

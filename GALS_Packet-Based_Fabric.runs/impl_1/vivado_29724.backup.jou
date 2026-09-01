@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Tue Aug 18 18:46:48 2026
+# Process ID         : 29724
+# Current directory  : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1
+# Command line       : vivado.exe -log arty_stress_top.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source arty_stress_top.tcl -notrace
+# Log file           : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1/arty_stress_top.vdi
+# Journal file       : D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.runs/impl_1\vivado.jou
+# Running On         : LAPTOP-QOCHRTAO
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : AMD Ryzen 5 7640HS w/ Radeon 760M Graphics     
+# CPU Frequency      : 4292 MHz
+# CPU Physical cores : 6
+# CPU Logical cores  : 12
+# Host memory        : 16309 MB
+# Swap memory        : 40802 MB
+# Total Virtual      : 57112 MB
+# Available Virtual  : 27187 MB
+#-----------------------------------------------------------
+source arty_stress_top.tcl -notrace

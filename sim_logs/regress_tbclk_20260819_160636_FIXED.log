@@ -1,0 +1,3085 @@
+===================================================
+ GALS NoC - simulation regression
+ date     : 2026-08-19 16:06:39
+ clocks   : TB default : NoC 250 MHz, sink 500 MHz, senders 125/333/100 MHz
+ Test6 VC : VC0 only - แยก packet_arbiter ออกมาทดสอบตัวเดียว
+ defines  : (none)
+ runner   : standalone xvlog/xelab/xsim (Vivado 2025.2), ไม่ผ่าน project flow
+            เทียบ baseline แล้วตรงกับ run_sim_regression.tcl ทุกตัวเลข
+===================================================
+
+
+****** xsim v2025.2 (64-bit)
+  **** SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
+  **** IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+  **** SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+  **** Start of session at: Wed Aug 19 15:56:50 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source xsim.dir/tb_snap/xsim_script.tcl
+# xsim {tb_snap} -autoloadwcfg -tclbatch {run.tcl}
+Time resolution is 1 ps
+source run.tcl
+## run all
+
+[TB] --- Start GALS Test 1: Fire through diagonal links ---
+[SB-PRED] t=100000 src=0x0 -> Node11 (VC0) pkt_id=0 len=4
+[SB-PRED] t=100000 src=0x3 -> Node00 (VC0) pkt_id=0 len=4
+[155000 ns] Node 00 (VC0) rcv: 0x30
+[163000 ns] Node 00 (VC0) rcv: 0x31
+[175000 ns] Node 11 (VC0) rcv: 0x00
+[175000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=183000 Node00 (VC0) src=0x3 pkt_id=0 len=4 matches prediction
+[183000 ns] Node 00 (VC0) rcv: 0x33
+[185000 ns] Node 11 (VC0) rcv: 0x01
+[195000 ns] Node 11 (VC0) rcv: 0x02
+[SB-PASS] t=205000 Node11 (VC0) src=0x0 pkt_id=0 len=4 matches prediction
+[205000 ns] Node 11 (VC0) rcv: 0x03
+[TB] --- Test 1 Finished ---
+
+[TB] --- Start GALS Test 2: VC Preemption Test (Ambulance vs Truck) ---
+[SB-PRED] t=655000 src=0x0 -> Node10 (VC0) pkt_id=1 len=30
+[SB-PRED] t=655000 src=0x2 -> Node10 (VC1) pkt_id=0 len=5
+[716000 ns] Node 10 (VC0) rcv: 0x00
+[724000 ns] Node 10 (VC0) rcv: 0x01
+[732000 ns] Node 10 (VC0) rcv: 0x02
+[740000 ns] Node 10 (VC0) rcv: 0x03
+[748000 ns] Node 10 (VC0) rcv: 0x04
+[756000 ns] Node 10 (VC0) rcv: 0x05
+[764000 ns] Node 10 (VC0) rcv: 0x06
+[772000 ns] Node 10 (VC1) rcv: 0x20
+[780000 ns] Node 10 (VC1) rcv: 0x21
+[788000 ns] Node 10 (VC1) rcv: 0x22
+[796000 ns] Node 10 (VC1) rcv: 0x23
+[SB-PASS] t=804000 Node10 (VC1) src=0x2 pkt_id=0 len=5 matches prediction
+[804000 ns] Node 10 (VC1) rcv: 0x24
+[812000 ns] Node 10 (VC0) rcv: 0x07
+[820000 ns] Node 10 (VC0) rcv: 0x08
+[828000 ns] Node 10 (VC0) rcv: 0x09
+[836000 ns] Node 10 (VC0) rcv: 0x0a
+[844000 ns] Node 10 (VC0) rcv: 0x0b
+[852000 ns] Node 10 (VC0) rcv: 0x0c
+[860000 ns] Node 10 (VC0) rcv: 0x0d
+[868000 ns] Node 10 (VC0) rcv: 0x0e
+[876000 ns] Node 10 (VC0) rcv: 0x0f
+[884000 ns] Node 10 (VC0) rcv: 0x10
+[892000 ns] Node 10 (VC0) rcv: 0x11
+[900000 ns] Node 10 (VC0) rcv: 0x12
+[908000 ns] Node 10 (VC0) rcv: 0x13
+[916000 ns] Node 10 (VC0) rcv: 0x14
+[924000 ns] Node 10 (VC0) rcv: 0x15
+[932000 ns] Node 10 (VC0) rcv: 0x16
+[940000 ns] Node 10 (VC0) rcv: 0x17
+[948000 ns] Node 10 (VC0) rcv: 0x18
+[956000 ns] Node 10 (VC0) rcv: 0x19
+[964000 ns] Node 10 (VC0) rcv: 0x1a
+[972000 ns] Node 10 (VC0) rcv: 0x1b
+[980000 ns] Node 10 (VC0) rcv: 0x1c
+[SB-PASS] t=988000 Node10 (VC0) src=0x0 pkt_id=1 len=30 matches prediction
+[988000 ns] Node 10 (VC0) rcv: 0x1d
+[TB] --- Test 2 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: VC Preemption Test
+=================================================
+ [Node00 TX] Flits: 30 | Stalls: 4 (1.7%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 35 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 5 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 1 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 0 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 1 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=4 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 3: Random All-to-All Traffic with VCs ---
+[SB-PRED] t=1138000 src=0x2 -> Node11 (VC0) pkt_id=1 len=14
+[SB-PRED] t=1142000 src=0x3 -> Node10 (VC1) pkt_id=1 len=9
+[SB-PRED] t=1159000 src=0x1 -> Node00 (VC1) pkt_id=0 len=13
+[SB-PRED] t=1167000 src=0x0 -> Node10 (VC1) pkt_id=2 len=19
+[1207000 ns] Node 00 (VC1) rcv: 0x10
+[SB-PRED] t=1214000 src=0x0 -> Node01 (VC0) pkt_id=3 len=18
+[1215000 ns] Node 11 (VC0) rcv: 0x20
+[1215000 ns] Node 00 (VC1) rcv: 0x11
+[SB-PRED] t=1219000 src=0x2 -> Node00 (VC1) pkt_id=2 len=18
+[1220000 ns] Node 10 (VC1) rcv: 0x30
+[1223000 ns] Node 00 (VC1) rcv: 0x12
+[1225000 ns] Node 11 (VC0) rcv: 0x21
+[1228000 ns] Node 10 (VC1) rcv: 0x31
+[1231000 ns] Node 00 (VC1) rcv: 0x13
+[1235000 ns] Node 11 (VC0) rcv: 0x22
+[1236000 ns] Node 10 (VC1) rcv: 0x32
+[1239000 ns] Node 00 (VC1) rcv: 0x14
+[1244000 ns] Node 10 (VC1) rcv: 0x33
+[1245000 ns] Node 11 (VC0) rcv: 0x23
+[1247000 ns] Node 00 (VC1) rcv: 0x15
+[1255000 ns] Node 11 (VC0) rcv: 0x24
+[1255000 ns] Node 00 (VC1) rcv: 0x16
+[1260000 ns] Node 10 (VC1) rcv: 0x34
+[1263000 ns] Node 00 (VC1) rcv: 0x17
+[1265000 ns] Node 11 (VC0) rcv: 0x25
+[1268000 ns] Node 10 (VC1) rcv: 0x35
+[SB-PRED] t=1271000 src=0x3 -> Node00 (VC0) pkt_id=2 len=19
+[SB-PRED] t=1271000 src=0x0 -> Node10 (VC0) pkt_id=4 len=18
+[1271000 ns] Node 00 (VC1) rcv: 0x18
+[1275000 ns] Node 11 (VC0) rcv: 0x26
+[SB-PRED] t=1276000 src=0x1 -> Node00 (VC0) pkt_id=1 len=20
+[1276000 ns] Node 10 (VC1) rcv: 0x36
+[1279000 ns] Node 00 (VC1) rcv: 0x19
+[1283000 ns] Node 01 (VC0) rcv: 0x00
+[SB-PRED] t=1284000 src=0x2 -> Node11 (VC1) pkt_id=3 len=20
+[1284000 ns] Node 10 (VC1) rcv: 0x37
+[1285000 ns] Node 11 (VC0) rcv: 0x27
+[1287000 ns] Node 00 (VC1) rcv: 0x1a
+[1289000 ns] Node 01 (VC0) rcv: 0x01
+[1292000 ns] Node 01 (VC0) rcv: 0x02
+[1295000 ns] Node 01 (VC0) rcv: 0x03
+[1295000 ns] Node 11 (VC0) rcv: 0x28
+[1295000 ns] Node 00 (VC1) rcv: 0x1b
+[SB-PASS] t=1300000 Node10 (VC1) src=0x3 pkt_id=1 len=9 matches prediction
+[1300000 ns] Node 10 (VC1) rcv: 0x38
+[1301000 ns] Node 01 (VC0) rcv: 0x04
+[SB-PASS] t=1303000 Node00 (VC1) src=0x1 pkt_id=0 len=13 matches prediction
+[1303000 ns] Node 00 (VC1) rcv: 0x1c
+[1304000 ns] Node 01 (VC0) rcv: 0x05
+[1305000 ns] Node 11 (VC0) rcv: 0x29
+[1307000 ns] Node 01 (VC0) rcv: 0x06
+[1307000 ns] Node 00 (VC1) rcv: 0x20
+[1308000 ns] Node 10 (VC1) rcv: 0x00
+[1311000 ns] Node 00 (VC1) rcv: 0x21
+[1313000 ns] Node 01 (VC0) rcv: 0x07
+[1315000 ns] Node 11 (VC0) rcv: 0x2a
+[1315000 ns] Node 00 (VC1) rcv: 0x22
+[1316000 ns] Node 01 (VC0) rcv: 0x08
+[1316000 ns] Node 10 (VC1) rcv: 0x01
+[1319000 ns] Node 01 (VC0) rcv: 0x09
+[1319000 ns] Node 00 (VC1) rcv: 0x23
+[1323000 ns] Node 00 (VC1) rcv: 0x24
+[1324000 ns] Node 10 (VC1) rcv: 0x02
+[1325000 ns] Node 01 (VC0) rcv: 0x0a
+[1325000 ns] Node 11 (VC0) rcv: 0x2b
+[1327000 ns] Node 00 (VC1) rcv: 0x25
+[1328000 ns] Node 01 (VC0) rcv: 0x0b
+[1331000 ns] Node 01 (VC0) rcv: 0x0c
+[1331000 ns] Node 00 (VC1) rcv: 0x26
+[1332000 ns] Node 10 (VC1) rcv: 0x03
+[1335000 ns] Node 11 (VC0) rcv: 0x2c
+[1335000 ns] Node 00 (VC1) rcv: 0x27
+[1337000 ns] Node 01 (VC0) rcv: 0x0d
+[1339000 ns] Node 00 (VC1) rcv: 0x28
+[1340000 ns] Node 01 (VC0) rcv: 0x0e
+[1340000 ns] Node 10 (VC1) rcv: 0x04
+[1343000 ns] Node 01 (VC0) rcv: 0x0f
+[1343000 ns] Node 00 (VC1) rcv: 0x29
+[SB-PASS] t=1345000 Node11 (VC0) src=0x2 pkt_id=1 len=14 matches prediction
+[1345000 ns] Node 11 (VC0) rcv: 0x2d
+[1347000 ns] Node 00 (VC1) rcv: 0x2a
+[1348000 ns] Node 10 (VC1) rcv: 0x05
+[1349000 ns] Node 01 (VC0) rcv: 0x10
+[1351000 ns] Node 00 (VC1) rcv: 0x2b
+[SB-PASS] t=1352000 Node01 (VC0) src=0x0 pkt_id=3 len=18 matches prediction
+[1352000 ns] Node 01 (VC0) rcv: 0x11
+[1355000 ns] Node 00 (VC1) rcv: 0x2c
+[1356000 ns] Node 10 (VC1) rcv: 0x06
+[1359000 ns] Node 00 (VC1) rcv: 0x2d
+[1363000 ns] Node 00 (VC1) rcv: 0x2e
+[1364000 ns] Node 10 (VC1) rcv: 0x07
+[1365000 ns] Node 11 (VC1) rcv: 0x20
+[1367000 ns] Node 00 (VC1) rcv: 0x2f
+[1371000 ns] Node 00 (VC1) rcv: 0x30
+[SB-PRED] t=1372000 src=0x0 -> Node01 (VC0) pkt_id=5 len=4
+[1372000 ns] Node 10 (VC1) rcv: 0x08
+[1375000 ns] Node 11 (VC1) rcv: 0x21
+[SB-PASS] t=1375000 Node00 (VC1) src=0x2 pkt_id=2 len=18 matches prediction
+[1375000 ns] Node 00 (VC1) rcv: 0x31
+[SB-PRED] t=1379000 src=0x2 -> Node10 (VC0) pkt_id=4 len=18
+[1379000 ns] Node 00 (VC0) rcv: 0x10
+[1380000 ns] Node 10 (VC1) rcv: 0x09
+[1383000 ns] Node 00 (VC0) rcv: 0x11
+[1385000 ns] Node 11 (VC1) rcv: 0x22
+[1387000 ns] Node 00 (VC0) rcv: 0x12
+[1388000 ns] Node 10 (VC1) rcv: 0x0a
+[1391000 ns] Node 00 (VC0) rcv: 0x13
+[1395000 ns] Node 11 (VC1) rcv: 0x23
+[1395000 ns] Node 00 (VC0) rcv: 0x14
+[1396000 ns] Node 10 (VC1) rcv: 0x0b
+[1399000 ns] Node 00 (VC0) rcv: 0x15
+[1403000 ns] Node 00 (VC0) rcv: 0x16
+[1404000 ns] Node 10 (VC1) rcv: 0x0c
+[1405000 ns] Node 11 (VC1) rcv: 0x24
+[1407000 ns] Node 00 (VC0) rcv: 0x17
+[1411000 ns] Node 00 (VC0) rcv: 0x18
+[1412000 ns] Node 10 (VC1) rcv: 0x0d
+[1415000 ns] Node 11 (VC1) rcv: 0x25
+[1415000 ns] Node 00 (VC0) rcv: 0x19
+[1419000 ns] Node 00 (VC0) rcv: 0x1a
+[1420000 ns] Node 10 (VC1) rcv: 0x0e
+[1423000 ns] Node 00 (VC0) rcv: 0x1b
+[1425000 ns] Node 11 (VC1) rcv: 0x26
+[1427000 ns] Node 01 (VC0) rcv: 0x00
+[1427000 ns] Node 00 (VC0) rcv: 0x1c
+[1428000 ns] Node 10 (VC1) rcv: 0x0f
+[1431000 ns] Node 00 (VC0) rcv: 0x1d
+[1433000 ns] Node 01 (VC0) rcv: 0x01
+[1435000 ns] Node 11 (VC1) rcv: 0x27
+[1435000 ns] Node 00 (VC0) rcv: 0x1e
+[1436000 ns] Node 01 (VC0) rcv: 0x02
+[1436000 ns] Node 10 (VC1) rcv: 0x10
+[SB-PASS] t=1439000 Node01 (VC0) src=0x0 pkt_id=5 len=4 matches prediction
+[1439000 ns] Node 01 (VC0) rcv: 0x03
+[1439000 ns] Node 00 (VC0) rcv: 0x1f
+[1444000 ns] Node 10 (VC1) rcv: 0x11
+[1445000 ns] Node 11 (VC1) rcv: 0x28
+[1447000 ns] Node 00 (VC0) rcv: 0x20
+[SB-PRED] t=1448000 src=0x1 -> Node11 (VC1) pkt_id=2 len=5
+[SB-PASS] t=1452000 Node10 (VC1) src=0x0 pkt_id=2 len=19 matches prediction
+[1452000 ns] Node 10 (VC1) rcv: 0x12
+[1455000 ns] Node 11 (VC1) rcv: 0x29
+[1455000 ns] Node 00 (VC0) rcv: 0x21
+[1460000 ns] Node 10 (VC0) rcv: 0x00
+[1463000 ns] Node 00 (VC0) rcv: 0x22
+[1465000 ns] Node 11 (VC1) rcv: 0x2a
+[1468000 ns] Node 10 (VC0) rcv: 0x01
+[SB-PASS] t=1471000 Node00 (VC0) src=0x1 pkt_id=1 len=20 matches prediction
+[1471000 ns] Node 00 (VC0) rcv: 0x23
+[1475000 ns] Node 11 (VC1) rcv: 0x2b
+[1475000 ns] Node 00 (VC0) rcv: 0x30
+[1476000 ns] Node 10 (VC0) rcv: 0x02
+[1479000 ns] Node 00 (VC0) rcv: 0x31
+[1483000 ns] Node 00 (VC0) rcv: 0x32
+[1484000 ns] Node 10 (VC0) rcv: 0x03
+[1485000 ns] Node 11 (VC1) rcv: 0x2c
+[1487000 ns] Node 00 (VC0) rcv: 0x33
+[1491000 ns] Node 00 (VC0) rcv: 0x34
+[1492000 ns] Node 10 (VC0) rcv: 0x04
+[1495000 ns] Node 11 (VC1) rcv: 0x2d
+[1495000 ns] Node 00 (VC0) rcv: 0x35
+[SB-PRED] t=1497000 src=0x3 -> Node00 (VC1) pkt_id=3 len=16
+[1499000 ns] Node 00 (VC0) rcv: 0x36
+[SB-PRED] t=1500000 src=0x1 -> Node00 (VC1) pkt_id=3 len=9
+[1500000 ns] Node 10 (VC0) rcv: 0x05
+[1503000 ns] Node 00 (VC0) rcv: 0x37
+[1505000 ns] Node 11 (VC1) rcv: 0x2e
+[1507000 ns] Node 00 (VC0) rcv: 0x38
+[1508000 ns] Node 10 (VC0) rcv: 0x06
+[1511000 ns] Node 00 (VC0) rcv: 0x39
+[1515000 ns] Node 11 (VC1) rcv: 0x2f
+[1515000 ns] Node 00 (VC0) rcv: 0x3a
+[1516000 ns] Node 10 (VC0) rcv: 0x07
+[1519000 ns] Node 00 (VC0) rcv: 0x3b
+[1523000 ns] Node 00 (VC0) rcv: 0x3c
+[1524000 ns] Node 10 (VC0) rcv: 0x08
+[1525000 ns] Node 11 (VC1) rcv: 0x30
+[1527000 ns] Node 00 (VC0) rcv: 0x3d
+[1531000 ns] Node 00 (VC0) rcv: 0x3e
+[1532000 ns] Node 10 (VC0) rcv: 0x09
+[1535000 ns] Node 11 (VC1) rcv: 0x31
+[1535000 ns] Node 00 (VC0) rcv: 0x3f
+[1539000 ns] Node 00 (VC0) rcv: 0x40
+[1540000 ns] Node 10 (VC0) rcv: 0x0a
+[1543000 ns] Node 00 (VC1) rcv: 0x10
+[1545000 ns] Node 11 (VC1) rcv: 0x32
+[1548000 ns] Node 10 (VC0) rcv: 0x0b
+[1551000 ns] Node 00 (VC1) rcv: 0x11
+[SB-PASS] t=1555000 Node11 (VC1) src=0x2 pkt_id=3 len=20 matches prediction
+[1555000 ns] Node 11 (VC1) rcv: 0x33
+[1556000 ns] Node 10 (VC0) rcv: 0x0c
+[1559000 ns] Node 00 (VC1) rcv: 0x12
+[1564000 ns] Node 10 (VC0) rcv: 0x0d
+[1565000 ns] Node 11 (VC1) rcv: 0x10
+[1567000 ns] Node 00 (VC1) rcv: 0x13
+[1572000 ns] Node 10 (VC0) rcv: 0x0e
+[1575000 ns] Node 11 (VC1) rcv: 0x11
+[1575000 ns] Node 00 (VC1) rcv: 0x14
+[1580000 ns] Node 10 (VC0) rcv: 0x0f
+[1583000 ns] Node 00 (VC1) rcv: 0x15
+[1585000 ns] Node 11 (VC1) rcv: 0x12
+[1588000 ns] Node 10 (VC0) rcv: 0x10
+[1591000 ns] Node 00 (VC1) rcv: 0x16
+[1595000 ns] Node 11 (VC1) rcv: 0x13
+[SB-PASS] t=1596000 Node10 (VC0) src=0x0 pkt_id=4 len=18 matches prediction
+[1596000 ns] Node 10 (VC0) rcv: 0x11
+[1599000 ns] Node 00 (VC1) rcv: 0x17
+[1604000 ns] Node 10 (VC0) rcv: 0x20
+[SB-PASS] t=1605000 Node11 (VC1) src=0x1 pkt_id=2 len=5 matches prediction
+[1605000 ns] Node 11 (VC1) rcv: 0x14
+[SB-PASS] t=1607000 Node00 (VC1) src=0x1 pkt_id=3 len=9 matches prediction
+[1607000 ns] Node 00 (VC1) rcv: 0x18
+[1611000 ns] Node 00 (VC1) rcv: 0x30
+[1612000 ns] Node 10 (VC0) rcv: 0x21
+[1615000 ns] Node 00 (VC1) rcv: 0x31
+[1619000 ns] Node 00 (VC1) rcv: 0x32
+[1620000 ns] Node 10 (VC0) rcv: 0x22
+[1623000 ns] Node 00 (VC1) rcv: 0x33
+[1627000 ns] Node 00 (VC1) rcv: 0x34
+[1628000 ns] Node 10 (VC0) rcv: 0x23
+[1631000 ns] Node 00 (VC1) rcv: 0x35
+[1635000 ns] Node 00 (VC1) rcv: 0x36
+[1636000 ns] Node 10 (VC0) rcv: 0x24
+[1639000 ns] Node 00 (VC1) rcv: 0x37
+[1643000 ns] Node 00 (VC1) rcv: 0x38
+[1644000 ns] Node 10 (VC0) rcv: 0x25
+[1647000 ns] Node 00 (VC1) rcv: 0x39
+[1652000 ns] Node 10 (VC0) rcv: 0x26
+[1655000 ns] Node 00 (VC1) rcv: 0x3a
+[1660000 ns] Node 10 (VC0) rcv: 0x27
+[1663000 ns] Node 00 (VC1) rcv: 0x3b
+[1668000 ns] Node 10 (VC0) rcv: 0x28
+[1675000 ns] Node 00 (VC1) rcv: 0x3c
+[1676000 ns] Node 10 (VC0) rcv: 0x29
+[1683000 ns] Node 00 (VC1) rcv: 0x3d
+[1684000 ns] Node 10 (VC0) rcv: 0x2a
+[1692000 ns] Node 10 (VC0) rcv: 0x2b
+[1695000 ns] Node 00 (VC1) rcv: 0x3e
+[SB-PRED] t=1696000 src=0x3 -> Node00 (VC1) pkt_id=4 len=15
+[1700000 ns] Node 10 (VC0) rcv: 0x2c
+[SB-PASS] t=1703000 Node00 (VC1) src=0x3 pkt_id=3 len=16 matches prediction
+[1703000 ns] Node 00 (VC1) rcv: 0x3f
+[1707000 ns] Node 00 (VC0) rcv: 0x41
+[1708000 ns] Node 10 (VC0) rcv: 0x2d
+[SB-PASS] t=1711000 Node00 (VC0) src=0x3 pkt_id=2 len=19 matches prediction
+[1711000 ns] Node 00 (VC0) rcv: 0x42
+[1716000 ns] Node 10 (VC0) rcv: 0x2e
+[1724000 ns] Node 10 (VC0) rcv: 0x2f
+[1732000 ns] Node 10 (VC0) rcv: 0x30
+[SB-PASS] t=1740000 Node10 (VC0) src=0x2 pkt_id=4 len=18 matches prediction
+[1740000 ns] Node 10 (VC0) rcv: 0x31
+[1755000 ns] Node 00 (VC1) rcv: 0x30
+[1763000 ns] Node 00 (VC1) rcv: 0x31
+[1775000 ns] Node 00 (VC1) rcv: 0x32
+[1783000 ns] Node 00 (VC1) rcv: 0x33
+[1795000 ns] Node 00 (VC1) rcv: 0x34
+[1803000 ns] Node 00 (VC1) rcv: 0x35
+[1815000 ns] Node 00 (VC1) rcv: 0x36
+[1823000 ns] Node 00 (VC1) rcv: 0x37
+[1835000 ns] Node 00 (VC1) rcv: 0x38
+[1843000 ns] Node 00 (VC1) rcv: 0x39
+[1855000 ns] Node 00 (VC1) rcv: 0x3a
+[1863000 ns] Node 00 (VC1) rcv: 0x3b
+[1875000 ns] Node 00 (VC1) rcv: 0x3c
+[1883000 ns] Node 00 (VC1) rcv: 0x3d
+[SB-PASS] t=1895000 Node00 (VC1) src=0x3 pkt_id=4 len=15 matches prediction
+[1895000 ns] Node 00 (VC1) rcv: 0x3e
+[TB] --- Test 3 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Random All-to-All Traffic
+=================================================
+ [Node00 TX] Flits: 59 | Stalls: 14 (2.1%)
+ [Node00 RX] Flits: 110 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 47 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 64 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 70 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 22 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 39 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 6 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=20 Mismatched=0 Pending=0
+=================================================
+
+[TB] --- Test 3 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Random All-to-All Traffic
+=================================================
+ [Node00 TX] Flits: 59 | Stalls: 14 (2.1%)
+ [Node00 RX] Flits: 110 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 47 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 64 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 70 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 22 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 39 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 6 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=20 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 4: Multi-Port Contention (Fairness Test) ---
+[SB-PRED] t=2465000 src=0x0 -> Node10 (VC0) pkt_id=6 len=20
+[SB-PRED] t=2465000 src=0x2 -> Node10 (VC0) pkt_id=5 len=20
+[SB-PRED] t=2465000 src=0x3 -> Node10 (VC0) pkt_id=5 len=20
+[2532000 ns] Node 10 (VC0) rcv: 0x00
+[2540000 ns] Node 10 (VC0) rcv: 0x01
+[2548000 ns] Node 10 (VC0) rcv: 0x02
+[2556000 ns] Node 10 (VC0) rcv: 0x03
+[2564000 ns] Node 10 (VC0) rcv: 0x04
+[2572000 ns] Node 10 (VC0) rcv: 0x05
+[2580000 ns] Node 10 (VC0) rcv: 0x06
+[2588000 ns] Node 10 (VC0) rcv: 0x07
+[2596000 ns] Node 10 (VC0) rcv: 0x08
+[2604000 ns] Node 10 (VC0) rcv: 0x09
+[2612000 ns] Node 10 (VC0) rcv: 0x0a
+[2620000 ns] Node 10 (VC0) rcv: 0x0b
+[2628000 ns] Node 10 (VC0) rcv: 0x0c
+[2636000 ns] Node 10 (VC0) rcv: 0x0d
+[2644000 ns] Node 10 (VC0) rcv: 0x0e
+[2652000 ns] Node 10 (VC0) rcv: 0x0f
+[2660000 ns] Node 10 (VC0) rcv: 0x10
+[2668000 ns] Node 10 (VC0) rcv: 0x11
+[2676000 ns] Node 10 (VC0) rcv: 0x12
+[SB-PASS] t=2684000 Node10 (VC0) src=0x0 pkt_id=6 len=20 matches prediction
+[2684000 ns] Node 10 (VC0) rcv: 0x13
+[2692000 ns] Node 10 (VC0) rcv: 0x30
+[2700000 ns] Node 10 (VC0) rcv: 0x31
+[2708000 ns] Node 10 (VC0) rcv: 0x32
+[2716000 ns] Node 10 (VC0) rcv: 0x33
+[2724000 ns] Node 10 (VC0) rcv: 0x34
+[2732000 ns] Node 10 (VC0) rcv: 0x35
+[2740000 ns] Node 10 (VC0) rcv: 0x36
+[2748000 ns] Node 10 (VC0) rcv: 0x37
+[2756000 ns] Node 10 (VC0) rcv: 0x38
+[2764000 ns] Node 10 (VC0) rcv: 0x39
+[2772000 ns] Node 10 (VC0) rcv: 0x3a
+[2780000 ns] Node 10 (VC0) rcv: 0x3b
+[2788000 ns] Node 10 (VC0) rcv: 0x3c
+[2796000 ns] Node 10 (VC0) rcv: 0x3d
+[2804000 ns] Node 10 (VC0) rcv: 0x3e
+[2812000 ns] Node 10 (VC0) rcv: 0x3f
+[2820000 ns] Node 10 (VC0) rcv: 0x40
+[2828000 ns] Node 10 (VC0) rcv: 0x41
+[2836000 ns] Node 10 (VC0) rcv: 0x42
+[SB-PASS] t=2844000 Node10 (VC0) src=0x3 pkt_id=5 len=20 matches prediction
+[2844000 ns] Node 10 (VC0) rcv: 0x43
+[2852000 ns] Node 10 (VC0) rcv: 0x20
+[2860000 ns] Node 10 (VC0) rcv: 0x21
+[2868000 ns] Node 10 (VC0) rcv: 0x22
+[2876000 ns] Node 10 (VC0) rcv: 0x23
+[2884000 ns] Node 10 (VC0) rcv: 0x24
+[2892000 ns] Node 10 (VC0) rcv: 0x25
+[2900000 ns] Node 10 (VC0) rcv: 0x26
+[2908000 ns] Node 10 (VC0) rcv: 0x27
+[2916000 ns] Node 10 (VC0) rcv: 0x28
+[2924000 ns] Node 10 (VC0) rcv: 0x29
+[2932000 ns] Node 10 (VC0) rcv: 0x2a
+[2940000 ns] Node 10 (VC0) rcv: 0x2b
+[2948000 ns] Node 10 (VC0) rcv: 0x2c
+[2956000 ns] Node 10 (VC0) rcv: 0x2d
+[2964000 ns] Node 10 (VC0) rcv: 0x2e
+[2972000 ns] Node 10 (VC0) rcv: 0x2f
+[2980000 ns] Node 10 (VC0) rcv: 0x30
+[2988000 ns] Node 10 (VC0) rcv: 0x31
+[2996000 ns] Node 10 (VC0) rcv: 0x32
+[SB-PASS] t=3004000 Node10 (VC0) src=0x2 pkt_id=5 len=20 matches prediction
+[3004000 ns] Node 10 (VC0) rcv: 0x33
+[TB] --- Test 4 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Multi-Port Contention (Fairness Test)
+=================================================
+ [Node00 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 60 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 9 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=23 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 5: Starvation Override Proof (VC1 Flood vs VC0) ---
+[SB-PRED] t=3275000 src=0x0 -> Node10 (VC0) pkt_id=7 len=50
+[SB-PRED] t=3295000 src=0x2 -> Node10 (VC1) pkt_id=6 len=15
+[3340000 ns] Node 10 (VC0) rcv: 0x00
+[SB-PRED] t=3341000 src=0x2 -> Node10 (VC1) pkt_id=7 len=15
+[3348000 ns] Node 10 (VC0) rcv: 0x01
+[3356000 ns] Node 10 (VC0) rcv: 0x02
+[3364000 ns] Node 10 (VC1) rcv: 0x20
+[3372000 ns] Node 10 (VC1) rcv: 0x21
+[3380000 ns] Node 10 (VC1) rcv: 0x22
+[3388000 ns] Node 10 (VC1) rcv: 0x23
+[SB-PRED] t=3389000 src=0x2 -> Node10 (VC1) pkt_id=8 len=15
+[3396000 ns] Node 10 (VC1) rcv: 0x24
+[3404000 ns] Node 10 (VC1) rcv: 0x25
+[3412000 ns] Node 10 (VC1) rcv: 0x26
+[3420000 ns] Node 10 (VC1) rcv: 0x27
+[3428000 ns] Node 10 (VC1) rcv: 0x28
+[3436000 ns] Node 10 (VC1) rcv: 0x29
+[SB-PRED] t=3437000 src=0x2 -> Node10 (VC1) pkt_id=9 len=15
+[3444000 ns] Node 10 (VC1) rcv: 0x2a
+[3452000 ns] Node 10 (VC1) rcv: 0x2b
+[3460000 ns] Node 10 (VC1) rcv: 0x2c
+[3468000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=3476000 Node10 (VC1) src=0x2 pkt_id=6 len=15 matches prediction
+[3476000 ns] Node 10 (VC1) rcv: 0x2e
+[3484000 ns] Node 10 (VC1) rcv: 0x20
+[SB-PRED] t=3491000 src=0x2 -> Node10 (VC1) pkt_id=10 len=15
+[3492000 ns] Node 10 (VC1) rcv: 0x21
+[3500000 ns] Node 10 (VC1) rcv: 0x22
+[3508000 ns] Node 10 (VC1) rcv: 0x23
+[3516000 ns] Node 10 (VC1) rcv: 0x24
+[3524000 ns] Node 10 (VC1) rcv: 0x25
+[3532000 ns] Node 10 (VC1) rcv: 0x26
+[3540000 ns] Node 10 (VC1) rcv: 0x27
+[3548000 ns] Node 10 (VC1) rcv: 0x28
+[SB-PRED] t=3551000 src=0x2 -> Node10 (VC1) pkt_id=11 len=15
+[3556000 ns] Node 10 (VC1) rcv: 0x29
+[3564000 ns] Node 10 (VC1) rcv: 0x2a
+[3572000 ns] Node 10 (VC1) rcv: 0x2b
+[3580000 ns] Node 10 (VC1) rcv: 0x2c
+[3588000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=3596000 Node10 (VC1) src=0x2 pkt_id=7 len=15 matches prediction
+[3596000 ns] Node 10 (VC1) rcv: 0x2e
+[3604000 ns] Node 10 (VC1) rcv: 0x20
+[SB-PRED] t=3611000 src=0x2 -> Node10 (VC1) pkt_id=12 len=15
+[3612000 ns] Node 10 (VC1) rcv: 0x21
+[3620000 ns] Node 10 (VC1) rcv: 0x22
+[3628000 ns] Node 10 (VC1) rcv: 0x23
+[3636000 ns] Node 10 (VC1) rcv: 0x24
+[3644000 ns] Node 10 (VC1) rcv: 0x25
+[3652000 ns] Node 10 (VC1) rcv: 0x26
+[3660000 ns] Node 10 (VC1) rcv: 0x27
+[3668000 ns] Node 10 (VC1) rcv: 0x28
+[SB-PRED] t=3671000 src=0x2 -> Node10 (VC1) pkt_id=13 len=15
+[3676000 ns] Node 10 (VC1) rcv: 0x29
+[3684000 ns] Node 10 (VC1) rcv: 0x2a
+[3692000 ns] Node 10 (VC1) rcv: 0x2b
+[3700000 ns] Node 10 (VC1) rcv: 0x2c
+[3708000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=3716000 Node10 (VC1) src=0x2 pkt_id=8 len=15 matches prediction
+[3716000 ns] Node 10 (VC1) rcv: 0x2e
+[3724000 ns] Node 10 (VC1) rcv: 0x20
+[SB-PRED] t=3731000 src=0x2 -> Node10 (VC1) pkt_id=14 len=15
+[3732000 ns] Node 10 (VC1) rcv: 0x21
+[3740000 ns] Node 10 (VC1) rcv: 0x22
+[3748000 ns] Node 10 (VC1) rcv: 0x23
+[3756000 ns] Node 10 (VC1) rcv: 0x24
+[3764000 ns] Node 10 (VC1) rcv: 0x25
+[3772000 ns] Node 10 (VC1) rcv: 0x26
+[3780000 ns] Node 10 (VC1) rcv: 0x27
+[3788000 ns] Node 10 (VC1) rcv: 0x28
+[SB-PRED] t=3794000 src=0x2 -> Node10 (VC1) pkt_id=15 len=15
+[3796000 ns] Node 10 (VC1) rcv: 0x29
+[3804000 ns] Node 10 (VC1) rcv: 0x2a
+[3812000 ns] Node 10 (VC1) rcv: 0x2b
+[3820000 ns] Node 10 (VC1) rcv: 0x2c
+[3828000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=3836000 Node10 (VC1) src=0x2 pkt_id=9 len=15 matches prediction
+[3836000 ns] Node 10 (VC1) rcv: 0x2e
+[3844000 ns] Node 10 (VC1) rcv: 0x20
+[3852000 ns] Node 10 (VC1) rcv: 0x21
+[3860000 ns] Node 10 (VC1) rcv: 0x22
+[3868000 ns] Node 10 (VC1) rcv: 0x23
+[3876000 ns] Node 10 (VC1) rcv: 0x24
+[3884000 ns] Node 10 (VC1) rcv: 0x25
+[3892000 ns] Node 10 (VC1) rcv: 0x26
+[3900000 ns] Node 10 (VC1) rcv: 0x27
+[3908000 ns] Node 10 (VC1) rcv: 0x28
+[3916000 ns] Node 10 (VC1) rcv: 0x29
+[3924000 ns] Node 10 (VC1) rcv: 0x2a
+[3932000 ns] Node 10 (VC1) rcv: 0x2b
+[3940000 ns] Node 10 (VC1) rcv: 0x2c
+[3948000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=3956000 Node10 (VC1) src=0x2 pkt_id=10 len=15 matches prediction
+[3956000 ns] Node 10 (VC1) rcv: 0x2e
+[3964000 ns] Node 10 (VC1) rcv: 0x20
+[3972000 ns] Node 10 (VC1) rcv: 0x21
+[3980000 ns] Node 10 (VC1) rcv: 0x22
+[3988000 ns] Node 10 (VC1) rcv: 0x23
+[3996000 ns] Node 10 (VC1) rcv: 0x24
+[4004000 ns] Node 10 (VC1) rcv: 0x25
+[4012000 ns] Node 10 (VC1) rcv: 0x26
+[4020000 ns] Node 10 (VC1) rcv: 0x27
+[4028000 ns] Node 10 (VC1) rcv: 0x28
+[4036000 ns] Node 10 (VC1) rcv: 0x29
+[4044000 ns] Node 10 (VC1) rcv: 0x2a
+[4052000 ns] Node 10 (VC1) rcv: 0x2b
+[4060000 ns] Node 10 (VC1) rcv: 0x2c
+[4068000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=4076000 Node10 (VC1) src=0x2 pkt_id=11 len=15 matches prediction
+[4076000 ns] Node 10 (VC1) rcv: 0x2e
+[4084000 ns] Node 10 (VC1) rcv: 0x20
+[4092000 ns] Node 10 (VC1) rcv: 0x21
+[4100000 ns] Node 10 (VC1) rcv: 0x22
+[4108000 ns] Node 10 (VC1) rcv: 0x23
+[4116000 ns] Node 10 (VC1) rcv: 0x24
+[4124000 ns] Node 10 (VC1) rcv: 0x25
+[4132000 ns] Node 10 (VC1) rcv: 0x26
+[4140000 ns] Node 10 (VC1) rcv: 0x27
+[4148000 ns] Node 10 (VC1) rcv: 0x28
+[4156000 ns] Node 10 (VC1) rcv: 0x29
+[4164000 ns] Node 10 (VC1) rcv: 0x2a
+[4172000 ns] Node 10 (VC1) rcv: 0x2b
+[4180000 ns] Node 10 (VC1) rcv: 0x2c
+[4188000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=4196000 Node10 (VC1) src=0x2 pkt_id=12 len=15 matches prediction
+[4196000 ns] Node 10 (VC1) rcv: 0x2e
+[4204000 ns] Node 10 (VC1) rcv: 0x20
+[4212000 ns] Node 10 (VC1) rcv: 0x21
+[4220000 ns] Node 10 (VC1) rcv: 0x22
+[4228000 ns] Node 10 (VC1) rcv: 0x23
+[4236000 ns] Node 10 (VC1) rcv: 0x24
+[4244000 ns] Node 10 (VC1) rcv: 0x25
+[4252000 ns] Node 10 (VC1) rcv: 0x26
+[4260000 ns] Node 10 (VC1) rcv: 0x27
+[4268000 ns] Node 10 (VC1) rcv: 0x28
+[4276000 ns] Node 10 (VC1) rcv: 0x29
+[4284000 ns] Node 10 (VC1) rcv: 0x2a
+[4292000 ns] Node 10 (VC1) rcv: 0x2b
+[4300000 ns] Node 10 (VC1) rcv: 0x2c
+[4308000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=4316000 Node10 (VC1) src=0x2 pkt_id=13 len=15 matches prediction
+[4316000 ns] Node 10 (VC1) rcv: 0x2e
+[4324000 ns] Node 10 (VC1) rcv: 0x20
+[4332000 ns] Node 10 (VC1) rcv: 0x21
+[4340000 ns] Node 10 (VC1) rcv: 0x22
+[4348000 ns] Node 10 (VC1) rcv: 0x23
+[4356000 ns] Node 10 (VC1) rcv: 0x24
+[4364000 ns] Node 10 (VC1) rcv: 0x25
+[4372000 ns] Node 10 (VC1) rcv: 0x26
+[4380000 ns] Node 10 (VC1) rcv: 0x27
+[4388000 ns] Node 10 (VC1) rcv: 0x28
+[4396000 ns] Node 10 (VC1) rcv: 0x29
+[4404000 ns] Node 10 (VC1) rcv: 0x2a
+[4412000 ns] Node 10 (VC1) rcv: 0x2b
+[4420000 ns] Node 10 (VC1) rcv: 0x2c
+[4428000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=4436000 Node10 (VC1) src=0x2 pkt_id=14 len=15 matches prediction
+[4436000 ns] Node 10 (VC1) rcv: 0x2e
+[4444000 ns] Node 10 (VC1) rcv: 0x20
+[4452000 ns] Node 10 (VC1) rcv: 0x21
+[4460000 ns] Node 10 (VC1) rcv: 0x22
+[4468000 ns] Node 10 (VC1) rcv: 0x23
+[4476000 ns] Node 10 (VC1) rcv: 0x24
+[4484000 ns] Node 10 (VC1) rcv: 0x25
+[4492000 ns] Node 10 (VC1) rcv: 0x26
+[4500000 ns] Node 10 (VC1) rcv: 0x27
+[4508000 ns] Node 10 (VC1) rcv: 0x28
+[4516000 ns] Node 10 (VC1) rcv: 0x29
+[4524000 ns] Node 10 (VC1) rcv: 0x2a
+[4532000 ns] Node 10 (VC1) rcv: 0x2b
+[4540000 ns] Node 10 (VC1) rcv: 0x2c
+[4548000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=4556000 Node10 (VC1) src=0x2 pkt_id=15 len=15 matches prediction
+[4556000 ns] Node 10 (VC1) rcv: 0x2e
+[4564000 ns] Node 10 (VC0) rcv: 0x03
+[4572000 ns] Node 10 (VC0) rcv: 0x04
+[4580000 ns] Node 10 (VC0) rcv: 0x05
+[4588000 ns] Node 10 (VC0) rcv: 0x06
+[4596000 ns] Node 10 (VC0) rcv: 0x07
+[4604000 ns] Node 10 (VC0) rcv: 0x08
+[4612000 ns] Node 10 (VC0) rcv: 0x09
+[4620000 ns] Node 10 (VC0) rcv: 0x0a
+[4628000 ns] Node 10 (VC0) rcv: 0x0b
+[4636000 ns] Node 10 (VC0) rcv: 0x0c
+[4644000 ns] Node 10 (VC0) rcv: 0x0d
+[4652000 ns] Node 10 (VC0) rcv: 0x0e
+[4660000 ns] Node 10 (VC0) rcv: 0x0f
+[4668000 ns] Node 10 (VC0) rcv: 0x10
+[4676000 ns] Node 10 (VC0) rcv: 0x11
+[4684000 ns] Node 10 (VC0) rcv: 0x12
+[4692000 ns] Node 10 (VC0) rcv: 0x13
+[4700000 ns] Node 10 (VC0) rcv: 0x14
+[4708000 ns] Node 10 (VC0) rcv: 0x15
+[4716000 ns] Node 10 (VC0) rcv: 0x16
+[4724000 ns] Node 10 (VC0) rcv: 0x17
+[4732000 ns] Node 10 (VC0) rcv: 0x18
+[4740000 ns] Node 10 (VC0) rcv: 0x19
+[4748000 ns] Node 10 (VC0) rcv: 0x1a
+[4756000 ns] Node 10 (VC0) rcv: 0x1b
+[4764000 ns] Node 10 (VC0) rcv: 0x1c
+[4772000 ns] Node 10 (VC0) rcv: 0x1d
+[4780000 ns] Node 10 (VC0) rcv: 0x1e
+[4788000 ns] Node 10 (VC0) rcv: 0x1f
+[4796000 ns] Node 10 (VC0) rcv: 0x20
+[4804000 ns] Node 10 (VC0) rcv: 0x21
+[4812000 ns] Node 10 (VC0) rcv: 0x22
+[4820000 ns] Node 10 (VC0) rcv: 0x23
+[4828000 ns] Node 10 (VC0) rcv: 0x24
+[4836000 ns] Node 10 (VC0) rcv: 0x25
+[4844000 ns] Node 10 (VC0) rcv: 0x26
+[4852000 ns] Node 10 (VC0) rcv: 0x27
+[4860000 ns] Node 10 (VC0) rcv: 0x28
+[4868000 ns] Node 10 (VC0) rcv: 0x29
+[4876000 ns] Node 10 (VC0) rcv: 0x2a
+[4884000 ns] Node 10 (VC0) rcv: 0x2b
+[4892000 ns] Node 10 (VC0) rcv: 0x2c
+[4900000 ns] Node 10 (VC0) rcv: 0x2d
+[4908000 ns] Node 10 (VC0) rcv: 0x2e
+[4916000 ns] Node 10 (VC0) rcv: 0x2f
+[4924000 ns] Node 10 (VC0) rcv: 0x30
+[SB-PASS] t=4932000 Node10 (VC0) src=0x0 pkt_id=7 len=50 matches prediction
+[4932000 ns] Node 10 (VC0) rcv: 0x31
+[TB] --- Test 5 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Starvation Override Proof
+=================================================
+ [Node00 TX] Flits: 50 | Stalls: 24 (2.1%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 200 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 150 | Stalls: 47 (6.3%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 20 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=34 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 6: Sustained Hot-Spot Contention ---
+[TB]     VC mode: VC0 only (แยก packet_arbiter ออกมาตัวเดียว)
+[SB-PRED] t=5524000 src=0x1 -> Node00 (VC0) pkt_id=4 len=20
+[SB-PRED] t=5524000 src=0x2 -> Node00 (VC0) pkt_id=0 len=20
+[SB-PRED] t=5524000 src=0x3 -> Node00 (VC0) pkt_id=6 len=20
+[5563000 ns] Node 00 (VC0) rcv: 0x20
+[5567000 ns] Node 00 (VC0) rcv: 0x21
+[5571000 ns] Node 00 (VC0) rcv: 0x22
+[5575000 ns] Node 00 (VC0) rcv: 0x23
+[5579000 ns] Node 00 (VC0) rcv: 0x24
+[5583000 ns] Node 00 (VC0) rcv: 0x25
+[SB-PRED] t=5585000 src=0x2 -> Node00 (VC0) pkt_id=1 len=20
+[5587000 ns] Node 00 (VC0) rcv: 0x26
+[5591000 ns] Node 00 (VC0) rcv: 0x27
+[5595000 ns] Node 00 (VC0) rcv: 0x28
+[5599000 ns] Node 00 (VC0) rcv: 0x29
+[5603000 ns] Node 00 (VC0) rcv: 0x2a
+[5607000 ns] Node 00 (VC0) rcv: 0x2b
+[5611000 ns] Node 00 (VC0) rcv: 0x2c
+[5615000 ns] Node 00 (VC0) rcv: 0x2d
+[5619000 ns] Node 00 (VC0) rcv: 0x2e
+[5623000 ns] Node 00 (VC0) rcv: 0x2f
+[5627000 ns] Node 00 (VC0) rcv: 0x30
+[5631000 ns] Node 00 (VC0) rcv: 0x31
+[5635000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=5639000 Node00 (VC0) src=0x2 pkt_id=0 len=20 matches prediction
+[5639000 ns] Node 00 (VC0) rcv: 0x33
+[5643000 ns] Node 00 (VC0) rcv: 0x10
+[5647000 ns] Node 00 (VC0) rcv: 0x11
+[SB-PRED] t=5648000 src=0x2 -> Node00 (VC0) pkt_id=2 len=20
+[5651000 ns] Node 00 (VC0) rcv: 0x12
+[5655000 ns] Node 00 (VC0) rcv: 0x13
+[5659000 ns] Node 00 (VC0) rcv: 0x14
+[5663000 ns] Node 00 (VC0) rcv: 0x15
+[5667000 ns] Node 00 (VC0) rcv: 0x16
+[5671000 ns] Node 00 (VC0) rcv: 0x17
+[5675000 ns] Node 00 (VC0) rcv: 0x18
+[5679000 ns] Node 00 (VC0) rcv: 0x19
+[5683000 ns] Node 00 (VC0) rcv: 0x1a
+[SB-PRED] t=5684000 src=0x1 -> Node00 (VC0) pkt_id=5 len=20
+[5687000 ns] Node 00 (VC0) rcv: 0x1b
+[5691000 ns] Node 00 (VC0) rcv: 0x1c
+[5695000 ns] Node 00 (VC0) rcv: 0x1d
+[5699000 ns] Node 00 (VC0) rcv: 0x1e
+[5703000 ns] Node 00 (VC0) rcv: 0x1f
+[5707000 ns] Node 00 (VC0) rcv: 0x20
+[5711000 ns] Node 00 (VC0) rcv: 0x21
+[5715000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=5719000 Node00 (VC0) src=0x1 pkt_id=4 len=20 matches prediction
+[5719000 ns] Node 00 (VC0) rcv: 0x23
+[5723000 ns] Node 00 (VC0) rcv: 0x30
+[SB-PRED] t=5725000 src=0x3 -> Node00 (VC0) pkt_id=7 len=20
+[5727000 ns] Node 00 (VC0) rcv: 0x31
+[5731000 ns] Node 00 (VC0) rcv: 0x32
+[5735000 ns] Node 00 (VC0) rcv: 0x33
+[5739000 ns] Node 00 (VC0) rcv: 0x34
+[5743000 ns] Node 00 (VC0) rcv: 0x35
+[5747000 ns] Node 00 (VC0) rcv: 0x36
+[5751000 ns] Node 00 (VC0) rcv: 0x37
+[5755000 ns] Node 00 (VC0) rcv: 0x38
+[5759000 ns] Node 00 (VC0) rcv: 0x39
+[5763000 ns] Node 00 (VC0) rcv: 0x3a
+[5767000 ns] Node 00 (VC0) rcv: 0x3b
+[5771000 ns] Node 00 (VC0) rcv: 0x3c
+[5775000 ns] Node 00 (VC0) rcv: 0x3d
+[5779000 ns] Node 00 (VC0) rcv: 0x3e
+[5783000 ns] Node 00 (VC0) rcv: 0x3f
+[SB-PRED] t=5786000 src=0x2 -> Node00 (VC0) pkt_id=3 len=20
+[5787000 ns] Node 00 (VC0) rcv: 0x40
+[5791000 ns] Node 00 (VC0) rcv: 0x41
+[5795000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=5799000 Node00 (VC0) src=0x3 pkt_id=6 len=20 matches prediction
+[5799000 ns] Node 00 (VC0) rcv: 0x43
+[5803000 ns] Node 00 (VC0) rcv: 0x10
+[5807000 ns] Node 00 (VC0) rcv: 0x11
+[5811000 ns] Node 00 (VC0) rcv: 0x12
+[5815000 ns] Node 00 (VC0) rcv: 0x13
+[5819000 ns] Node 00 (VC0) rcv: 0x14
+[5823000 ns] Node 00 (VC0) rcv: 0x15
+[5827000 ns] Node 00 (VC0) rcv: 0x16
+[5831000 ns] Node 00 (VC0) rcv: 0x17
+[5835000 ns] Node 00 (VC0) rcv: 0x18
+[5839000 ns] Node 00 (VC0) rcv: 0x19
+[5843000 ns] Node 00 (VC0) rcv: 0x1a
+[5847000 ns] Node 00 (VC0) rcv: 0x1b
+[5851000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=5852000 src=0x1 -> Node00 (VC0) pkt_id=6 len=20
+[5855000 ns] Node 00 (VC0) rcv: 0x1d
+[5859000 ns] Node 00 (VC0) rcv: 0x1e
+[5863000 ns] Node 00 (VC0) rcv: 0x1f
+[5867000 ns] Node 00 (VC0) rcv: 0x20
+[5871000 ns] Node 00 (VC0) rcv: 0x21
+[5879000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=5887000 Node00 (VC0) src=0x1 pkt_id=5 len=20 matches prediction
+[5887000 ns] Node 00 (VC0) rcv: 0x23
+[5891000 ns] Node 00 (VC0) rcv: 0x20
+[5895000 ns] Node 00 (VC0) rcv: 0x21
+[5899000 ns] Node 00 (VC0) rcv: 0x22
+[5903000 ns] Node 00 (VC0) rcv: 0x23
+[5907000 ns] Node 00 (VC0) rcv: 0x24
+[5911000 ns] Node 00 (VC0) rcv: 0x25
+[5915000 ns] Node 00 (VC0) rcv: 0x26
+[5919000 ns] Node 00 (VC0) rcv: 0x27
+[5923000 ns] Node 00 (VC0) rcv: 0x28
+[5927000 ns] Node 00 (VC0) rcv: 0x29
+[5931000 ns] Node 00 (VC0) rcv: 0x2a
+[5935000 ns] Node 00 (VC0) rcv: 0x2b
+[SB-PRED] t=5935000 src=0x3 -> Node00 (VC0) pkt_id=8 len=20
+[5939000 ns] Node 00 (VC0) rcv: 0x2c
+[5943000 ns] Node 00 (VC0) rcv: 0x2d
+[5947000 ns] Node 00 (VC0) rcv: 0x2e
+[5951000 ns] Node 00 (VC0) rcv: 0x2f
+[5955000 ns] Node 00 (VC0) rcv: 0x30
+[5959000 ns] Node 00 (VC0) rcv: 0x31
+[5963000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=5967000 Node00 (VC0) src=0x2 pkt_id=1 len=20 matches prediction
+[5967000 ns] Node 00 (VC0) rcv: 0x33
+[5971000 ns] Node 00 (VC0) rcv: 0x10
+[5975000 ns] Node 00 (VC0) rcv: 0x11
+[5979000 ns] Node 00 (VC0) rcv: 0x12
+[5983000 ns] Node 00 (VC0) rcv: 0x13
+[5987000 ns] Node 00 (VC0) rcv: 0x14
+[5991000 ns] Node 00 (VC0) rcv: 0x15
+[5995000 ns] Node 00 (VC0) rcv: 0x16
+[5999000 ns] Node 00 (VC0) rcv: 0x17
+[6003000 ns] Node 00 (VC0) rcv: 0x18
+[6007000 ns] Node 00 (VC0) rcv: 0x19
+[6011000 ns] Node 00 (VC0) rcv: 0x1a
+[6015000 ns] Node 00 (VC0) rcv: 0x1b
+[6019000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6020000 src=0x1 -> Node00 (VC0) pkt_id=7 len=20
+[6023000 ns] Node 00 (VC0) rcv: 0x1d
+[6027000 ns] Node 00 (VC0) rcv: 0x1e
+[6031000 ns] Node 00 (VC0) rcv: 0x1f
+[6035000 ns] Node 00 (VC0) rcv: 0x20
+[6039000 ns] Node 00 (VC0) rcv: 0x21
+[6047000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6055000 Node00 (VC0) src=0x1 pkt_id=6 len=20 matches prediction
+[6055000 ns] Node 00 (VC0) rcv: 0x23
+[6059000 ns] Node 00 (VC0) rcv: 0x30
+[6063000 ns] Node 00 (VC0) rcv: 0x31
+[6067000 ns] Node 00 (VC0) rcv: 0x32
+[6071000 ns] Node 00 (VC0) rcv: 0x33
+[6075000 ns] Node 00 (VC0) rcv: 0x34
+[6079000 ns] Node 00 (VC0) rcv: 0x35
+[6083000 ns] Node 00 (VC0) rcv: 0x36
+[6087000 ns] Node 00 (VC0) rcv: 0x37
+[6091000 ns] Node 00 (VC0) rcv: 0x38
+[6095000 ns] Node 00 (VC0) rcv: 0x39
+[6099000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=6101000 src=0x2 -> Node00 (VC0) pkt_id=4 len=20
+[6103000 ns] Node 00 (VC0) rcv: 0x3b
+[6107000 ns] Node 00 (VC0) rcv: 0x3c
+[6111000 ns] Node 00 (VC0) rcv: 0x3d
+[6115000 ns] Node 00 (VC0) rcv: 0x3e
+[6119000 ns] Node 00 (VC0) rcv: 0x3f
+[6123000 ns] Node 00 (VC0) rcv: 0x40
+[6127000 ns] Node 00 (VC0) rcv: 0x41
+[6131000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=6135000 Node00 (VC0) src=0x3 pkt_id=7 len=20 matches prediction
+[6135000 ns] Node 00 (VC0) rcv: 0x43
+[6139000 ns] Node 00 (VC0) rcv: 0x10
+[6143000 ns] Node 00 (VC0) rcv: 0x11
+[SB-PRED] t=6145000 src=0x3 -> Node00 (VC0) pkt_id=9 len=20
+[6147000 ns] Node 00 (VC0) rcv: 0x12
+[6151000 ns] Node 00 (VC0) rcv: 0x13
+[6155000 ns] Node 00 (VC0) rcv: 0x14
+[6159000 ns] Node 00 (VC0) rcv: 0x15
+[6163000 ns] Node 00 (VC0) rcv: 0x16
+[6167000 ns] Node 00 (VC0) rcv: 0x17
+[6171000 ns] Node 00 (VC0) rcv: 0x18
+[6175000 ns] Node 00 (VC0) rcv: 0x19
+[6179000 ns] Node 00 (VC0) rcv: 0x1a
+[6183000 ns] Node 00 (VC0) rcv: 0x1b
+[6187000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6188000 src=0x1 -> Node00 (VC0) pkt_id=8 len=20
+[6191000 ns] Node 00 (VC0) rcv: 0x1d
+[6195000 ns] Node 00 (VC0) rcv: 0x1e
+[6199000 ns] Node 00 (VC0) rcv: 0x1f
+[6203000 ns] Node 00 (VC0) rcv: 0x20
+[6207000 ns] Node 00 (VC0) rcv: 0x21
+[6215000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6223000 Node00 (VC0) src=0x1 pkt_id=7 len=20 matches prediction
+[6223000 ns] Node 00 (VC0) rcv: 0x23
+[6227000 ns] Node 00 (VC0) rcv: 0x20
+[6231000 ns] Node 00 (VC0) rcv: 0x21
+[6235000 ns] Node 00 (VC0) rcv: 0x22
+[6239000 ns] Node 00 (VC0) rcv: 0x23
+[6243000 ns] Node 00 (VC0) rcv: 0x24
+[6247000 ns] Node 00 (VC0) rcv: 0x25
+[6251000 ns] Node 00 (VC0) rcv: 0x26
+[6255000 ns] Node 00 (VC0) rcv: 0x27
+[6259000 ns] Node 00 (VC0) rcv: 0x28
+[6263000 ns] Node 00 (VC0) rcv: 0x29
+[6267000 ns] Node 00 (VC0) rcv: 0x2a
+[6271000 ns] Node 00 (VC0) rcv: 0x2b
+[6275000 ns] Node 00 (VC0) rcv: 0x2c
+[6279000 ns] Node 00 (VC0) rcv: 0x2d
+[6283000 ns] Node 00 (VC0) rcv: 0x2e
+[6287000 ns] Node 00 (VC0) rcv: 0x2f
+[6291000 ns] Node 00 (VC0) rcv: 0x30
+[6295000 ns] Node 00 (VC0) rcv: 0x31
+[6299000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=6303000 Node00 (VC0) src=0x2 pkt_id=2 len=20 matches prediction
+[6303000 ns] Node 00 (VC0) rcv: 0x33
+[6307000 ns] Node 00 (VC0) rcv: 0x10
+[6311000 ns] Node 00 (VC0) rcv: 0x11
+[6315000 ns] Node 00 (VC0) rcv: 0x12
+[6319000 ns] Node 00 (VC0) rcv: 0x13
+[6323000 ns] Node 00 (VC0) rcv: 0x14
+[6327000 ns] Node 00 (VC0) rcv: 0x15
+[6331000 ns] Node 00 (VC0) rcv: 0x16
+[6335000 ns] Node 00 (VC0) rcv: 0x17
+[6339000 ns] Node 00 (VC0) rcv: 0x18
+[6343000 ns] Node 00 (VC0) rcv: 0x19
+[6347000 ns] Node 00 (VC0) rcv: 0x1a
+[6351000 ns] Node 00 (VC0) rcv: 0x1b
+[6355000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6355000 src=0x3 -> Node00 (VC0) pkt_id=10 len=20
+[SB-PRED] t=6356000 src=0x1 -> Node00 (VC0) pkt_id=9 len=20
+[6359000 ns] Node 00 (VC0) rcv: 0x1d
+[6363000 ns] Node 00 (VC0) rcv: 0x1e
+[6367000 ns] Node 00 (VC0) rcv: 0x1f
+[6371000 ns] Node 00 (VC0) rcv: 0x20
+[6375000 ns] Node 00 (VC0) rcv: 0x21
+[6383000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6391000 Node00 (VC0) src=0x1 pkt_id=8 len=20 matches prediction
+[6391000 ns] Node 00 (VC0) rcv: 0x23
+[6395000 ns] Node 00 (VC0) rcv: 0x30
+[6399000 ns] Node 00 (VC0) rcv: 0x31
+[6403000 ns] Node 00 (VC0) rcv: 0x32
+[6407000 ns] Node 00 (VC0) rcv: 0x33
+[6411000 ns] Node 00 (VC0) rcv: 0x34
+[6415000 ns] Node 00 (VC0) rcv: 0x35
+[6419000 ns] Node 00 (VC0) rcv: 0x36
+[6423000 ns] Node 00 (VC0) rcv: 0x37
+[6427000 ns] Node 00 (VC0) rcv: 0x38
+[6431000 ns] Node 00 (VC0) rcv: 0x39
+[6435000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=6437000 src=0x2 -> Node00 (VC0) pkt_id=5 len=20
+[6439000 ns] Node 00 (VC0) rcv: 0x3b
+[6443000 ns] Node 00 (VC0) rcv: 0x3c
+[6447000 ns] Node 00 (VC0) rcv: 0x3d
+[6451000 ns] Node 00 (VC0) rcv: 0x3e
+[6455000 ns] Node 00 (VC0) rcv: 0x3f
+[6459000 ns] Node 00 (VC0) rcv: 0x40
+[6463000 ns] Node 00 (VC0) rcv: 0x41
+[6467000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=6471000 Node00 (VC0) src=0x3 pkt_id=8 len=20 matches prediction
+[6471000 ns] Node 00 (VC0) rcv: 0x43
+[6475000 ns] Node 00 (VC0) rcv: 0x10
+[6479000 ns] Node 00 (VC0) rcv: 0x11
+[6483000 ns] Node 00 (VC0) rcv: 0x12
+[6487000 ns] Node 00 (VC0) rcv: 0x13
+[6491000 ns] Node 00 (VC0) rcv: 0x14
+[6495000 ns] Node 00 (VC0) rcv: 0x15
+[6499000 ns] Node 00 (VC0) rcv: 0x16
+[6503000 ns] Node 00 (VC0) rcv: 0x17
+[6507000 ns] Node 00 (VC0) rcv: 0x18
+[6511000 ns] Node 00 (VC0) rcv: 0x19
+[6515000 ns] Node 00 (VC0) rcv: 0x1a
+[6519000 ns] Node 00 (VC0) rcv: 0x1b
+[6523000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6524000 src=0x1 -> Node00 (VC0) pkt_id=10 len=20
+[6527000 ns] Node 00 (VC0) rcv: 0x1d
+[6531000 ns] Node 00 (VC0) rcv: 0x1e
+[6535000 ns] Node 00 (VC0) rcv: 0x1f
+[6539000 ns] Node 00 (VC0) rcv: 0x20
+[6543000 ns] Node 00 (VC0) rcv: 0x21
+[6551000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6559000 Node00 (VC0) src=0x1 pkt_id=9 len=20 matches prediction
+[6559000 ns] Node 00 (VC0) rcv: 0x23
+[6563000 ns] Node 00 (VC0) rcv: 0x20
+[SB-PRED] t=6565000 src=0x3 -> Node00 (VC0) pkt_id=11 len=20
+[6567000 ns] Node 00 (VC0) rcv: 0x21
+[6571000 ns] Node 00 (VC0) rcv: 0x22
+[6575000 ns] Node 00 (VC0) rcv: 0x23
+[6579000 ns] Node 00 (VC0) rcv: 0x24
+[6583000 ns] Node 00 (VC0) rcv: 0x25
+[6587000 ns] Node 00 (VC0) rcv: 0x26
+[6591000 ns] Node 00 (VC0) rcv: 0x27
+[6595000 ns] Node 00 (VC0) rcv: 0x28
+[6599000 ns] Node 00 (VC0) rcv: 0x29
+[6603000 ns] Node 00 (VC0) rcv: 0x2a
+[6607000 ns] Node 00 (VC0) rcv: 0x2b
+[6611000 ns] Node 00 (VC0) rcv: 0x2c
+[6615000 ns] Node 00 (VC0) rcv: 0x2d
+[6619000 ns] Node 00 (VC0) rcv: 0x2e
+[6623000 ns] Node 00 (VC0) rcv: 0x2f
+[6627000 ns] Node 00 (VC0) rcv: 0x30
+[6631000 ns] Node 00 (VC0) rcv: 0x31
+[6635000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=6639000 Node00 (VC0) src=0x2 pkt_id=3 len=20 matches prediction
+[6639000 ns] Node 00 (VC0) rcv: 0x33
+[6643000 ns] Node 00 (VC0) rcv: 0x10
+[6647000 ns] Node 00 (VC0) rcv: 0x11
+[6651000 ns] Node 00 (VC0) rcv: 0x12
+[6655000 ns] Node 00 (VC0) rcv: 0x13
+[6659000 ns] Node 00 (VC0) rcv: 0x14
+[6663000 ns] Node 00 (VC0) rcv: 0x15
+[6667000 ns] Node 00 (VC0) rcv: 0x16
+[6671000 ns] Node 00 (VC0) rcv: 0x17
+[6675000 ns] Node 00 (VC0) rcv: 0x18
+[6679000 ns] Node 00 (VC0) rcv: 0x19
+[6683000 ns] Node 00 (VC0) rcv: 0x1a
+[6687000 ns] Node 00 (VC0) rcv: 0x1b
+[6691000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6692000 src=0x1 -> Node00 (VC0) pkt_id=11 len=20
+[6695000 ns] Node 00 (VC0) rcv: 0x1d
+[6699000 ns] Node 00 (VC0) rcv: 0x1e
+[6703000 ns] Node 00 (VC0) rcv: 0x1f
+[6707000 ns] Node 00 (VC0) rcv: 0x20
+[6711000 ns] Node 00 (VC0) rcv: 0x21
+[6719000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6727000 Node00 (VC0) src=0x1 pkt_id=10 len=20 matches prediction
+[6727000 ns] Node 00 (VC0) rcv: 0x23
+[6731000 ns] Node 00 (VC0) rcv: 0x30
+[6735000 ns] Node 00 (VC0) rcv: 0x31
+[6739000 ns] Node 00 (VC0) rcv: 0x32
+[6743000 ns] Node 00 (VC0) rcv: 0x33
+[6747000 ns] Node 00 (VC0) rcv: 0x34
+[6751000 ns] Node 00 (VC0) rcv: 0x35
+[6755000 ns] Node 00 (VC0) rcv: 0x36
+[6759000 ns] Node 00 (VC0) rcv: 0x37
+[6763000 ns] Node 00 (VC0) rcv: 0x38
+[6767000 ns] Node 00 (VC0) rcv: 0x39
+[6771000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=6773000 src=0x2 -> Node00 (VC0) pkt_id=6 len=20
+[6775000 ns] Node 00 (VC0) rcv: 0x3b
+[SB-PRED] t=6775000 src=0x3 -> Node00 (VC0) pkt_id=12 len=20
+[6779000 ns] Node 00 (VC0) rcv: 0x3c
+[6783000 ns] Node 00 (VC0) rcv: 0x3d
+[6787000 ns] Node 00 (VC0) rcv: 0x3e
+[6791000 ns] Node 00 (VC0) rcv: 0x3f
+[6795000 ns] Node 00 (VC0) rcv: 0x40
+[6799000 ns] Node 00 (VC0) rcv: 0x41
+[6803000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=6807000 Node00 (VC0) src=0x3 pkt_id=9 len=20 matches prediction
+[6807000 ns] Node 00 (VC0) rcv: 0x43
+[6811000 ns] Node 00 (VC0) rcv: 0x10
+[6815000 ns] Node 00 (VC0) rcv: 0x11
+[6819000 ns] Node 00 (VC0) rcv: 0x12
+[6823000 ns] Node 00 (VC0) rcv: 0x13
+[6827000 ns] Node 00 (VC0) rcv: 0x14
+[6831000 ns] Node 00 (VC0) rcv: 0x15
+[6835000 ns] Node 00 (VC0) rcv: 0x16
+[6839000 ns] Node 00 (VC0) rcv: 0x17
+[6843000 ns] Node 00 (VC0) rcv: 0x18
+[6847000 ns] Node 00 (VC0) rcv: 0x19
+[6851000 ns] Node 00 (VC0) rcv: 0x1a
+[6855000 ns] Node 00 (VC0) rcv: 0x1b
+[6859000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=6860000 src=0x1 -> Node00 (VC0) pkt_id=12 len=20
+[6863000 ns] Node 00 (VC0) rcv: 0x1d
+[6867000 ns] Node 00 (VC0) rcv: 0x1e
+[6871000 ns] Node 00 (VC0) rcv: 0x1f
+[6875000 ns] Node 00 (VC0) rcv: 0x20
+[6879000 ns] Node 00 (VC0) rcv: 0x21
+[6887000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=6895000 Node00 (VC0) src=0x1 pkt_id=11 len=20 matches prediction
+[6895000 ns] Node 00 (VC0) rcv: 0x23
+[6899000 ns] Node 00 (VC0) rcv: 0x20
+[6903000 ns] Node 00 (VC0) rcv: 0x21
+[6907000 ns] Node 00 (VC0) rcv: 0x22
+[6911000 ns] Node 00 (VC0) rcv: 0x23
+[6915000 ns] Node 00 (VC0) rcv: 0x24
+[6919000 ns] Node 00 (VC0) rcv: 0x25
+[6923000 ns] Node 00 (VC0) rcv: 0x26
+[6927000 ns] Node 00 (VC0) rcv: 0x27
+[6931000 ns] Node 00 (VC0) rcv: 0x28
+[6935000 ns] Node 00 (VC0) rcv: 0x29
+[6939000 ns] Node 00 (VC0) rcv: 0x2a
+[6943000 ns] Node 00 (VC0) rcv: 0x2b
+[6947000 ns] Node 00 (VC0) rcv: 0x2c
+[6951000 ns] Node 00 (VC0) rcv: 0x2d
+[6955000 ns] Node 00 (VC0) rcv: 0x2e
+[6959000 ns] Node 00 (VC0) rcv: 0x2f
+[6963000 ns] Node 00 (VC0) rcv: 0x30
+[6967000 ns] Node 00 (VC0) rcv: 0x31
+[6971000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=6975000 Node00 (VC0) src=0x2 pkt_id=4 len=20 matches prediction
+[6975000 ns] Node 00 (VC0) rcv: 0x33
+[6979000 ns] Node 00 (VC0) rcv: 0x10
+[6983000 ns] Node 00 (VC0) rcv: 0x11
+[6987000 ns] Node 00 (VC0) rcv: 0x12
+[6991000 ns] Node 00 (VC0) rcv: 0x13
+[6995000 ns] Node 00 (VC0) rcv: 0x14
+[6999000 ns] Node 00 (VC0) rcv: 0x15
+[7003000 ns] Node 00 (VC0) rcv: 0x16
+[7007000 ns] Node 00 (VC0) rcv: 0x17
+[7011000 ns] Node 00 (VC0) rcv: 0x18
+[7015000 ns] Node 00 (VC0) rcv: 0x19
+[7019000 ns] Node 00 (VC0) rcv: 0x1a
+[7023000 ns] Node 00 (VC0) rcv: 0x1b
+[7027000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7028000 src=0x1 -> Node00 (VC0) pkt_id=13 len=20
+[7031000 ns] Node 00 (VC0) rcv: 0x1d
+[7035000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=7035000 src=0x3 -> Node00 (VC0) pkt_id=13 len=20
+[7039000 ns] Node 00 (VC0) rcv: 0x1f
+[7043000 ns] Node 00 (VC0) rcv: 0x20
+[7047000 ns] Node 00 (VC0) rcv: 0x21
+[7055000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7063000 Node00 (VC0) src=0x1 pkt_id=12 len=20 matches prediction
+[7063000 ns] Node 00 (VC0) rcv: 0x23
+[7067000 ns] Node 00 (VC0) rcv: 0x30
+[7071000 ns] Node 00 (VC0) rcv: 0x31
+[7075000 ns] Node 00 (VC0) rcv: 0x32
+[7079000 ns] Node 00 (VC0) rcv: 0x33
+[7083000 ns] Node 00 (VC0) rcv: 0x34
+[7087000 ns] Node 00 (VC0) rcv: 0x35
+[7091000 ns] Node 00 (VC0) rcv: 0x36
+[7095000 ns] Node 00 (VC0) rcv: 0x37
+[7099000 ns] Node 00 (VC0) rcv: 0x38
+[7103000 ns] Node 00 (VC0) rcv: 0x39
+[7107000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=7109000 src=0x2 -> Node00 (VC0) pkt_id=7 len=20
+[7111000 ns] Node 00 (VC0) rcv: 0x3b
+[7115000 ns] Node 00 (VC0) rcv: 0x3c
+[7119000 ns] Node 00 (VC0) rcv: 0x3d
+[7123000 ns] Node 00 (VC0) rcv: 0x3e
+[7127000 ns] Node 00 (VC0) rcv: 0x3f
+[7131000 ns] Node 00 (VC0) rcv: 0x40
+[7135000 ns] Node 00 (VC0) rcv: 0x41
+[7139000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=7143000 Node00 (VC0) src=0x3 pkt_id=10 len=20 matches prediction
+[7143000 ns] Node 00 (VC0) rcv: 0x43
+[7147000 ns] Node 00 (VC0) rcv: 0x10
+[7151000 ns] Node 00 (VC0) rcv: 0x11
+[7155000 ns] Node 00 (VC0) rcv: 0x12
+[7159000 ns] Node 00 (VC0) rcv: 0x13
+[7163000 ns] Node 00 (VC0) rcv: 0x14
+[7167000 ns] Node 00 (VC0) rcv: 0x15
+[7171000 ns] Node 00 (VC0) rcv: 0x16
+[7175000 ns] Node 00 (VC0) rcv: 0x17
+[7179000 ns] Node 00 (VC0) rcv: 0x18
+[7183000 ns] Node 00 (VC0) rcv: 0x19
+[7187000 ns] Node 00 (VC0) rcv: 0x1a
+[7191000 ns] Node 00 (VC0) rcv: 0x1b
+[7195000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7196000 src=0x1 -> Node00 (VC0) pkt_id=14 len=20
+[7199000 ns] Node 00 (VC0) rcv: 0x1d
+[7203000 ns] Node 00 (VC0) rcv: 0x1e
+[7207000 ns] Node 00 (VC0) rcv: 0x1f
+[7211000 ns] Node 00 (VC0) rcv: 0x20
+[7215000 ns] Node 00 (VC0) rcv: 0x21
+[7223000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7231000 Node00 (VC0) src=0x1 pkt_id=13 len=20 matches prediction
+[7231000 ns] Node 00 (VC0) rcv: 0x23
+[7235000 ns] Node 00 (VC0) rcv: 0x20
+[7239000 ns] Node 00 (VC0) rcv: 0x21
+[7243000 ns] Node 00 (VC0) rcv: 0x22
+[7247000 ns] Node 00 (VC0) rcv: 0x23
+[7251000 ns] Node 00 (VC0) rcv: 0x24
+[7255000 ns] Node 00 (VC0) rcv: 0x25
+[7259000 ns] Node 00 (VC0) rcv: 0x26
+[7263000 ns] Node 00 (VC0) rcv: 0x27
+[7267000 ns] Node 00 (VC0) rcv: 0x28
+[7271000 ns] Node 00 (VC0) rcv: 0x29
+[7275000 ns] Node 00 (VC0) rcv: 0x2a
+[7279000 ns] Node 00 (VC0) rcv: 0x2b
+[7283000 ns] Node 00 (VC0) rcv: 0x2c
+[7287000 ns] Node 00 (VC0) rcv: 0x2d
+[7291000 ns] Node 00 (VC0) rcv: 0x2e
+[7295000 ns] Node 00 (VC0) rcv: 0x2f
+[7299000 ns] Node 00 (VC0) rcv: 0x30
+[7303000 ns] Node 00 (VC0) rcv: 0x31
+[7307000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=7311000 Node00 (VC0) src=0x2 pkt_id=5 len=20 matches prediction
+[7311000 ns] Node 00 (VC0) rcv: 0x33
+[7315000 ns] Node 00 (VC0) rcv: 0x10
+[7319000 ns] Node 00 (VC0) rcv: 0x11
+[7323000 ns] Node 00 (VC0) rcv: 0x12
+[7327000 ns] Node 00 (VC0) rcv: 0x13
+[7331000 ns] Node 00 (VC0) rcv: 0x14
+[7335000 ns] Node 00 (VC0) rcv: 0x15
+[7339000 ns] Node 00 (VC0) rcv: 0x16
+[7343000 ns] Node 00 (VC0) rcv: 0x17
+[7347000 ns] Node 00 (VC0) rcv: 0x18
+[7351000 ns] Node 00 (VC0) rcv: 0x19
+[7355000 ns] Node 00 (VC0) rcv: 0x1a
+[7359000 ns] Node 00 (VC0) rcv: 0x1b
+[7363000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7364000 src=0x1 -> Node00 (VC0) pkt_id=15 len=20
+[SB-PRED] t=7365000 src=0x3 -> Node00 (VC0) pkt_id=14 len=20
+[7367000 ns] Node 00 (VC0) rcv: 0x1d
+[7371000 ns] Node 00 (VC0) rcv: 0x1e
+[7375000 ns] Node 00 (VC0) rcv: 0x1f
+[7379000 ns] Node 00 (VC0) rcv: 0x20
+[7383000 ns] Node 00 (VC0) rcv: 0x21
+[7391000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7399000 Node00 (VC0) src=0x1 pkt_id=14 len=20 matches prediction
+[7399000 ns] Node 00 (VC0) rcv: 0x23
+[7403000 ns] Node 00 (VC0) rcv: 0x30
+[7407000 ns] Node 00 (VC0) rcv: 0x31
+[7411000 ns] Node 00 (VC0) rcv: 0x32
+[7415000 ns] Node 00 (VC0) rcv: 0x33
+[7419000 ns] Node 00 (VC0) rcv: 0x34
+[7423000 ns] Node 00 (VC0) rcv: 0x35
+[7427000 ns] Node 00 (VC0) rcv: 0x36
+[7431000 ns] Node 00 (VC0) rcv: 0x37
+[7435000 ns] Node 00 (VC0) rcv: 0x38
+[7439000 ns] Node 00 (VC0) rcv: 0x39
+[7443000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=7445000 src=0x2 -> Node00 (VC0) pkt_id=8 len=20
+[7447000 ns] Node 00 (VC0) rcv: 0x3b
+[7451000 ns] Node 00 (VC0) rcv: 0x3c
+[7455000 ns] Node 00 (VC0) rcv: 0x3d
+[7459000 ns] Node 00 (VC0) rcv: 0x3e
+[7463000 ns] Node 00 (VC0) rcv: 0x3f
+[7467000 ns] Node 00 (VC0) rcv: 0x40
+[7471000 ns] Node 00 (VC0) rcv: 0x41
+[7475000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=7479000 Node00 (VC0) src=0x3 pkt_id=11 len=20 matches prediction
+[7479000 ns] Node 00 (VC0) rcv: 0x43
+[7483000 ns] Node 00 (VC0) rcv: 0x10
+[7487000 ns] Node 00 (VC0) rcv: 0x11
+[7491000 ns] Node 00 (VC0) rcv: 0x12
+[7495000 ns] Node 00 (VC0) rcv: 0x13
+[7499000 ns] Node 00 (VC0) rcv: 0x14
+[7503000 ns] Node 00 (VC0) rcv: 0x15
+[7507000 ns] Node 00 (VC0) rcv: 0x16
+[7511000 ns] Node 00 (VC0) rcv: 0x17
+[7515000 ns] Node 00 (VC0) rcv: 0x18
+[7519000 ns] Node 00 (VC0) rcv: 0x19
+[7523000 ns] Node 00 (VC0) rcv: 0x1a
+[7527000 ns] Node 00 (VC0) rcv: 0x1b
+[7531000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7532000 src=0x1 -> Node00 (VC0) pkt_id=0 len=20
+[7535000 ns] Node 00 (VC0) rcv: 0x1d
+[7539000 ns] Node 00 (VC0) rcv: 0x1e
+[7543000 ns] Node 00 (VC0) rcv: 0x1f
+[7547000 ns] Node 00 (VC0) rcv: 0x20
+[7551000 ns] Node 00 (VC0) rcv: 0x21
+[7559000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7567000 Node00 (VC0) src=0x1 pkt_id=15 len=20 matches prediction
+[7567000 ns] Node 00 (VC0) rcv: 0x23
+[7571000 ns] Node 00 (VC0) rcv: 0x20
+[7575000 ns] Node 00 (VC0) rcv: 0x21
+[7579000 ns] Node 00 (VC0) rcv: 0x22
+[7583000 ns] Node 00 (VC0) rcv: 0x23
+[7587000 ns] Node 00 (VC0) rcv: 0x24
+[7591000 ns] Node 00 (VC0) rcv: 0x25
+[7595000 ns] Node 00 (VC0) rcv: 0x26
+[7599000 ns] Node 00 (VC0) rcv: 0x27
+[7603000 ns] Node 00 (VC0) rcv: 0x28
+[7607000 ns] Node 00 (VC0) rcv: 0x29
+[7611000 ns] Node 00 (VC0) rcv: 0x2a
+[7615000 ns] Node 00 (VC0) rcv: 0x2b
+[7619000 ns] Node 00 (VC0) rcv: 0x2c
+[7623000 ns] Node 00 (VC0) rcv: 0x2d
+[7627000 ns] Node 00 (VC0) rcv: 0x2e
+[7631000 ns] Node 00 (VC0) rcv: 0x2f
+[7635000 ns] Node 00 (VC0) rcv: 0x30
+[7639000 ns] Node 00 (VC0) rcv: 0x31
+[7643000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=7647000 Node00 (VC0) src=0x2 pkt_id=6 len=20 matches prediction
+[7647000 ns] Node 00 (VC0) rcv: 0x33
+[7651000 ns] Node 00 (VC0) rcv: 0x10
+[7655000 ns] Node 00 (VC0) rcv: 0x11
+[7659000 ns] Node 00 (VC0) rcv: 0x12
+[7663000 ns] Node 00 (VC0) rcv: 0x13
+[7667000 ns] Node 00 (VC0) rcv: 0x14
+[7671000 ns] Node 00 (VC0) rcv: 0x15
+[7675000 ns] Node 00 (VC0) rcv: 0x16
+[7679000 ns] Node 00 (VC0) rcv: 0x17
+[7683000 ns] Node 00 (VC0) rcv: 0x18
+[7687000 ns] Node 00 (VC0) rcv: 0x19
+[7691000 ns] Node 00 (VC0) rcv: 0x1a
+[7695000 ns] Node 00 (VC0) rcv: 0x1b
+[7699000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7700000 src=0x1 -> Node00 (VC0) pkt_id=1 len=20
+[7703000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=7705000 src=0x3 -> Node00 (VC0) pkt_id=15 len=20
+[7707000 ns] Node 00 (VC0) rcv: 0x1e
+[7711000 ns] Node 00 (VC0) rcv: 0x1f
+[7715000 ns] Node 00 (VC0) rcv: 0x20
+[7719000 ns] Node 00 (VC0) rcv: 0x21
+[7727000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7735000 Node00 (VC0) src=0x1 pkt_id=0 len=20 matches prediction
+[7735000 ns] Node 00 (VC0) rcv: 0x23
+[7739000 ns] Node 00 (VC0) rcv: 0x30
+[7743000 ns] Node 00 (VC0) rcv: 0x31
+[7747000 ns] Node 00 (VC0) rcv: 0x32
+[7751000 ns] Node 00 (VC0) rcv: 0x33
+[7755000 ns] Node 00 (VC0) rcv: 0x34
+[7759000 ns] Node 00 (VC0) rcv: 0x35
+[7763000 ns] Node 00 (VC0) rcv: 0x36
+[7767000 ns] Node 00 (VC0) rcv: 0x37
+[7771000 ns] Node 00 (VC0) rcv: 0x38
+[7775000 ns] Node 00 (VC0) rcv: 0x39
+[7779000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=7781000 src=0x2 -> Node00 (VC0) pkt_id=9 len=20
+[7783000 ns] Node 00 (VC0) rcv: 0x3b
+[7787000 ns] Node 00 (VC0) rcv: 0x3c
+[7791000 ns] Node 00 (VC0) rcv: 0x3d
+[7795000 ns] Node 00 (VC0) rcv: 0x3e
+[7799000 ns] Node 00 (VC0) rcv: 0x3f
+[7803000 ns] Node 00 (VC0) rcv: 0x40
+[7807000 ns] Node 00 (VC0) rcv: 0x41
+[7811000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=7815000 Node00 (VC0) src=0x3 pkt_id=12 len=20 matches prediction
+[7815000 ns] Node 00 (VC0) rcv: 0x43
+[7819000 ns] Node 00 (VC0) rcv: 0x10
+[7823000 ns] Node 00 (VC0) rcv: 0x11
+[7827000 ns] Node 00 (VC0) rcv: 0x12
+[7831000 ns] Node 00 (VC0) rcv: 0x13
+[7835000 ns] Node 00 (VC0) rcv: 0x14
+[7839000 ns] Node 00 (VC0) rcv: 0x15
+[7843000 ns] Node 00 (VC0) rcv: 0x16
+[7847000 ns] Node 00 (VC0) rcv: 0x17
+[7851000 ns] Node 00 (VC0) rcv: 0x18
+[7855000 ns] Node 00 (VC0) rcv: 0x19
+[7859000 ns] Node 00 (VC0) rcv: 0x1a
+[7863000 ns] Node 00 (VC0) rcv: 0x1b
+[7867000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=7868000 src=0x1 -> Node00 (VC0) pkt_id=2 len=20
+[7871000 ns] Node 00 (VC0) rcv: 0x1d
+[7875000 ns] Node 00 (VC0) rcv: 0x1e
+[7879000 ns] Node 00 (VC0) rcv: 0x1f
+[7883000 ns] Node 00 (VC0) rcv: 0x20
+[7887000 ns] Node 00 (VC0) rcv: 0x21
+[7895000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=7903000 Node00 (VC0) src=0x1 pkt_id=1 len=20 matches prediction
+[7903000 ns] Node 00 (VC0) rcv: 0x23
+[7907000 ns] Node 00 (VC0) rcv: 0x20
+[7911000 ns] Node 00 (VC0) rcv: 0x21
+[7915000 ns] Node 00 (VC0) rcv: 0x22
+[7919000 ns] Node 00 (VC0) rcv: 0x23
+[7923000 ns] Node 00 (VC0) rcv: 0x24
+[7927000 ns] Node 00 (VC0) rcv: 0x25
+[7931000 ns] Node 00 (VC0) rcv: 0x26
+[7935000 ns] Node 00 (VC0) rcv: 0x27
+[7939000 ns] Node 00 (VC0) rcv: 0x28
+[7943000 ns] Node 00 (VC0) rcv: 0x29
+[7947000 ns] Node 00 (VC0) rcv: 0x2a
+[7951000 ns] Node 00 (VC0) rcv: 0x2b
+[7955000 ns] Node 00 (VC0) rcv: 0x2c
+[7959000 ns] Node 00 (VC0) rcv: 0x2d
+[7963000 ns] Node 00 (VC0) rcv: 0x2e
+[7967000 ns] Node 00 (VC0) rcv: 0x2f
+[7971000 ns] Node 00 (VC0) rcv: 0x30
+[7975000 ns] Node 00 (VC0) rcv: 0x31
+[7979000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=7983000 Node00 (VC0) src=0x2 pkt_id=7 len=20 matches prediction
+[7983000 ns] Node 00 (VC0) rcv: 0x33
+[7987000 ns] Node 00 (VC0) rcv: 0x10
+[7991000 ns] Node 00 (VC0) rcv: 0x11
+[7995000 ns] Node 00 (VC0) rcv: 0x12
+[7999000 ns] Node 00 (VC0) rcv: 0x13
+[8003000 ns] Node 00 (VC0) rcv: 0x14
+[8007000 ns] Node 00 (VC0) rcv: 0x15
+[8011000 ns] Node 00 (VC0) rcv: 0x16
+[8015000 ns] Node 00 (VC0) rcv: 0x17
+[8019000 ns] Node 00 (VC0) rcv: 0x18
+[8023000 ns] Node 00 (VC0) rcv: 0x19
+[8027000 ns] Node 00 (VC0) rcv: 0x1a
+[8031000 ns] Node 00 (VC0) rcv: 0x1b
+[8035000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8036000 src=0x1 -> Node00 (VC0) pkt_id=3 len=20
+[8039000 ns] Node 00 (VC0) rcv: 0x1d
+[8043000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=8045000 src=0x3 -> Node00 (VC0) pkt_id=0 len=20
+[8047000 ns] Node 00 (VC0) rcv: 0x1f
+[8051000 ns] Node 00 (VC0) rcv: 0x20
+[8055000 ns] Node 00 (VC0) rcv: 0x21
+[8063000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8071000 Node00 (VC0) src=0x1 pkt_id=2 len=20 matches prediction
+[8071000 ns] Node 00 (VC0) rcv: 0x23
+[8075000 ns] Node 00 (VC0) rcv: 0x30
+[8079000 ns] Node 00 (VC0) rcv: 0x31
+[8083000 ns] Node 00 (VC0) rcv: 0x32
+[8087000 ns] Node 00 (VC0) rcv: 0x33
+[8091000 ns] Node 00 (VC0) rcv: 0x34
+[8095000 ns] Node 00 (VC0) rcv: 0x35
+[8099000 ns] Node 00 (VC0) rcv: 0x36
+[8103000 ns] Node 00 (VC0) rcv: 0x37
+[8107000 ns] Node 00 (VC0) rcv: 0x38
+[8111000 ns] Node 00 (VC0) rcv: 0x39
+[8115000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=8117000 src=0x2 -> Node00 (VC0) pkt_id=10 len=20
+[8119000 ns] Node 00 (VC0) rcv: 0x3b
+[8123000 ns] Node 00 (VC0) rcv: 0x3c
+[8127000 ns] Node 00 (VC0) rcv: 0x3d
+[8131000 ns] Node 00 (VC0) rcv: 0x3e
+[8135000 ns] Node 00 (VC0) rcv: 0x3f
+[8139000 ns] Node 00 (VC0) rcv: 0x40
+[8143000 ns] Node 00 (VC0) rcv: 0x41
+[8147000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=8151000 Node00 (VC0) src=0x3 pkt_id=13 len=20 matches prediction
+[8151000 ns] Node 00 (VC0) rcv: 0x43
+[8155000 ns] Node 00 (VC0) rcv: 0x10
+[8159000 ns] Node 00 (VC0) rcv: 0x11
+[8163000 ns] Node 00 (VC0) rcv: 0x12
+[8167000 ns] Node 00 (VC0) rcv: 0x13
+[8171000 ns] Node 00 (VC0) rcv: 0x14
+[8175000 ns] Node 00 (VC0) rcv: 0x15
+[8179000 ns] Node 00 (VC0) rcv: 0x16
+[8183000 ns] Node 00 (VC0) rcv: 0x17
+[8187000 ns] Node 00 (VC0) rcv: 0x18
+[8191000 ns] Node 00 (VC0) rcv: 0x19
+[8195000 ns] Node 00 (VC0) rcv: 0x1a
+[8199000 ns] Node 00 (VC0) rcv: 0x1b
+[8203000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8204000 src=0x1 -> Node00 (VC0) pkt_id=4 len=20
+[8207000 ns] Node 00 (VC0) rcv: 0x1d
+[8211000 ns] Node 00 (VC0) rcv: 0x1e
+[8215000 ns] Node 00 (VC0) rcv: 0x1f
+[8219000 ns] Node 00 (VC0) rcv: 0x20
+[8223000 ns] Node 00 (VC0) rcv: 0x21
+[8231000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8239000 Node00 (VC0) src=0x1 pkt_id=3 len=20 matches prediction
+[8239000 ns] Node 00 (VC0) rcv: 0x23
+[8243000 ns] Node 00 (VC0) rcv: 0x20
+[8247000 ns] Node 00 (VC0) rcv: 0x21
+[8251000 ns] Node 00 (VC0) rcv: 0x22
+[8255000 ns] Node 00 (VC0) rcv: 0x23
+[8259000 ns] Node 00 (VC0) rcv: 0x24
+[8263000 ns] Node 00 (VC0) rcv: 0x25
+[8267000 ns] Node 00 (VC0) rcv: 0x26
+[8271000 ns] Node 00 (VC0) rcv: 0x27
+[8275000 ns] Node 00 (VC0) rcv: 0x28
+[8279000 ns] Node 00 (VC0) rcv: 0x29
+[8283000 ns] Node 00 (VC0) rcv: 0x2a
+[8287000 ns] Node 00 (VC0) rcv: 0x2b
+[8291000 ns] Node 00 (VC0) rcv: 0x2c
+[8295000 ns] Node 00 (VC0) rcv: 0x2d
+[8299000 ns] Node 00 (VC0) rcv: 0x2e
+[8303000 ns] Node 00 (VC0) rcv: 0x2f
+[8307000 ns] Node 00 (VC0) rcv: 0x30
+[8311000 ns] Node 00 (VC0) rcv: 0x31
+[8315000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=8319000 Node00 (VC0) src=0x2 pkt_id=8 len=20 matches prediction
+[8319000 ns] Node 00 (VC0) rcv: 0x33
+[8323000 ns] Node 00 (VC0) rcv: 0x10
+[8327000 ns] Node 00 (VC0) rcv: 0x11
+[8331000 ns] Node 00 (VC0) rcv: 0x12
+[8335000 ns] Node 00 (VC0) rcv: 0x13
+[8339000 ns] Node 00 (VC0) rcv: 0x14
+[8343000 ns] Node 00 (VC0) rcv: 0x15
+[8347000 ns] Node 00 (VC0) rcv: 0x16
+[8351000 ns] Node 00 (VC0) rcv: 0x17
+[8355000 ns] Node 00 (VC0) rcv: 0x18
+[8359000 ns] Node 00 (VC0) rcv: 0x19
+[8363000 ns] Node 00 (VC0) rcv: 0x1a
+[8367000 ns] Node 00 (VC0) rcv: 0x1b
+[8371000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8372000 src=0x1 -> Node00 (VC0) pkt_id=5 len=20
+[8375000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=8375000 src=0x3 -> Node00 (VC0) pkt_id=1 len=20
+[8379000 ns] Node 00 (VC0) rcv: 0x1e
+[8383000 ns] Node 00 (VC0) rcv: 0x1f
+[8387000 ns] Node 00 (VC0) rcv: 0x20
+[8391000 ns] Node 00 (VC0) rcv: 0x21
+[8399000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8407000 Node00 (VC0) src=0x1 pkt_id=4 len=20 matches prediction
+[8407000 ns] Node 00 (VC0) rcv: 0x23
+[8411000 ns] Node 00 (VC0) rcv: 0x30
+[8415000 ns] Node 00 (VC0) rcv: 0x31
+[8419000 ns] Node 00 (VC0) rcv: 0x32
+[8423000 ns] Node 00 (VC0) rcv: 0x33
+[8427000 ns] Node 00 (VC0) rcv: 0x34
+[8431000 ns] Node 00 (VC0) rcv: 0x35
+[8435000 ns] Node 00 (VC0) rcv: 0x36
+[8439000 ns] Node 00 (VC0) rcv: 0x37
+[8443000 ns] Node 00 (VC0) rcv: 0x38
+[8447000 ns] Node 00 (VC0) rcv: 0x39
+[8451000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=8453000 src=0x2 -> Node00 (VC0) pkt_id=11 len=20
+[8455000 ns] Node 00 (VC0) rcv: 0x3b
+[8459000 ns] Node 00 (VC0) rcv: 0x3c
+[8463000 ns] Node 00 (VC0) rcv: 0x3d
+[8467000 ns] Node 00 (VC0) rcv: 0x3e
+[8471000 ns] Node 00 (VC0) rcv: 0x3f
+[8475000 ns] Node 00 (VC0) rcv: 0x40
+[8479000 ns] Node 00 (VC0) rcv: 0x41
+[8483000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=8487000 Node00 (VC0) src=0x3 pkt_id=14 len=20 matches prediction
+[8487000 ns] Node 00 (VC0) rcv: 0x43
+[8491000 ns] Node 00 (VC0) rcv: 0x10
+[8495000 ns] Node 00 (VC0) rcv: 0x11
+[8499000 ns] Node 00 (VC0) rcv: 0x12
+[8503000 ns] Node 00 (VC0) rcv: 0x13
+[8507000 ns] Node 00 (VC0) rcv: 0x14
+[8511000 ns] Node 00 (VC0) rcv: 0x15
+[8515000 ns] Node 00 (VC0) rcv: 0x16
+[8519000 ns] Node 00 (VC0) rcv: 0x17
+[8523000 ns] Node 00 (VC0) rcv: 0x18
+[8527000 ns] Node 00 (VC0) rcv: 0x19
+[8531000 ns] Node 00 (VC0) rcv: 0x1a
+[8535000 ns] Node 00 (VC0) rcv: 0x1b
+[8539000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8540000 src=0x1 -> Node00 (VC0) pkt_id=6 len=20
+[8543000 ns] Node 00 (VC0) rcv: 0x1d
+[8547000 ns] Node 00 (VC0) rcv: 0x1e
+[8551000 ns] Node 00 (VC0) rcv: 0x1f
+[8555000 ns] Node 00 (VC0) rcv: 0x20
+[8559000 ns] Node 00 (VC0) rcv: 0x21
+[8567000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8575000 Node00 (VC0) src=0x1 pkt_id=5 len=20 matches prediction
+[8575000 ns] Node 00 (VC0) rcv: 0x23
+[8579000 ns] Node 00 (VC0) rcv: 0x20
+[8583000 ns] Node 00 (VC0) rcv: 0x21
+[8587000 ns] Node 00 (VC0) rcv: 0x22
+[8591000 ns] Node 00 (VC0) rcv: 0x23
+[8595000 ns] Node 00 (VC0) rcv: 0x24
+[8599000 ns] Node 00 (VC0) rcv: 0x25
+[8603000 ns] Node 00 (VC0) rcv: 0x26
+[8607000 ns] Node 00 (VC0) rcv: 0x27
+[8611000 ns] Node 00 (VC0) rcv: 0x28
+[8615000 ns] Node 00 (VC0) rcv: 0x29
+[8619000 ns] Node 00 (VC0) rcv: 0x2a
+[8623000 ns] Node 00 (VC0) rcv: 0x2b
+[8627000 ns] Node 00 (VC0) rcv: 0x2c
+[8631000 ns] Node 00 (VC0) rcv: 0x2d
+[8635000 ns] Node 00 (VC0) rcv: 0x2e
+[8639000 ns] Node 00 (VC0) rcv: 0x2f
+[8643000 ns] Node 00 (VC0) rcv: 0x30
+[8647000 ns] Node 00 (VC0) rcv: 0x31
+[8651000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=8655000 Node00 (VC0) src=0x2 pkt_id=9 len=20 matches prediction
+[8655000 ns] Node 00 (VC0) rcv: 0x33
+[8659000 ns] Node 00 (VC0) rcv: 0x10
+[8663000 ns] Node 00 (VC0) rcv: 0x11
+[8667000 ns] Node 00 (VC0) rcv: 0x12
+[8671000 ns] Node 00 (VC0) rcv: 0x13
+[8675000 ns] Node 00 (VC0) rcv: 0x14
+[8679000 ns] Node 00 (VC0) rcv: 0x15
+[8683000 ns] Node 00 (VC0) rcv: 0x16
+[8687000 ns] Node 00 (VC0) rcv: 0x17
+[8691000 ns] Node 00 (VC0) rcv: 0x18
+[8695000 ns] Node 00 (VC0) rcv: 0x19
+[8699000 ns] Node 00 (VC0) rcv: 0x1a
+[8703000 ns] Node 00 (VC0) rcv: 0x1b
+[8707000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8708000 src=0x1 -> Node00 (VC0) pkt_id=7 len=20
+[8711000 ns] Node 00 (VC0) rcv: 0x1d
+[8715000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=8715000 src=0x3 -> Node00 (VC0) pkt_id=2 len=20
+[8719000 ns] Node 00 (VC0) rcv: 0x1f
+[8723000 ns] Node 00 (VC0) rcv: 0x20
+[8727000 ns] Node 00 (VC0) rcv: 0x21
+[8735000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8743000 Node00 (VC0) src=0x1 pkt_id=6 len=20 matches prediction
+[8743000 ns] Node 00 (VC0) rcv: 0x23
+[8747000 ns] Node 00 (VC0) rcv: 0x30
+[8751000 ns] Node 00 (VC0) rcv: 0x31
+[8755000 ns] Node 00 (VC0) rcv: 0x32
+[8759000 ns] Node 00 (VC0) rcv: 0x33
+[8763000 ns] Node 00 (VC0) rcv: 0x34
+[8767000 ns] Node 00 (VC0) rcv: 0x35
+[8771000 ns] Node 00 (VC0) rcv: 0x36
+[8775000 ns] Node 00 (VC0) rcv: 0x37
+[8779000 ns] Node 00 (VC0) rcv: 0x38
+[8783000 ns] Node 00 (VC0) rcv: 0x39
+[8787000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=8789000 src=0x2 -> Node00 (VC0) pkt_id=12 len=20
+[8791000 ns] Node 00 (VC0) rcv: 0x3b
+[8795000 ns] Node 00 (VC0) rcv: 0x3c
+[8799000 ns] Node 00 (VC0) rcv: 0x3d
+[8803000 ns] Node 00 (VC0) rcv: 0x3e
+[8807000 ns] Node 00 (VC0) rcv: 0x3f
+[8811000 ns] Node 00 (VC0) rcv: 0x40
+[8815000 ns] Node 00 (VC0) rcv: 0x41
+[8819000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=8823000 Node00 (VC0) src=0x3 pkt_id=15 len=20 matches prediction
+[8823000 ns] Node 00 (VC0) rcv: 0x43
+[8827000 ns] Node 00 (VC0) rcv: 0x10
+[8831000 ns] Node 00 (VC0) rcv: 0x11
+[8835000 ns] Node 00 (VC0) rcv: 0x12
+[8839000 ns] Node 00 (VC0) rcv: 0x13
+[8843000 ns] Node 00 (VC0) rcv: 0x14
+[8847000 ns] Node 00 (VC0) rcv: 0x15
+[8851000 ns] Node 00 (VC0) rcv: 0x16
+[8855000 ns] Node 00 (VC0) rcv: 0x17
+[8859000 ns] Node 00 (VC0) rcv: 0x18
+[8863000 ns] Node 00 (VC0) rcv: 0x19
+[8867000 ns] Node 00 (VC0) rcv: 0x1a
+[8871000 ns] Node 00 (VC0) rcv: 0x1b
+[8875000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=8876000 src=0x1 -> Node00 (VC0) pkt_id=8 len=20
+[8879000 ns] Node 00 (VC0) rcv: 0x1d
+[8883000 ns] Node 00 (VC0) rcv: 0x1e
+[8887000 ns] Node 00 (VC0) rcv: 0x1f
+[8891000 ns] Node 00 (VC0) rcv: 0x20
+[8895000 ns] Node 00 (VC0) rcv: 0x21
+[8903000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=8911000 Node00 (VC0) src=0x1 pkt_id=7 len=20 matches prediction
+[8911000 ns] Node 00 (VC0) rcv: 0x23
+[8915000 ns] Node 00 (VC0) rcv: 0x20
+[8919000 ns] Node 00 (VC0) rcv: 0x21
+[8923000 ns] Node 00 (VC0) rcv: 0x22
+[8927000 ns] Node 00 (VC0) rcv: 0x23
+[8931000 ns] Node 00 (VC0) rcv: 0x24
+[8935000 ns] Node 00 (VC0) rcv: 0x25
+[8939000 ns] Node 00 (VC0) rcv: 0x26
+[8943000 ns] Node 00 (VC0) rcv: 0x27
+[8947000 ns] Node 00 (VC0) rcv: 0x28
+[8951000 ns] Node 00 (VC0) rcv: 0x29
+[8955000 ns] Node 00 (VC0) rcv: 0x2a
+[8959000 ns] Node 00 (VC0) rcv: 0x2b
+[8963000 ns] Node 00 (VC0) rcv: 0x2c
+[8967000 ns] Node 00 (VC0) rcv: 0x2d
+[8971000 ns] Node 00 (VC0) rcv: 0x2e
+[8975000 ns] Node 00 (VC0) rcv: 0x2f
+[8979000 ns] Node 00 (VC0) rcv: 0x30
+[8983000 ns] Node 00 (VC0) rcv: 0x31
+[8987000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=8991000 Node00 (VC0) src=0x2 pkt_id=10 len=20 matches prediction
+[8991000 ns] Node 00 (VC0) rcv: 0x33
+[8995000 ns] Node 00 (VC0) rcv: 0x10
+[8999000 ns] Node 00 (VC0) rcv: 0x11
+[9003000 ns] Node 00 (VC0) rcv: 0x12
+[9007000 ns] Node 00 (VC0) rcv: 0x13
+[9011000 ns] Node 00 (VC0) rcv: 0x14
+[9015000 ns] Node 00 (VC0) rcv: 0x15
+[9019000 ns] Node 00 (VC0) rcv: 0x16
+[9023000 ns] Node 00 (VC0) rcv: 0x17
+[9027000 ns] Node 00 (VC0) rcv: 0x18
+[9031000 ns] Node 00 (VC0) rcv: 0x19
+[9035000 ns] Node 00 (VC0) rcv: 0x1a
+[9039000 ns] Node 00 (VC0) rcv: 0x1b
+[9043000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9044000 src=0x1 -> Node00 (VC0) pkt_id=9 len=20
+[SB-PRED] t=9045000 src=0x3 -> Node00 (VC0) pkt_id=3 len=20
+[9047000 ns] Node 00 (VC0) rcv: 0x1d
+[9051000 ns] Node 00 (VC0) rcv: 0x1e
+[9055000 ns] Node 00 (VC0) rcv: 0x1f
+[9059000 ns] Node 00 (VC0) rcv: 0x20
+[9063000 ns] Node 00 (VC0) rcv: 0x21
+[9071000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9079000 Node00 (VC0) src=0x1 pkt_id=8 len=20 matches prediction
+[9079000 ns] Node 00 (VC0) rcv: 0x23
+[9083000 ns] Node 00 (VC0) rcv: 0x30
+[9087000 ns] Node 00 (VC0) rcv: 0x31
+[9091000 ns] Node 00 (VC0) rcv: 0x32
+[9095000 ns] Node 00 (VC0) rcv: 0x33
+[9099000 ns] Node 00 (VC0) rcv: 0x34
+[9103000 ns] Node 00 (VC0) rcv: 0x35
+[9107000 ns] Node 00 (VC0) rcv: 0x36
+[9111000 ns] Node 00 (VC0) rcv: 0x37
+[9115000 ns] Node 00 (VC0) rcv: 0x38
+[9119000 ns] Node 00 (VC0) rcv: 0x39
+[9123000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=9125000 src=0x2 -> Node00 (VC0) pkt_id=13 len=20
+[9127000 ns] Node 00 (VC0) rcv: 0x3b
+[9131000 ns] Node 00 (VC0) rcv: 0x3c
+[9135000 ns] Node 00 (VC0) rcv: 0x3d
+[9139000 ns] Node 00 (VC0) rcv: 0x3e
+[9143000 ns] Node 00 (VC0) rcv: 0x3f
+[9147000 ns] Node 00 (VC0) rcv: 0x40
+[9151000 ns] Node 00 (VC0) rcv: 0x41
+[9155000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=9159000 Node00 (VC0) src=0x3 pkt_id=0 len=20 matches prediction
+[9159000 ns] Node 00 (VC0) rcv: 0x43
+[9163000 ns] Node 00 (VC0) rcv: 0x10
+[9167000 ns] Node 00 (VC0) rcv: 0x11
+[9171000 ns] Node 00 (VC0) rcv: 0x12
+[9175000 ns] Node 00 (VC0) rcv: 0x13
+[9179000 ns] Node 00 (VC0) rcv: 0x14
+[9183000 ns] Node 00 (VC0) rcv: 0x15
+[9187000 ns] Node 00 (VC0) rcv: 0x16
+[9191000 ns] Node 00 (VC0) rcv: 0x17
+[9195000 ns] Node 00 (VC0) rcv: 0x18
+[9199000 ns] Node 00 (VC0) rcv: 0x19
+[9203000 ns] Node 00 (VC0) rcv: 0x1a
+[9207000 ns] Node 00 (VC0) rcv: 0x1b
+[9211000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9212000 src=0x1 -> Node00 (VC0) pkt_id=10 len=20
+[9215000 ns] Node 00 (VC0) rcv: 0x1d
+[9219000 ns] Node 00 (VC0) rcv: 0x1e
+[9223000 ns] Node 00 (VC0) rcv: 0x1f
+[9227000 ns] Node 00 (VC0) rcv: 0x20
+[9231000 ns] Node 00 (VC0) rcv: 0x21
+[9239000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9247000 Node00 (VC0) src=0x1 pkt_id=9 len=20 matches prediction
+[9247000 ns] Node 00 (VC0) rcv: 0x23
+[9251000 ns] Node 00 (VC0) rcv: 0x20
+[9255000 ns] Node 00 (VC0) rcv: 0x21
+[9259000 ns] Node 00 (VC0) rcv: 0x22
+[9263000 ns] Node 00 (VC0) rcv: 0x23
+[9267000 ns] Node 00 (VC0) rcv: 0x24
+[9271000 ns] Node 00 (VC0) rcv: 0x25
+[9275000 ns] Node 00 (VC0) rcv: 0x26
+[9279000 ns] Node 00 (VC0) rcv: 0x27
+[9283000 ns] Node 00 (VC0) rcv: 0x28
+[9287000 ns] Node 00 (VC0) rcv: 0x29
+[9291000 ns] Node 00 (VC0) rcv: 0x2a
+[9295000 ns] Node 00 (VC0) rcv: 0x2b
+[9299000 ns] Node 00 (VC0) rcv: 0x2c
+[9303000 ns] Node 00 (VC0) rcv: 0x2d
+[9307000 ns] Node 00 (VC0) rcv: 0x2e
+[9311000 ns] Node 00 (VC0) rcv: 0x2f
+[9315000 ns] Node 00 (VC0) rcv: 0x30
+[9319000 ns] Node 00 (VC0) rcv: 0x31
+[9323000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=9327000 Node00 (VC0) src=0x2 pkt_id=11 len=20 matches prediction
+[9327000 ns] Node 00 (VC0) rcv: 0x33
+[9331000 ns] Node 00 (VC0) rcv: 0x10
+[9335000 ns] Node 00 (VC0) rcv: 0x11
+[9339000 ns] Node 00 (VC0) rcv: 0x12
+[9343000 ns] Node 00 (VC0) rcv: 0x13
+[9347000 ns] Node 00 (VC0) rcv: 0x14
+[9351000 ns] Node 00 (VC0) rcv: 0x15
+[9355000 ns] Node 00 (VC0) rcv: 0x16
+[9359000 ns] Node 00 (VC0) rcv: 0x17
+[9363000 ns] Node 00 (VC0) rcv: 0x18
+[9367000 ns] Node 00 (VC0) rcv: 0x19
+[9371000 ns] Node 00 (VC0) rcv: 0x1a
+[9375000 ns] Node 00 (VC0) rcv: 0x1b
+[9379000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9380000 src=0x1 -> Node00 (VC0) pkt_id=11 len=20
+[9383000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=9385000 src=0x3 -> Node00 (VC0) pkt_id=4 len=20
+[9387000 ns] Node 00 (VC0) rcv: 0x1e
+[9391000 ns] Node 00 (VC0) rcv: 0x1f
+[9395000 ns] Node 00 (VC0) rcv: 0x20
+[9399000 ns] Node 00 (VC0) rcv: 0x21
+[9407000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9415000 Node00 (VC0) src=0x1 pkt_id=10 len=20 matches prediction
+[9415000 ns] Node 00 (VC0) rcv: 0x23
+[9419000 ns] Node 00 (VC0) rcv: 0x30
+[9423000 ns] Node 00 (VC0) rcv: 0x31
+[9427000 ns] Node 00 (VC0) rcv: 0x32
+[9431000 ns] Node 00 (VC0) rcv: 0x33
+[9435000 ns] Node 00 (VC0) rcv: 0x34
+[9439000 ns] Node 00 (VC0) rcv: 0x35
+[9443000 ns] Node 00 (VC0) rcv: 0x36
+[9447000 ns] Node 00 (VC0) rcv: 0x37
+[9451000 ns] Node 00 (VC0) rcv: 0x38
+[9455000 ns] Node 00 (VC0) rcv: 0x39
+[9459000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=9461000 src=0x2 -> Node00 (VC0) pkt_id=14 len=20
+[9463000 ns] Node 00 (VC0) rcv: 0x3b
+[9467000 ns] Node 00 (VC0) rcv: 0x3c
+[9471000 ns] Node 00 (VC0) rcv: 0x3d
+[9475000 ns] Node 00 (VC0) rcv: 0x3e
+[9479000 ns] Node 00 (VC0) rcv: 0x3f
+[9483000 ns] Node 00 (VC0) rcv: 0x40
+[9487000 ns] Node 00 (VC0) rcv: 0x41
+[9491000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=9495000 Node00 (VC0) src=0x3 pkt_id=1 len=20 matches prediction
+[9495000 ns] Node 00 (VC0) rcv: 0x43
+[9499000 ns] Node 00 (VC0) rcv: 0x10
+[9503000 ns] Node 00 (VC0) rcv: 0x11
+[9507000 ns] Node 00 (VC0) rcv: 0x12
+[9511000 ns] Node 00 (VC0) rcv: 0x13
+[9515000 ns] Node 00 (VC0) rcv: 0x14
+[9519000 ns] Node 00 (VC0) rcv: 0x15
+[9523000 ns] Node 00 (VC0) rcv: 0x16
+[9527000 ns] Node 00 (VC0) rcv: 0x17
+[9531000 ns] Node 00 (VC0) rcv: 0x18
+[9535000 ns] Node 00 (VC0) rcv: 0x19
+[9539000 ns] Node 00 (VC0) rcv: 0x1a
+[9543000 ns] Node 00 (VC0) rcv: 0x1b
+[9547000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9548000 src=0x1 -> Node00 (VC0) pkt_id=12 len=20
+[9551000 ns] Node 00 (VC0) rcv: 0x1d
+[9555000 ns] Node 00 (VC0) rcv: 0x1e
+[9559000 ns] Node 00 (VC0) rcv: 0x1f
+[9563000 ns] Node 00 (VC0) rcv: 0x20
+[9567000 ns] Node 00 (VC0) rcv: 0x21
+[9575000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9583000 Node00 (VC0) src=0x1 pkt_id=11 len=20 matches prediction
+[9583000 ns] Node 00 (VC0) rcv: 0x23
+[9587000 ns] Node 00 (VC0) rcv: 0x20
+[9591000 ns] Node 00 (VC0) rcv: 0x21
+[9595000 ns] Node 00 (VC0) rcv: 0x22
+[9599000 ns] Node 00 (VC0) rcv: 0x23
+[9603000 ns] Node 00 (VC0) rcv: 0x24
+[9607000 ns] Node 00 (VC0) rcv: 0x25
+[9611000 ns] Node 00 (VC0) rcv: 0x26
+[9615000 ns] Node 00 (VC0) rcv: 0x27
+[9619000 ns] Node 00 (VC0) rcv: 0x28
+[9623000 ns] Node 00 (VC0) rcv: 0x29
+[9627000 ns] Node 00 (VC0) rcv: 0x2a
+[9631000 ns] Node 00 (VC0) rcv: 0x2b
+[9635000 ns] Node 00 (VC0) rcv: 0x2c
+[9639000 ns] Node 00 (VC0) rcv: 0x2d
+[9643000 ns] Node 00 (VC0) rcv: 0x2e
+[9647000 ns] Node 00 (VC0) rcv: 0x2f
+[9651000 ns] Node 00 (VC0) rcv: 0x30
+[9655000 ns] Node 00 (VC0) rcv: 0x31
+[9659000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=9663000 Node00 (VC0) src=0x2 pkt_id=12 len=20 matches prediction
+[9663000 ns] Node 00 (VC0) rcv: 0x33
+[9667000 ns] Node 00 (VC0) rcv: 0x10
+[9671000 ns] Node 00 (VC0) rcv: 0x11
+[9675000 ns] Node 00 (VC0) rcv: 0x12
+[9679000 ns] Node 00 (VC0) rcv: 0x13
+[9683000 ns] Node 00 (VC0) rcv: 0x14
+[9687000 ns] Node 00 (VC0) rcv: 0x15
+[9691000 ns] Node 00 (VC0) rcv: 0x16
+[9695000 ns] Node 00 (VC0) rcv: 0x17
+[9699000 ns] Node 00 (VC0) rcv: 0x18
+[9703000 ns] Node 00 (VC0) rcv: 0x19
+[9707000 ns] Node 00 (VC0) rcv: 0x1a
+[9711000 ns] Node 00 (VC0) rcv: 0x1b
+[9715000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9716000 src=0x1 -> Node00 (VC0) pkt_id=13 len=20
+[9719000 ns] Node 00 (VC0) rcv: 0x1d
+[9723000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=9725000 src=0x3 -> Node00 (VC0) pkt_id=5 len=20
+[9727000 ns] Node 00 (VC0) rcv: 0x1f
+[9731000 ns] Node 00 (VC0) rcv: 0x20
+[9735000 ns] Node 00 (VC0) rcv: 0x21
+[9743000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9751000 Node00 (VC0) src=0x1 pkt_id=12 len=20 matches prediction
+[9751000 ns] Node 00 (VC0) rcv: 0x23
+[9755000 ns] Node 00 (VC0) rcv: 0x30
+[9759000 ns] Node 00 (VC0) rcv: 0x31
+[9763000 ns] Node 00 (VC0) rcv: 0x32
+[9767000 ns] Node 00 (VC0) rcv: 0x33
+[9771000 ns] Node 00 (VC0) rcv: 0x34
+[9775000 ns] Node 00 (VC0) rcv: 0x35
+[9779000 ns] Node 00 (VC0) rcv: 0x36
+[9783000 ns] Node 00 (VC0) rcv: 0x37
+[9787000 ns] Node 00 (VC0) rcv: 0x38
+[9791000 ns] Node 00 (VC0) rcv: 0x39
+[9795000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=9797000 src=0x2 -> Node00 (VC0) pkt_id=15 len=20
+[9799000 ns] Node 00 (VC0) rcv: 0x3b
+[9803000 ns] Node 00 (VC0) rcv: 0x3c
+[9807000 ns] Node 00 (VC0) rcv: 0x3d
+[9811000 ns] Node 00 (VC0) rcv: 0x3e
+[9815000 ns] Node 00 (VC0) rcv: 0x3f
+[9819000 ns] Node 00 (VC0) rcv: 0x40
+[9823000 ns] Node 00 (VC0) rcv: 0x41
+[9827000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=9831000 Node00 (VC0) src=0x3 pkt_id=2 len=20 matches prediction
+[9831000 ns] Node 00 (VC0) rcv: 0x43
+[9835000 ns] Node 00 (VC0) rcv: 0x10
+[9839000 ns] Node 00 (VC0) rcv: 0x11
+[9843000 ns] Node 00 (VC0) rcv: 0x12
+[9847000 ns] Node 00 (VC0) rcv: 0x13
+[9851000 ns] Node 00 (VC0) rcv: 0x14
+[9855000 ns] Node 00 (VC0) rcv: 0x15
+[9859000 ns] Node 00 (VC0) rcv: 0x16
+[9863000 ns] Node 00 (VC0) rcv: 0x17
+[9867000 ns] Node 00 (VC0) rcv: 0x18
+[9871000 ns] Node 00 (VC0) rcv: 0x19
+[9875000 ns] Node 00 (VC0) rcv: 0x1a
+[9879000 ns] Node 00 (VC0) rcv: 0x1b
+[9883000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=9884000 src=0x1 -> Node00 (VC0) pkt_id=14 len=20
+[9887000 ns] Node 00 (VC0) rcv: 0x1d
+[9891000 ns] Node 00 (VC0) rcv: 0x1e
+[9895000 ns] Node 00 (VC0) rcv: 0x1f
+[9899000 ns] Node 00 (VC0) rcv: 0x20
+[9903000 ns] Node 00 (VC0) rcv: 0x21
+[9911000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9919000 Node00 (VC0) src=0x1 pkt_id=13 len=20 matches prediction
+[9919000 ns] Node 00 (VC0) rcv: 0x23
+[9923000 ns] Node 00 (VC0) rcv: 0x20
+[9927000 ns] Node 00 (VC0) rcv: 0x21
+[9931000 ns] Node 00 (VC0) rcv: 0x22
+[9935000 ns] Node 00 (VC0) rcv: 0x23
+[9939000 ns] Node 00 (VC0) rcv: 0x24
+[9943000 ns] Node 00 (VC0) rcv: 0x25
+[9947000 ns] Node 00 (VC0) rcv: 0x26
+[9951000 ns] Node 00 (VC0) rcv: 0x27
+[9955000 ns] Node 00 (VC0) rcv: 0x28
+[9959000 ns] Node 00 (VC0) rcv: 0x29
+[9963000 ns] Node 00 (VC0) rcv: 0x2a
+[9967000 ns] Node 00 (VC0) rcv: 0x2b
+[9971000 ns] Node 00 (VC0) rcv: 0x2c
+[9975000 ns] Node 00 (VC0) rcv: 0x2d
+[9979000 ns] Node 00 (VC0) rcv: 0x2e
+[9983000 ns] Node 00 (VC0) rcv: 0x2f
+[9987000 ns] Node 00 (VC0) rcv: 0x30
+[9991000 ns] Node 00 (VC0) rcv: 0x31
+[9995000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=9999000 Node00 (VC0) src=0x2 pkt_id=13 len=20 matches prediction
+[9999000 ns] Node 00 (VC0) rcv: 0x33
+[10003000 ns] Node 00 (VC0) rcv: 0x10
+[10007000 ns] Node 00 (VC0) rcv: 0x11
+[10011000 ns] Node 00 (VC0) rcv: 0x12
+[10015000 ns] Node 00 (VC0) rcv: 0x13
+[10019000 ns] Node 00 (VC0) rcv: 0x14
+[10023000 ns] Node 00 (VC0) rcv: 0x15
+[10027000 ns] Node 00 (VC0) rcv: 0x16
+[10031000 ns] Node 00 (VC0) rcv: 0x17
+[10035000 ns] Node 00 (VC0) rcv: 0x18
+[10039000 ns] Node 00 (VC0) rcv: 0x19
+[10043000 ns] Node 00 (VC0) rcv: 0x1a
+[10047000 ns] Node 00 (VC0) rcv: 0x1b
+[10051000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10052000 src=0x1 -> Node00 (VC0) pkt_id=15 len=20
+[10055000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=10055000 src=0x3 -> Node00 (VC0) pkt_id=6 len=20
+[10059000 ns] Node 00 (VC0) rcv: 0x1e
+[10063000 ns] Node 00 (VC0) rcv: 0x1f
+[10067000 ns] Node 00 (VC0) rcv: 0x20
+[10071000 ns] Node 00 (VC0) rcv: 0x21
+[10079000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10087000 Node00 (VC0) src=0x1 pkt_id=14 len=20 matches prediction
+[10087000 ns] Node 00 (VC0) rcv: 0x23
+[10091000 ns] Node 00 (VC0) rcv: 0x30
+[10095000 ns] Node 00 (VC0) rcv: 0x31
+[10099000 ns] Node 00 (VC0) rcv: 0x32
+[10103000 ns] Node 00 (VC0) rcv: 0x33
+[10107000 ns] Node 00 (VC0) rcv: 0x34
+[10111000 ns] Node 00 (VC0) rcv: 0x35
+[10115000 ns] Node 00 (VC0) rcv: 0x36
+[10119000 ns] Node 00 (VC0) rcv: 0x37
+[10123000 ns] Node 00 (VC0) rcv: 0x38
+[10127000 ns] Node 00 (VC0) rcv: 0x39
+[10131000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=10133000 src=0x2 -> Node00 (VC0) pkt_id=0 len=20
+[10135000 ns] Node 00 (VC0) rcv: 0x3b
+[10139000 ns] Node 00 (VC0) rcv: 0x3c
+[10143000 ns] Node 00 (VC0) rcv: 0x3d
+[10147000 ns] Node 00 (VC0) rcv: 0x3e
+[10151000 ns] Node 00 (VC0) rcv: 0x3f
+[10155000 ns] Node 00 (VC0) rcv: 0x40
+[10159000 ns] Node 00 (VC0) rcv: 0x41
+[10163000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=10167000 Node00 (VC0) src=0x3 pkt_id=3 len=20 matches prediction
+[10167000 ns] Node 00 (VC0) rcv: 0x43
+[10171000 ns] Node 00 (VC0) rcv: 0x10
+[10175000 ns] Node 00 (VC0) rcv: 0x11
+[10179000 ns] Node 00 (VC0) rcv: 0x12
+[10183000 ns] Node 00 (VC0) rcv: 0x13
+[10187000 ns] Node 00 (VC0) rcv: 0x14
+[10191000 ns] Node 00 (VC0) rcv: 0x15
+[10195000 ns] Node 00 (VC0) rcv: 0x16
+[10199000 ns] Node 00 (VC0) rcv: 0x17
+[10203000 ns] Node 00 (VC0) rcv: 0x18
+[10207000 ns] Node 00 (VC0) rcv: 0x19
+[10211000 ns] Node 00 (VC0) rcv: 0x1a
+[10215000 ns] Node 00 (VC0) rcv: 0x1b
+[10219000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10220000 src=0x1 -> Node00 (VC0) pkt_id=0 len=20
+[10223000 ns] Node 00 (VC0) rcv: 0x1d
+[10227000 ns] Node 00 (VC0) rcv: 0x1e
+[10231000 ns] Node 00 (VC0) rcv: 0x1f
+[10235000 ns] Node 00 (VC0) rcv: 0x20
+[10239000 ns] Node 00 (VC0) rcv: 0x21
+[10247000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10255000 Node00 (VC0) src=0x1 pkt_id=15 len=20 matches prediction
+[10255000 ns] Node 00 (VC0) rcv: 0x23
+[10259000 ns] Node 00 (VC0) rcv: 0x20
+[10263000 ns] Node 00 (VC0) rcv: 0x21
+[10267000 ns] Node 00 (VC0) rcv: 0x22
+[10271000 ns] Node 00 (VC0) rcv: 0x23
+[10275000 ns] Node 00 (VC0) rcv: 0x24
+[10279000 ns] Node 00 (VC0) rcv: 0x25
+[10283000 ns] Node 00 (VC0) rcv: 0x26
+[10287000 ns] Node 00 (VC0) rcv: 0x27
+[10291000 ns] Node 00 (VC0) rcv: 0x28
+[10295000 ns] Node 00 (VC0) rcv: 0x29
+[10299000 ns] Node 00 (VC0) rcv: 0x2a
+[10303000 ns] Node 00 (VC0) rcv: 0x2b
+[10307000 ns] Node 00 (VC0) rcv: 0x2c
+[10311000 ns] Node 00 (VC0) rcv: 0x2d
+[10315000 ns] Node 00 (VC0) rcv: 0x2e
+[10319000 ns] Node 00 (VC0) rcv: 0x2f
+[10323000 ns] Node 00 (VC0) rcv: 0x30
+[10327000 ns] Node 00 (VC0) rcv: 0x31
+[10331000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=10335000 Node00 (VC0) src=0x2 pkt_id=14 len=20 matches prediction
+[10335000 ns] Node 00 (VC0) rcv: 0x33
+[10339000 ns] Node 00 (VC0) rcv: 0x10
+[10343000 ns] Node 00 (VC0) rcv: 0x11
+[10347000 ns] Node 00 (VC0) rcv: 0x12
+[10351000 ns] Node 00 (VC0) rcv: 0x13
+[10355000 ns] Node 00 (VC0) rcv: 0x14
+[10359000 ns] Node 00 (VC0) rcv: 0x15
+[10363000 ns] Node 00 (VC0) rcv: 0x16
+[10367000 ns] Node 00 (VC0) rcv: 0x17
+[10371000 ns] Node 00 (VC0) rcv: 0x18
+[10375000 ns] Node 00 (VC0) rcv: 0x19
+[10379000 ns] Node 00 (VC0) rcv: 0x1a
+[10383000 ns] Node 00 (VC0) rcv: 0x1b
+[10387000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10388000 src=0x1 -> Node00 (VC0) pkt_id=1 len=20
+[10391000 ns] Node 00 (VC0) rcv: 0x1d
+[10395000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=10395000 src=0x3 -> Node00 (VC0) pkt_id=7 len=20
+[10399000 ns] Node 00 (VC0) rcv: 0x1f
+[10403000 ns] Node 00 (VC0) rcv: 0x20
+[10407000 ns] Node 00 (VC0) rcv: 0x21
+[10415000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10423000 Node00 (VC0) src=0x1 pkt_id=0 len=20 matches prediction
+[10423000 ns] Node 00 (VC0) rcv: 0x23
+[10427000 ns] Node 00 (VC0) rcv: 0x30
+[10431000 ns] Node 00 (VC0) rcv: 0x31
+[10435000 ns] Node 00 (VC0) rcv: 0x32
+[10439000 ns] Node 00 (VC0) rcv: 0x33
+[10443000 ns] Node 00 (VC0) rcv: 0x34
+[10447000 ns] Node 00 (VC0) rcv: 0x35
+[10451000 ns] Node 00 (VC0) rcv: 0x36
+[10455000 ns] Node 00 (VC0) rcv: 0x37
+[10459000 ns] Node 00 (VC0) rcv: 0x38
+[10463000 ns] Node 00 (VC0) rcv: 0x39
+[10467000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=10469000 src=0x2 -> Node00 (VC0) pkt_id=1 len=20
+[10471000 ns] Node 00 (VC0) rcv: 0x3b
+[10475000 ns] Node 00 (VC0) rcv: 0x3c
+[10479000 ns] Node 00 (VC0) rcv: 0x3d
+[10483000 ns] Node 00 (VC0) rcv: 0x3e
+[10487000 ns] Node 00 (VC0) rcv: 0x3f
+[10491000 ns] Node 00 (VC0) rcv: 0x40
+[10495000 ns] Node 00 (VC0) rcv: 0x41
+[10499000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=10503000 Node00 (VC0) src=0x3 pkt_id=4 len=20 matches prediction
+[10503000 ns] Node 00 (VC0) rcv: 0x43
+[10507000 ns] Node 00 (VC0) rcv: 0x10
+[10511000 ns] Node 00 (VC0) rcv: 0x11
+[10515000 ns] Node 00 (VC0) rcv: 0x12
+[10519000 ns] Node 00 (VC0) rcv: 0x13
+[10523000 ns] Node 00 (VC0) rcv: 0x14
+[10527000 ns] Node 00 (VC0) rcv: 0x15
+[10531000 ns] Node 00 (VC0) rcv: 0x16
+[10535000 ns] Node 00 (VC0) rcv: 0x17
+[10539000 ns] Node 00 (VC0) rcv: 0x18
+[10543000 ns] Node 00 (VC0) rcv: 0x19
+[10547000 ns] Node 00 (VC0) rcv: 0x1a
+[10551000 ns] Node 00 (VC0) rcv: 0x1b
+[10555000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10556000 src=0x1 -> Node00 (VC0) pkt_id=2 len=20
+[10559000 ns] Node 00 (VC0) rcv: 0x1d
+[10563000 ns] Node 00 (VC0) rcv: 0x1e
+[10567000 ns] Node 00 (VC0) rcv: 0x1f
+[10571000 ns] Node 00 (VC0) rcv: 0x20
+[10575000 ns] Node 00 (VC0) rcv: 0x21
+[10583000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10591000 Node00 (VC0) src=0x1 pkt_id=1 len=20 matches prediction
+[10591000 ns] Node 00 (VC0) rcv: 0x23
+[10595000 ns] Node 00 (VC0) rcv: 0x20
+[10599000 ns] Node 00 (VC0) rcv: 0x21
+[10603000 ns] Node 00 (VC0) rcv: 0x22
+[10607000 ns] Node 00 (VC0) rcv: 0x23
+[10611000 ns] Node 00 (VC0) rcv: 0x24
+[10615000 ns] Node 00 (VC0) rcv: 0x25
+[10619000 ns] Node 00 (VC0) rcv: 0x26
+[10623000 ns] Node 00 (VC0) rcv: 0x27
+[10627000 ns] Node 00 (VC0) rcv: 0x28
+[10631000 ns] Node 00 (VC0) rcv: 0x29
+[10635000 ns] Node 00 (VC0) rcv: 0x2a
+[10639000 ns] Node 00 (VC0) rcv: 0x2b
+[10643000 ns] Node 00 (VC0) rcv: 0x2c
+[10647000 ns] Node 00 (VC0) rcv: 0x2d
+[10651000 ns] Node 00 (VC0) rcv: 0x2e
+[10655000 ns] Node 00 (VC0) rcv: 0x2f
+[10659000 ns] Node 00 (VC0) rcv: 0x30
+[10663000 ns] Node 00 (VC0) rcv: 0x31
+[10667000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=10671000 Node00 (VC0) src=0x2 pkt_id=15 len=20 matches prediction
+[10671000 ns] Node 00 (VC0) rcv: 0x33
+[10675000 ns] Node 00 (VC0) rcv: 0x10
+[10679000 ns] Node 00 (VC0) rcv: 0x11
+[10683000 ns] Node 00 (VC0) rcv: 0x12
+[10687000 ns] Node 00 (VC0) rcv: 0x13
+[10691000 ns] Node 00 (VC0) rcv: 0x14
+[10695000 ns] Node 00 (VC0) rcv: 0x15
+[10699000 ns] Node 00 (VC0) rcv: 0x16
+[10703000 ns] Node 00 (VC0) rcv: 0x17
+[10707000 ns] Node 00 (VC0) rcv: 0x18
+[10711000 ns] Node 00 (VC0) rcv: 0x19
+[10715000 ns] Node 00 (VC0) rcv: 0x1a
+[10719000 ns] Node 00 (VC0) rcv: 0x1b
+[10723000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10724000 src=0x1 -> Node00 (VC0) pkt_id=3 len=20
+[SB-PRED] t=10725000 src=0x3 -> Node00 (VC0) pkt_id=8 len=20
+[10727000 ns] Node 00 (VC0) rcv: 0x1d
+[10731000 ns] Node 00 (VC0) rcv: 0x1e
+[10735000 ns] Node 00 (VC0) rcv: 0x1f
+[10739000 ns] Node 00 (VC0) rcv: 0x20
+[10743000 ns] Node 00 (VC0) rcv: 0x21
+[10751000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10759000 Node00 (VC0) src=0x1 pkt_id=2 len=20 matches prediction
+[10759000 ns] Node 00 (VC0) rcv: 0x23
+[10763000 ns] Node 00 (VC0) rcv: 0x30
+[10767000 ns] Node 00 (VC0) rcv: 0x31
+[10771000 ns] Node 00 (VC0) rcv: 0x32
+[10775000 ns] Node 00 (VC0) rcv: 0x33
+[10779000 ns] Node 00 (VC0) rcv: 0x34
+[10783000 ns] Node 00 (VC0) rcv: 0x35
+[10787000 ns] Node 00 (VC0) rcv: 0x36
+[10791000 ns] Node 00 (VC0) rcv: 0x37
+[10795000 ns] Node 00 (VC0) rcv: 0x38
+[10799000 ns] Node 00 (VC0) rcv: 0x39
+[10803000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=10805000 src=0x2 -> Node00 (VC0) pkt_id=2 len=20
+[10807000 ns] Node 00 (VC0) rcv: 0x3b
+[10811000 ns] Node 00 (VC0) rcv: 0x3c
+[10815000 ns] Node 00 (VC0) rcv: 0x3d
+[10819000 ns] Node 00 (VC0) rcv: 0x3e
+[10823000 ns] Node 00 (VC0) rcv: 0x3f
+[10827000 ns] Node 00 (VC0) rcv: 0x40
+[10831000 ns] Node 00 (VC0) rcv: 0x41
+[10835000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=10839000 Node00 (VC0) src=0x3 pkt_id=5 len=20 matches prediction
+[10839000 ns] Node 00 (VC0) rcv: 0x43
+[10843000 ns] Node 00 (VC0) rcv: 0x10
+[10847000 ns] Node 00 (VC0) rcv: 0x11
+[10851000 ns] Node 00 (VC0) rcv: 0x12
+[10855000 ns] Node 00 (VC0) rcv: 0x13
+[10859000 ns] Node 00 (VC0) rcv: 0x14
+[10863000 ns] Node 00 (VC0) rcv: 0x15
+[10867000 ns] Node 00 (VC0) rcv: 0x16
+[10871000 ns] Node 00 (VC0) rcv: 0x17
+[10875000 ns] Node 00 (VC0) rcv: 0x18
+[10879000 ns] Node 00 (VC0) rcv: 0x19
+[10883000 ns] Node 00 (VC0) rcv: 0x1a
+[10887000 ns] Node 00 (VC0) rcv: 0x1b
+[10891000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=10892000 src=0x1 -> Node00 (VC0) pkt_id=4 len=20
+[10895000 ns] Node 00 (VC0) rcv: 0x1d
+[10899000 ns] Node 00 (VC0) rcv: 0x1e
+[10903000 ns] Node 00 (VC0) rcv: 0x1f
+[10907000 ns] Node 00 (VC0) rcv: 0x20
+[10911000 ns] Node 00 (VC0) rcv: 0x21
+[10919000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=10927000 Node00 (VC0) src=0x1 pkt_id=3 len=20 matches prediction
+[10927000 ns] Node 00 (VC0) rcv: 0x23
+[10931000 ns] Node 00 (VC0) rcv: 0x20
+[10935000 ns] Node 00 (VC0) rcv: 0x21
+[10939000 ns] Node 00 (VC0) rcv: 0x22
+[10943000 ns] Node 00 (VC0) rcv: 0x23
+[10947000 ns] Node 00 (VC0) rcv: 0x24
+[10951000 ns] Node 00 (VC0) rcv: 0x25
+[10955000 ns] Node 00 (VC0) rcv: 0x26
+[10959000 ns] Node 00 (VC0) rcv: 0x27
+[10963000 ns] Node 00 (VC0) rcv: 0x28
+[10967000 ns] Node 00 (VC0) rcv: 0x29
+[10971000 ns] Node 00 (VC0) rcv: 0x2a
+[10975000 ns] Node 00 (VC0) rcv: 0x2b
+[10979000 ns] Node 00 (VC0) rcv: 0x2c
+[10983000 ns] Node 00 (VC0) rcv: 0x2d
+[10987000 ns] Node 00 (VC0) rcv: 0x2e
+[10991000 ns] Node 00 (VC0) rcv: 0x2f
+[10995000 ns] Node 00 (VC0) rcv: 0x30
+[10999000 ns] Node 00 (VC0) rcv: 0x31
+[11003000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=11007000 Node00 (VC0) src=0x2 pkt_id=0 len=20 matches prediction
+[11007000 ns] Node 00 (VC0) rcv: 0x33
+[11011000 ns] Node 00 (VC0) rcv: 0x10
+[11015000 ns] Node 00 (VC0) rcv: 0x11
+[11019000 ns] Node 00 (VC0) rcv: 0x12
+[11023000 ns] Node 00 (VC0) rcv: 0x13
+[11027000 ns] Node 00 (VC0) rcv: 0x14
+[11031000 ns] Node 00 (VC0) rcv: 0x15
+[11035000 ns] Node 00 (VC0) rcv: 0x16
+[11039000 ns] Node 00 (VC0) rcv: 0x17
+[11043000 ns] Node 00 (VC0) rcv: 0x18
+[11047000 ns] Node 00 (VC0) rcv: 0x19
+[11051000 ns] Node 00 (VC0) rcv: 0x1a
+[11055000 ns] Node 00 (VC0) rcv: 0x1b
+[11059000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11060000 src=0x1 -> Node00 (VC0) pkt_id=5 len=20
+[11063000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=11065000 src=0x3 -> Node00 (VC0) pkt_id=9 len=20
+[11067000 ns] Node 00 (VC0) rcv: 0x1e
+[11071000 ns] Node 00 (VC0) rcv: 0x1f
+[11075000 ns] Node 00 (VC0) rcv: 0x20
+[11079000 ns] Node 00 (VC0) rcv: 0x21
+[11087000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11095000 Node00 (VC0) src=0x1 pkt_id=4 len=20 matches prediction
+[11095000 ns] Node 00 (VC0) rcv: 0x23
+[11099000 ns] Node 00 (VC0) rcv: 0x30
+[11103000 ns] Node 00 (VC0) rcv: 0x31
+[11107000 ns] Node 00 (VC0) rcv: 0x32
+[11111000 ns] Node 00 (VC0) rcv: 0x33
+[11115000 ns] Node 00 (VC0) rcv: 0x34
+[11119000 ns] Node 00 (VC0) rcv: 0x35
+[11123000 ns] Node 00 (VC0) rcv: 0x36
+[11127000 ns] Node 00 (VC0) rcv: 0x37
+[11131000 ns] Node 00 (VC0) rcv: 0x38
+[11135000 ns] Node 00 (VC0) rcv: 0x39
+[11139000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=11141000 src=0x2 -> Node00 (VC0) pkt_id=3 len=20
+[11143000 ns] Node 00 (VC0) rcv: 0x3b
+[11147000 ns] Node 00 (VC0) rcv: 0x3c
+[11151000 ns] Node 00 (VC0) rcv: 0x3d
+[11155000 ns] Node 00 (VC0) rcv: 0x3e
+[11159000 ns] Node 00 (VC0) rcv: 0x3f
+[11163000 ns] Node 00 (VC0) rcv: 0x40
+[11167000 ns] Node 00 (VC0) rcv: 0x41
+[11171000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=11175000 Node00 (VC0) src=0x3 pkt_id=6 len=20 matches prediction
+[11175000 ns] Node 00 (VC0) rcv: 0x43
+[11179000 ns] Node 00 (VC0) rcv: 0x10
+[11183000 ns] Node 00 (VC0) rcv: 0x11
+[11187000 ns] Node 00 (VC0) rcv: 0x12
+[11191000 ns] Node 00 (VC0) rcv: 0x13
+[11195000 ns] Node 00 (VC0) rcv: 0x14
+[11199000 ns] Node 00 (VC0) rcv: 0x15
+[11203000 ns] Node 00 (VC0) rcv: 0x16
+[11207000 ns] Node 00 (VC0) rcv: 0x17
+[11211000 ns] Node 00 (VC0) rcv: 0x18
+[11215000 ns] Node 00 (VC0) rcv: 0x19
+[11219000 ns] Node 00 (VC0) rcv: 0x1a
+[11223000 ns] Node 00 (VC0) rcv: 0x1b
+[11227000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11228000 src=0x1 -> Node00 (VC0) pkt_id=6 len=20
+[11231000 ns] Node 00 (VC0) rcv: 0x1d
+[11235000 ns] Node 00 (VC0) rcv: 0x1e
+[11239000 ns] Node 00 (VC0) rcv: 0x1f
+[11243000 ns] Node 00 (VC0) rcv: 0x20
+[11247000 ns] Node 00 (VC0) rcv: 0x21
+[11255000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11263000 Node00 (VC0) src=0x1 pkt_id=5 len=20 matches prediction
+[11263000 ns] Node 00 (VC0) rcv: 0x23
+[11267000 ns] Node 00 (VC0) rcv: 0x20
+[11271000 ns] Node 00 (VC0) rcv: 0x21
+[11275000 ns] Node 00 (VC0) rcv: 0x22
+[11279000 ns] Node 00 (VC0) rcv: 0x23
+[11283000 ns] Node 00 (VC0) rcv: 0x24
+[11287000 ns] Node 00 (VC0) rcv: 0x25
+[11291000 ns] Node 00 (VC0) rcv: 0x26
+[11295000 ns] Node 00 (VC0) rcv: 0x27
+[11299000 ns] Node 00 (VC0) rcv: 0x28
+[11303000 ns] Node 00 (VC0) rcv: 0x29
+[11307000 ns] Node 00 (VC0) rcv: 0x2a
+[11311000 ns] Node 00 (VC0) rcv: 0x2b
+[11315000 ns] Node 00 (VC0) rcv: 0x2c
+[11319000 ns] Node 00 (VC0) rcv: 0x2d
+[11323000 ns] Node 00 (VC0) rcv: 0x2e
+[11327000 ns] Node 00 (VC0) rcv: 0x2f
+[11331000 ns] Node 00 (VC0) rcv: 0x30
+[11335000 ns] Node 00 (VC0) rcv: 0x31
+[11339000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=11343000 Node00 (VC0) src=0x2 pkt_id=1 len=20 matches prediction
+[11343000 ns] Node 00 (VC0) rcv: 0x33
+[11347000 ns] Node 00 (VC0) rcv: 0x10
+[11351000 ns] Node 00 (VC0) rcv: 0x11
+[11355000 ns] Node 00 (VC0) rcv: 0x12
+[11359000 ns] Node 00 (VC0) rcv: 0x13
+[11363000 ns] Node 00 (VC0) rcv: 0x14
+[11367000 ns] Node 00 (VC0) rcv: 0x15
+[11371000 ns] Node 00 (VC0) rcv: 0x16
+[11375000 ns] Node 00 (VC0) rcv: 0x17
+[11379000 ns] Node 00 (VC0) rcv: 0x18
+[11383000 ns] Node 00 (VC0) rcv: 0x19
+[11387000 ns] Node 00 (VC0) rcv: 0x1a
+[11391000 ns] Node 00 (VC0) rcv: 0x1b
+[11395000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11396000 src=0x1 -> Node00 (VC0) pkt_id=7 len=20
+[11399000 ns] Node 00 (VC0) rcv: 0x1d
+[11403000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=11405000 src=0x3 -> Node00 (VC0) pkt_id=10 len=20
+[11407000 ns] Node 00 (VC0) rcv: 0x1f
+[11411000 ns] Node 00 (VC0) rcv: 0x20
+[11415000 ns] Node 00 (VC0) rcv: 0x21
+[11423000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11431000 Node00 (VC0) src=0x1 pkt_id=6 len=20 matches prediction
+[11431000 ns] Node 00 (VC0) rcv: 0x23
+[11435000 ns] Node 00 (VC0) rcv: 0x30
+[11439000 ns] Node 00 (VC0) rcv: 0x31
+[11443000 ns] Node 00 (VC0) rcv: 0x32
+[11447000 ns] Node 00 (VC0) rcv: 0x33
+[11451000 ns] Node 00 (VC0) rcv: 0x34
+[11455000 ns] Node 00 (VC0) rcv: 0x35
+[11459000 ns] Node 00 (VC0) rcv: 0x36
+[11463000 ns] Node 00 (VC0) rcv: 0x37
+[11467000 ns] Node 00 (VC0) rcv: 0x38
+[11471000 ns] Node 00 (VC0) rcv: 0x39
+[11475000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=11477000 src=0x2 -> Node00 (VC0) pkt_id=4 len=20
+[11479000 ns] Node 00 (VC0) rcv: 0x3b
+[11483000 ns] Node 00 (VC0) rcv: 0x3c
+[11487000 ns] Node 00 (VC0) rcv: 0x3d
+[11491000 ns] Node 00 (VC0) rcv: 0x3e
+[11495000 ns] Node 00 (VC0) rcv: 0x3f
+[11499000 ns] Node 00 (VC0) rcv: 0x40
+[11503000 ns] Node 00 (VC0) rcv: 0x41
+[11507000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=11511000 Node00 (VC0) src=0x3 pkt_id=7 len=20 matches prediction
+[11511000 ns] Node 00 (VC0) rcv: 0x43
+[11515000 ns] Node 00 (VC0) rcv: 0x10
+[11519000 ns] Node 00 (VC0) rcv: 0x11
+[11523000 ns] Node 00 (VC0) rcv: 0x12
+[11527000 ns] Node 00 (VC0) rcv: 0x13
+[11531000 ns] Node 00 (VC0) rcv: 0x14
+[11535000 ns] Node 00 (VC0) rcv: 0x15
+[11539000 ns] Node 00 (VC0) rcv: 0x16
+[11543000 ns] Node 00 (VC0) rcv: 0x17
+[11547000 ns] Node 00 (VC0) rcv: 0x18
+[11551000 ns] Node 00 (VC0) rcv: 0x19
+[11555000 ns] Node 00 (VC0) rcv: 0x1a
+[11559000 ns] Node 00 (VC0) rcv: 0x1b
+[11563000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11564000 src=0x1 -> Node00 (VC0) pkt_id=8 len=20
+[11567000 ns] Node 00 (VC0) rcv: 0x1d
+[11571000 ns] Node 00 (VC0) rcv: 0x1e
+[11575000 ns] Node 00 (VC0) rcv: 0x1f
+[11579000 ns] Node 00 (VC0) rcv: 0x20
+[11583000 ns] Node 00 (VC0) rcv: 0x21
+[11591000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11599000 Node00 (VC0) src=0x1 pkt_id=7 len=20 matches prediction
+[11599000 ns] Node 00 (VC0) rcv: 0x23
+[11603000 ns] Node 00 (VC0) rcv: 0x20
+[11607000 ns] Node 00 (VC0) rcv: 0x21
+[11611000 ns] Node 00 (VC0) rcv: 0x22
+[11615000 ns] Node 00 (VC0) rcv: 0x23
+[11619000 ns] Node 00 (VC0) rcv: 0x24
+[11623000 ns] Node 00 (VC0) rcv: 0x25
+[11627000 ns] Node 00 (VC0) rcv: 0x26
+[11631000 ns] Node 00 (VC0) rcv: 0x27
+[11635000 ns] Node 00 (VC0) rcv: 0x28
+[11639000 ns] Node 00 (VC0) rcv: 0x29
+[11643000 ns] Node 00 (VC0) rcv: 0x2a
+[11647000 ns] Node 00 (VC0) rcv: 0x2b
+[11651000 ns] Node 00 (VC0) rcv: 0x2c
+[11655000 ns] Node 00 (VC0) rcv: 0x2d
+[11659000 ns] Node 00 (VC0) rcv: 0x2e
+[11663000 ns] Node 00 (VC0) rcv: 0x2f
+[11667000 ns] Node 00 (VC0) rcv: 0x30
+[11671000 ns] Node 00 (VC0) rcv: 0x31
+[11675000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=11679000 Node00 (VC0) src=0x2 pkt_id=2 len=20 matches prediction
+[11679000 ns] Node 00 (VC0) rcv: 0x33
+[11683000 ns] Node 00 (VC0) rcv: 0x10
+[11687000 ns] Node 00 (VC0) rcv: 0x11
+[11691000 ns] Node 00 (VC0) rcv: 0x12
+[11695000 ns] Node 00 (VC0) rcv: 0x13
+[11699000 ns] Node 00 (VC0) rcv: 0x14
+[11703000 ns] Node 00 (VC0) rcv: 0x15
+[11707000 ns] Node 00 (VC0) rcv: 0x16
+[11711000 ns] Node 00 (VC0) rcv: 0x17
+[11715000 ns] Node 00 (VC0) rcv: 0x18
+[11719000 ns] Node 00 (VC0) rcv: 0x19
+[11723000 ns] Node 00 (VC0) rcv: 0x1a
+[11727000 ns] Node 00 (VC0) rcv: 0x1b
+[11731000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11732000 src=0x1 -> Node00 (VC0) pkt_id=9 len=20
+[11735000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=11735000 src=0x3 -> Node00 (VC0) pkt_id=11 len=20
+[11739000 ns] Node 00 (VC0) rcv: 0x1e
+[11743000 ns] Node 00 (VC0) rcv: 0x1f
+[11747000 ns] Node 00 (VC0) rcv: 0x20
+[11751000 ns] Node 00 (VC0) rcv: 0x21
+[11759000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11767000 Node00 (VC0) src=0x1 pkt_id=8 len=20 matches prediction
+[11767000 ns] Node 00 (VC0) rcv: 0x23
+[11771000 ns] Node 00 (VC0) rcv: 0x30
+[11775000 ns] Node 00 (VC0) rcv: 0x31
+[11779000 ns] Node 00 (VC0) rcv: 0x32
+[11783000 ns] Node 00 (VC0) rcv: 0x33
+[11787000 ns] Node 00 (VC0) rcv: 0x34
+[11791000 ns] Node 00 (VC0) rcv: 0x35
+[11795000 ns] Node 00 (VC0) rcv: 0x36
+[11799000 ns] Node 00 (VC0) rcv: 0x37
+[11803000 ns] Node 00 (VC0) rcv: 0x38
+[11807000 ns] Node 00 (VC0) rcv: 0x39
+[11811000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=11813000 src=0x2 -> Node00 (VC0) pkt_id=5 len=20
+[11815000 ns] Node 00 (VC0) rcv: 0x3b
+[11819000 ns] Node 00 (VC0) rcv: 0x3c
+[11823000 ns] Node 00 (VC0) rcv: 0x3d
+[11827000 ns] Node 00 (VC0) rcv: 0x3e
+[11831000 ns] Node 00 (VC0) rcv: 0x3f
+[11835000 ns] Node 00 (VC0) rcv: 0x40
+[11839000 ns] Node 00 (VC0) rcv: 0x41
+[11843000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=11847000 Node00 (VC0) src=0x3 pkt_id=8 len=20 matches prediction
+[11847000 ns] Node 00 (VC0) rcv: 0x43
+[11851000 ns] Node 00 (VC0) rcv: 0x10
+[11855000 ns] Node 00 (VC0) rcv: 0x11
+[11859000 ns] Node 00 (VC0) rcv: 0x12
+[11863000 ns] Node 00 (VC0) rcv: 0x13
+[11867000 ns] Node 00 (VC0) rcv: 0x14
+[11871000 ns] Node 00 (VC0) rcv: 0x15
+[11875000 ns] Node 00 (VC0) rcv: 0x16
+[11879000 ns] Node 00 (VC0) rcv: 0x17
+[11883000 ns] Node 00 (VC0) rcv: 0x18
+[11887000 ns] Node 00 (VC0) rcv: 0x19
+[11891000 ns] Node 00 (VC0) rcv: 0x1a
+[11895000 ns] Node 00 (VC0) rcv: 0x1b
+[11899000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=11900000 src=0x1 -> Node00 (VC0) pkt_id=10 len=20
+[11903000 ns] Node 00 (VC0) rcv: 0x1d
+[11907000 ns] Node 00 (VC0) rcv: 0x1e
+[11911000 ns] Node 00 (VC0) rcv: 0x1f
+[11915000 ns] Node 00 (VC0) rcv: 0x20
+[11919000 ns] Node 00 (VC0) rcv: 0x21
+[11927000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=11935000 Node00 (VC0) src=0x1 pkt_id=9 len=20 matches prediction
+[11935000 ns] Node 00 (VC0) rcv: 0x23
+[11939000 ns] Node 00 (VC0) rcv: 0x20
+[11943000 ns] Node 00 (VC0) rcv: 0x21
+[11947000 ns] Node 00 (VC0) rcv: 0x22
+[11951000 ns] Node 00 (VC0) rcv: 0x23
+[11955000 ns] Node 00 (VC0) rcv: 0x24
+[11959000 ns] Node 00 (VC0) rcv: 0x25
+[11963000 ns] Node 00 (VC0) rcv: 0x26
+[11967000 ns] Node 00 (VC0) rcv: 0x27
+[11971000 ns] Node 00 (VC0) rcv: 0x28
+[11975000 ns] Node 00 (VC0) rcv: 0x29
+[11979000 ns] Node 00 (VC0) rcv: 0x2a
+[11983000 ns] Node 00 (VC0) rcv: 0x2b
+[11987000 ns] Node 00 (VC0) rcv: 0x2c
+[11991000 ns] Node 00 (VC0) rcv: 0x2d
+[11995000 ns] Node 00 (VC0) rcv: 0x2e
+[11999000 ns] Node 00 (VC0) rcv: 0x2f
+[12003000 ns] Node 00 (VC0) rcv: 0x30
+[12007000 ns] Node 00 (VC0) rcv: 0x31
+[12011000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=12015000 Node00 (VC0) src=0x2 pkt_id=3 len=20 matches prediction
+[12015000 ns] Node 00 (VC0) rcv: 0x33
+[12019000 ns] Node 00 (VC0) rcv: 0x10
+[12023000 ns] Node 00 (VC0) rcv: 0x11
+[12027000 ns] Node 00 (VC0) rcv: 0x12
+[12031000 ns] Node 00 (VC0) rcv: 0x13
+[12035000 ns] Node 00 (VC0) rcv: 0x14
+[12039000 ns] Node 00 (VC0) rcv: 0x15
+[12043000 ns] Node 00 (VC0) rcv: 0x16
+[12047000 ns] Node 00 (VC0) rcv: 0x17
+[12051000 ns] Node 00 (VC0) rcv: 0x18
+[12055000 ns] Node 00 (VC0) rcv: 0x19
+[12059000 ns] Node 00 (VC0) rcv: 0x1a
+[12063000 ns] Node 00 (VC0) rcv: 0x1b
+[12067000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12068000 src=0x1 -> Node00 (VC0) pkt_id=11 len=20
+[12071000 ns] Node 00 (VC0) rcv: 0x1d
+[12075000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=12075000 src=0x3 -> Node00 (VC0) pkt_id=12 len=20
+[12079000 ns] Node 00 (VC0) rcv: 0x1f
+[12083000 ns] Node 00 (VC0) rcv: 0x20
+[12087000 ns] Node 00 (VC0) rcv: 0x21
+[12095000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12103000 Node00 (VC0) src=0x1 pkt_id=10 len=20 matches prediction
+[12103000 ns] Node 00 (VC0) rcv: 0x23
+[12107000 ns] Node 00 (VC0) rcv: 0x30
+[12111000 ns] Node 00 (VC0) rcv: 0x31
+[12115000 ns] Node 00 (VC0) rcv: 0x32
+[12119000 ns] Node 00 (VC0) rcv: 0x33
+[12123000 ns] Node 00 (VC0) rcv: 0x34
+[12127000 ns] Node 00 (VC0) rcv: 0x35
+[12131000 ns] Node 00 (VC0) rcv: 0x36
+[12135000 ns] Node 00 (VC0) rcv: 0x37
+[12139000 ns] Node 00 (VC0) rcv: 0x38
+[12143000 ns] Node 00 (VC0) rcv: 0x39
+[12147000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=12149000 src=0x2 -> Node00 (VC0) pkt_id=6 len=20
+[12151000 ns] Node 00 (VC0) rcv: 0x3b
+[12155000 ns] Node 00 (VC0) rcv: 0x3c
+[12159000 ns] Node 00 (VC0) rcv: 0x3d
+[12163000 ns] Node 00 (VC0) rcv: 0x3e
+[12167000 ns] Node 00 (VC0) rcv: 0x3f
+[12171000 ns] Node 00 (VC0) rcv: 0x40
+[12175000 ns] Node 00 (VC0) rcv: 0x41
+[12179000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=12183000 Node00 (VC0) src=0x3 pkt_id=9 len=20 matches prediction
+[12183000 ns] Node 00 (VC0) rcv: 0x43
+[12187000 ns] Node 00 (VC0) rcv: 0x10
+[12191000 ns] Node 00 (VC0) rcv: 0x11
+[12195000 ns] Node 00 (VC0) rcv: 0x12
+[12199000 ns] Node 00 (VC0) rcv: 0x13
+[12203000 ns] Node 00 (VC0) rcv: 0x14
+[12207000 ns] Node 00 (VC0) rcv: 0x15
+[12211000 ns] Node 00 (VC0) rcv: 0x16
+[12215000 ns] Node 00 (VC0) rcv: 0x17
+[12219000 ns] Node 00 (VC0) rcv: 0x18
+[12223000 ns] Node 00 (VC0) rcv: 0x19
+[12227000 ns] Node 00 (VC0) rcv: 0x1a
+[12231000 ns] Node 00 (VC0) rcv: 0x1b
+[12235000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12236000 src=0x1 -> Node00 (VC0) pkt_id=12 len=20
+[12239000 ns] Node 00 (VC0) rcv: 0x1d
+[12243000 ns] Node 00 (VC0) rcv: 0x1e
+[12247000 ns] Node 00 (VC0) rcv: 0x1f
+[12251000 ns] Node 00 (VC0) rcv: 0x20
+[12255000 ns] Node 00 (VC0) rcv: 0x21
+[12263000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12271000 Node00 (VC0) src=0x1 pkt_id=11 len=20 matches prediction
+[12271000 ns] Node 00 (VC0) rcv: 0x23
+[12275000 ns] Node 00 (VC0) rcv: 0x20
+[12279000 ns] Node 00 (VC0) rcv: 0x21
+[12283000 ns] Node 00 (VC0) rcv: 0x22
+[12287000 ns] Node 00 (VC0) rcv: 0x23
+[12291000 ns] Node 00 (VC0) rcv: 0x24
+[12295000 ns] Node 00 (VC0) rcv: 0x25
+[12299000 ns] Node 00 (VC0) rcv: 0x26
+[12303000 ns] Node 00 (VC0) rcv: 0x27
+[12307000 ns] Node 00 (VC0) rcv: 0x28
+[12311000 ns] Node 00 (VC0) rcv: 0x29
+[12315000 ns] Node 00 (VC0) rcv: 0x2a
+[12319000 ns] Node 00 (VC0) rcv: 0x2b
+[12323000 ns] Node 00 (VC0) rcv: 0x2c
+[12327000 ns] Node 00 (VC0) rcv: 0x2d
+[12331000 ns] Node 00 (VC0) rcv: 0x2e
+[12335000 ns] Node 00 (VC0) rcv: 0x2f
+[12339000 ns] Node 00 (VC0) rcv: 0x30
+[12343000 ns] Node 00 (VC0) rcv: 0x31
+[12347000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=12351000 Node00 (VC0) src=0x2 pkt_id=4 len=20 matches prediction
+[12351000 ns] Node 00 (VC0) rcv: 0x33
+[12355000 ns] Node 00 (VC0) rcv: 0x10
+[12359000 ns] Node 00 (VC0) rcv: 0x11
+[12363000 ns] Node 00 (VC0) rcv: 0x12
+[12367000 ns] Node 00 (VC0) rcv: 0x13
+[12371000 ns] Node 00 (VC0) rcv: 0x14
+[12375000 ns] Node 00 (VC0) rcv: 0x15
+[12379000 ns] Node 00 (VC0) rcv: 0x16
+[12383000 ns] Node 00 (VC0) rcv: 0x17
+[12387000 ns] Node 00 (VC0) rcv: 0x18
+[12391000 ns] Node 00 (VC0) rcv: 0x19
+[12395000 ns] Node 00 (VC0) rcv: 0x1a
+[12399000 ns] Node 00 (VC0) rcv: 0x1b
+[12403000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12404000 src=0x1 -> Node00 (VC0) pkt_id=13 len=20
+[SB-PRED] t=12405000 src=0x3 -> Node00 (VC0) pkt_id=13 len=20
+[12407000 ns] Node 00 (VC0) rcv: 0x1d
+[12411000 ns] Node 00 (VC0) rcv: 0x1e
+[12415000 ns] Node 00 (VC0) rcv: 0x1f
+[12419000 ns] Node 00 (VC0) rcv: 0x20
+[12423000 ns] Node 00 (VC0) rcv: 0x21
+[12431000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12439000 Node00 (VC0) src=0x1 pkt_id=12 len=20 matches prediction
+[12439000 ns] Node 00 (VC0) rcv: 0x23
+[12443000 ns] Node 00 (VC0) rcv: 0x30
+[12447000 ns] Node 00 (VC0) rcv: 0x31
+[12451000 ns] Node 00 (VC0) rcv: 0x32
+[12455000 ns] Node 00 (VC0) rcv: 0x33
+[12459000 ns] Node 00 (VC0) rcv: 0x34
+[12463000 ns] Node 00 (VC0) rcv: 0x35
+[12467000 ns] Node 00 (VC0) rcv: 0x36
+[12471000 ns] Node 00 (VC0) rcv: 0x37
+[12475000 ns] Node 00 (VC0) rcv: 0x38
+[12479000 ns] Node 00 (VC0) rcv: 0x39
+[12483000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=12485000 src=0x2 -> Node00 (VC0) pkt_id=7 len=20
+[12487000 ns] Node 00 (VC0) rcv: 0x3b
+[12491000 ns] Node 00 (VC0) rcv: 0x3c
+[12495000 ns] Node 00 (VC0) rcv: 0x3d
+[12499000 ns] Node 00 (VC0) rcv: 0x3e
+[12503000 ns] Node 00 (VC0) rcv: 0x3f
+[12507000 ns] Node 00 (VC0) rcv: 0x40
+[12511000 ns] Node 00 (VC0) rcv: 0x41
+[12515000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=12519000 Node00 (VC0) src=0x3 pkt_id=10 len=20 matches prediction
+[12519000 ns] Node 00 (VC0) rcv: 0x43
+[12523000 ns] Node 00 (VC0) rcv: 0x10
+[12527000 ns] Node 00 (VC0) rcv: 0x11
+[12531000 ns] Node 00 (VC0) rcv: 0x12
+[12535000 ns] Node 00 (VC0) rcv: 0x13
+[12539000 ns] Node 00 (VC0) rcv: 0x14
+[12543000 ns] Node 00 (VC0) rcv: 0x15
+[12547000 ns] Node 00 (VC0) rcv: 0x16
+[12551000 ns] Node 00 (VC0) rcv: 0x17
+[12555000 ns] Node 00 (VC0) rcv: 0x18
+[12559000 ns] Node 00 (VC0) rcv: 0x19
+[12563000 ns] Node 00 (VC0) rcv: 0x1a
+[12567000 ns] Node 00 (VC0) rcv: 0x1b
+[12571000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12572000 src=0x1 -> Node00 (VC0) pkt_id=14 len=20
+[12575000 ns] Node 00 (VC0) rcv: 0x1d
+[12579000 ns] Node 00 (VC0) rcv: 0x1e
+[12583000 ns] Node 00 (VC0) rcv: 0x1f
+[12587000 ns] Node 00 (VC0) rcv: 0x20
+[12591000 ns] Node 00 (VC0) rcv: 0x21
+[12599000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12607000 Node00 (VC0) src=0x1 pkt_id=13 len=20 matches prediction
+[12607000 ns] Node 00 (VC0) rcv: 0x23
+[12611000 ns] Node 00 (VC0) rcv: 0x20
+[12615000 ns] Node 00 (VC0) rcv: 0x21
+[12619000 ns] Node 00 (VC0) rcv: 0x22
+[12623000 ns] Node 00 (VC0) rcv: 0x23
+[12627000 ns] Node 00 (VC0) rcv: 0x24
+[12631000 ns] Node 00 (VC0) rcv: 0x25
+[12635000 ns] Node 00 (VC0) rcv: 0x26
+[12639000 ns] Node 00 (VC0) rcv: 0x27
+[12643000 ns] Node 00 (VC0) rcv: 0x28
+[12647000 ns] Node 00 (VC0) rcv: 0x29
+[12651000 ns] Node 00 (VC0) rcv: 0x2a
+[12655000 ns] Node 00 (VC0) rcv: 0x2b
+[12659000 ns] Node 00 (VC0) rcv: 0x2c
+[12663000 ns] Node 00 (VC0) rcv: 0x2d
+[12667000 ns] Node 00 (VC0) rcv: 0x2e
+[12671000 ns] Node 00 (VC0) rcv: 0x2f
+[12675000 ns] Node 00 (VC0) rcv: 0x30
+[12679000 ns] Node 00 (VC0) rcv: 0x31
+[12683000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=12687000 Node00 (VC0) src=0x2 pkt_id=5 len=20 matches prediction
+[12687000 ns] Node 00 (VC0) rcv: 0x33
+[12691000 ns] Node 00 (VC0) rcv: 0x10
+[12695000 ns] Node 00 (VC0) rcv: 0x11
+[12699000 ns] Node 00 (VC0) rcv: 0x12
+[12703000 ns] Node 00 (VC0) rcv: 0x13
+[12707000 ns] Node 00 (VC0) rcv: 0x14
+[12711000 ns] Node 00 (VC0) rcv: 0x15
+[12715000 ns] Node 00 (VC0) rcv: 0x16
+[12719000 ns] Node 00 (VC0) rcv: 0x17
+[12723000 ns] Node 00 (VC0) rcv: 0x18
+[12727000 ns] Node 00 (VC0) rcv: 0x19
+[12731000 ns] Node 00 (VC0) rcv: 0x1a
+[12735000 ns] Node 00 (VC0) rcv: 0x1b
+[12739000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12740000 src=0x1 -> Node00 (VC0) pkt_id=15 len=20
+[12743000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=12745000 src=0x3 -> Node00 (VC0) pkt_id=14 len=20
+[12747000 ns] Node 00 (VC0) rcv: 0x1e
+[12751000 ns] Node 00 (VC0) rcv: 0x1f
+[12755000 ns] Node 00 (VC0) rcv: 0x20
+[12759000 ns] Node 00 (VC0) rcv: 0x21
+[12767000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12775000 Node00 (VC0) src=0x1 pkt_id=14 len=20 matches prediction
+[12775000 ns] Node 00 (VC0) rcv: 0x23
+[12779000 ns] Node 00 (VC0) rcv: 0x30
+[12783000 ns] Node 00 (VC0) rcv: 0x31
+[12787000 ns] Node 00 (VC0) rcv: 0x32
+[12791000 ns] Node 00 (VC0) rcv: 0x33
+[12795000 ns] Node 00 (VC0) rcv: 0x34
+[12799000 ns] Node 00 (VC0) rcv: 0x35
+[12803000 ns] Node 00 (VC0) rcv: 0x36
+[12807000 ns] Node 00 (VC0) rcv: 0x37
+[12811000 ns] Node 00 (VC0) rcv: 0x38
+[12815000 ns] Node 00 (VC0) rcv: 0x39
+[12819000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=12821000 src=0x2 -> Node00 (VC0) pkt_id=8 len=20
+[12823000 ns] Node 00 (VC0) rcv: 0x3b
+[12827000 ns] Node 00 (VC0) rcv: 0x3c
+[12831000 ns] Node 00 (VC0) rcv: 0x3d
+[12835000 ns] Node 00 (VC0) rcv: 0x3e
+[12839000 ns] Node 00 (VC0) rcv: 0x3f
+[12843000 ns] Node 00 (VC0) rcv: 0x40
+[12847000 ns] Node 00 (VC0) rcv: 0x41
+[12851000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=12855000 Node00 (VC0) src=0x3 pkt_id=11 len=20 matches prediction
+[12855000 ns] Node 00 (VC0) rcv: 0x43
+[12859000 ns] Node 00 (VC0) rcv: 0x10
+[12863000 ns] Node 00 (VC0) rcv: 0x11
+[12867000 ns] Node 00 (VC0) rcv: 0x12
+[12871000 ns] Node 00 (VC0) rcv: 0x13
+[12875000 ns] Node 00 (VC0) rcv: 0x14
+[12879000 ns] Node 00 (VC0) rcv: 0x15
+[12883000 ns] Node 00 (VC0) rcv: 0x16
+[12887000 ns] Node 00 (VC0) rcv: 0x17
+[12891000 ns] Node 00 (VC0) rcv: 0x18
+[12895000 ns] Node 00 (VC0) rcv: 0x19
+[12899000 ns] Node 00 (VC0) rcv: 0x1a
+[12903000 ns] Node 00 (VC0) rcv: 0x1b
+[12907000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=12908000 src=0x1 -> Node00 (VC0) pkt_id=0 len=20
+[12911000 ns] Node 00 (VC0) rcv: 0x1d
+[12915000 ns] Node 00 (VC0) rcv: 0x1e
+[12919000 ns] Node 00 (VC0) rcv: 0x1f
+[12923000 ns] Node 00 (VC0) rcv: 0x20
+[12927000 ns] Node 00 (VC0) rcv: 0x21
+[12935000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12943000 Node00 (VC0) src=0x1 pkt_id=15 len=20 matches prediction
+[12943000 ns] Node 00 (VC0) rcv: 0x23
+[12947000 ns] Node 00 (VC0) rcv: 0x20
+[12951000 ns] Node 00 (VC0) rcv: 0x21
+[12955000 ns] Node 00 (VC0) rcv: 0x22
+[12959000 ns] Node 00 (VC0) rcv: 0x23
+[12963000 ns] Node 00 (VC0) rcv: 0x24
+[12967000 ns] Node 00 (VC0) rcv: 0x25
+[12971000 ns] Node 00 (VC0) rcv: 0x26
+[12975000 ns] Node 00 (VC0) rcv: 0x27
+[12979000 ns] Node 00 (VC0) rcv: 0x28
+[12983000 ns] Node 00 (VC0) rcv: 0x29
+[12987000 ns] Node 00 (VC0) rcv: 0x2a
+[12991000 ns] Node 00 (VC0) rcv: 0x2b
+[12995000 ns] Node 00 (VC0) rcv: 0x2c
+[12999000 ns] Node 00 (VC0) rcv: 0x2d
+[13003000 ns] Node 00 (VC0) rcv: 0x2e
+[13007000 ns] Node 00 (VC0) rcv: 0x2f
+[13011000 ns] Node 00 (VC0) rcv: 0x30
+[13015000 ns] Node 00 (VC0) rcv: 0x31
+[13019000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=13023000 Node00 (VC0) src=0x2 pkt_id=6 len=20 matches prediction
+[13023000 ns] Node 00 (VC0) rcv: 0x33
+[13027000 ns] Node 00 (VC0) rcv: 0x10
+[13031000 ns] Node 00 (VC0) rcv: 0x11
+[13035000 ns] Node 00 (VC0) rcv: 0x12
+[13039000 ns] Node 00 (VC0) rcv: 0x13
+[13043000 ns] Node 00 (VC0) rcv: 0x14
+[13047000 ns] Node 00 (VC0) rcv: 0x15
+[13051000 ns] Node 00 (VC0) rcv: 0x16
+[13055000 ns] Node 00 (VC0) rcv: 0x17
+[13059000 ns] Node 00 (VC0) rcv: 0x18
+[13063000 ns] Node 00 (VC0) rcv: 0x19
+[13067000 ns] Node 00 (VC0) rcv: 0x1a
+[13071000 ns] Node 00 (VC0) rcv: 0x1b
+[13075000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=13076000 src=0x1 -> Node00 (VC0) pkt_id=1 len=20
+[13079000 ns] Node 00 (VC0) rcv: 0x1d
+[13083000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=13085000 src=0x3 -> Node00 (VC0) pkt_id=15 len=20
+[13087000 ns] Node 00 (VC0) rcv: 0x1f
+[13091000 ns] Node 00 (VC0) rcv: 0x20
+[13095000 ns] Node 00 (VC0) rcv: 0x21
+[13103000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=13111000 Node00 (VC0) src=0x1 pkt_id=0 len=20 matches prediction
+[13111000 ns] Node 00 (VC0) rcv: 0x23
+[13115000 ns] Node 00 (VC0) rcv: 0x30
+[13119000 ns] Node 00 (VC0) rcv: 0x31
+[13123000 ns] Node 00 (VC0) rcv: 0x32
+[13127000 ns] Node 00 (VC0) rcv: 0x33
+[13131000 ns] Node 00 (VC0) rcv: 0x34
+[13135000 ns] Node 00 (VC0) rcv: 0x35
+[13139000 ns] Node 00 (VC0) rcv: 0x36
+[13143000 ns] Node 00 (VC0) rcv: 0x37
+[13147000 ns] Node 00 (VC0) rcv: 0x38
+[13151000 ns] Node 00 (VC0) rcv: 0x39
+[13155000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=13157000 src=0x2 -> Node00 (VC0) pkt_id=9 len=20
+[13159000 ns] Node 00 (VC0) rcv: 0x3b
+[13163000 ns] Node 00 (VC0) rcv: 0x3c
+[13167000 ns] Node 00 (VC0) rcv: 0x3d
+[13171000 ns] Node 00 (VC0) rcv: 0x3e
+[13175000 ns] Node 00 (VC0) rcv: 0x3f
+[13179000 ns] Node 00 (VC0) rcv: 0x40
+[13183000 ns] Node 00 (VC0) rcv: 0x41
+[13187000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=13191000 Node00 (VC0) src=0x3 pkt_id=12 len=20 matches prediction
+[13191000 ns] Node 00 (VC0) rcv: 0x43
+[13195000 ns] Node 00 (VC0) rcv: 0x10
+[13199000 ns] Node 00 (VC0) rcv: 0x11
+[13203000 ns] Node 00 (VC0) rcv: 0x12
+[13207000 ns] Node 00 (VC0) rcv: 0x13
+[13211000 ns] Node 00 (VC0) rcv: 0x14
+[13215000 ns] Node 00 (VC0) rcv: 0x15
+[13219000 ns] Node 00 (VC0) rcv: 0x16
+[13223000 ns] Node 00 (VC0) rcv: 0x17
+[13227000 ns] Node 00 (VC0) rcv: 0x18
+[13231000 ns] Node 00 (VC0) rcv: 0x19
+[13235000 ns] Node 00 (VC0) rcv: 0x1a
+[13239000 ns] Node 00 (VC0) rcv: 0x1b
+[13243000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=13244000 src=0x1 -> Node00 (VC0) pkt_id=2 len=20
+[13247000 ns] Node 00 (VC0) rcv: 0x1d
+[13251000 ns] Node 00 (VC0) rcv: 0x1e
+[13255000 ns] Node 00 (VC0) rcv: 0x1f
+[13259000 ns] Node 00 (VC0) rcv: 0x20
+[13263000 ns] Node 00 (VC0) rcv: 0x21
+[13271000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=13279000 Node00 (VC0) src=0x1 pkt_id=1 len=20 matches prediction
+[13279000 ns] Node 00 (VC0) rcv: 0x23
+[13283000 ns] Node 00 (VC0) rcv: 0x20
+[13287000 ns] Node 00 (VC0) rcv: 0x21
+[13291000 ns] Node 00 (VC0) rcv: 0x22
+[13295000 ns] Node 00 (VC0) rcv: 0x23
+[13299000 ns] Node 00 (VC0) rcv: 0x24
+[13303000 ns] Node 00 (VC0) rcv: 0x25
+[13307000 ns] Node 00 (VC0) rcv: 0x26
+[13311000 ns] Node 00 (VC0) rcv: 0x27
+[13315000 ns] Node 00 (VC0) rcv: 0x28
+[13319000 ns] Node 00 (VC0) rcv: 0x29
+[13323000 ns] Node 00 (VC0) rcv: 0x2a
+[13327000 ns] Node 00 (VC0) rcv: 0x2b
+[13331000 ns] Node 00 (VC0) rcv: 0x2c
+[13335000 ns] Node 00 (VC0) rcv: 0x2d
+[13339000 ns] Node 00 (VC0) rcv: 0x2e
+[13343000 ns] Node 00 (VC0) rcv: 0x2f
+[13347000 ns] Node 00 (VC0) rcv: 0x30
+[13351000 ns] Node 00 (VC0) rcv: 0x31
+[13355000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=13359000 Node00 (VC0) src=0x2 pkt_id=7 len=20 matches prediction
+[13359000 ns] Node 00 (VC0) rcv: 0x33
+[13363000 ns] Node 00 (VC0) rcv: 0x10
+[13367000 ns] Node 00 (VC0) rcv: 0x11
+[13371000 ns] Node 00 (VC0) rcv: 0x12
+[13375000 ns] Node 00 (VC0) rcv: 0x13
+[13379000 ns] Node 00 (VC0) rcv: 0x14
+[13383000 ns] Node 00 (VC0) rcv: 0x15
+[13387000 ns] Node 00 (VC0) rcv: 0x16
+[13391000 ns] Node 00 (VC0) rcv: 0x17
+[13395000 ns] Node 00 (VC0) rcv: 0x18
+[13399000 ns] Node 00 (VC0) rcv: 0x19
+[13403000 ns] Node 00 (VC0) rcv: 0x1a
+[13407000 ns] Node 00 (VC0) rcv: 0x1b
+[13411000 ns] Node 00 (VC0) rcv: 0x1c
+[SB-PRED] t=13412000 src=0x1 -> Node00 (VC0) pkt_id=3 len=20
+[13415000 ns] Node 00 (VC0) rcv: 0x1d
+[SB-PRED] t=13415000 src=0x3 -> Node00 (VC0) pkt_id=0 len=20
+[13419000 ns] Node 00 (VC0) rcv: 0x1e
+[13423000 ns] Node 00 (VC0) rcv: 0x1f
+[13427000 ns] Node 00 (VC0) rcv: 0x20
+[13431000 ns] Node 00 (VC0) rcv: 0x21
+[13439000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=13447000 Node00 (VC0) src=0x1 pkt_id=2 len=20 matches prediction
+[13447000 ns] Node 00 (VC0) rcv: 0x23
+[13451000 ns] Node 00 (VC0) rcv: 0x30
+[13455000 ns] Node 00 (VC0) rcv: 0x31
+[13459000 ns] Node 00 (VC0) rcv: 0x32
+[13463000 ns] Node 00 (VC0) rcv: 0x33
+[13467000 ns] Node 00 (VC0) rcv: 0x34
+[13471000 ns] Node 00 (VC0) rcv: 0x35
+[13475000 ns] Node 00 (VC0) rcv: 0x36
+[13479000 ns] Node 00 (VC0) rcv: 0x37
+[13483000 ns] Node 00 (VC0) rcv: 0x38
+[13487000 ns] Node 00 (VC0) rcv: 0x39
+[13491000 ns] Node 00 (VC0) rcv: 0x3a
+[SB-PRED] t=13493000 src=0x2 -> Node00 (VC0) pkt_id=10 len=20
+[13495000 ns] Node 00 (VC0) rcv: 0x3b
+[13499000 ns] Node 00 (VC0) rcv: 0x3c
+[13503000 ns] Node 00 (VC0) rcv: 0x3d
+[13507000 ns] Node 00 (VC0) rcv: 0x3e
+[13511000 ns] Node 00 (VC0) rcv: 0x3f
+[13515000 ns] Node 00 (VC0) rcv: 0x40
+[13519000 ns] Node 00 (VC0) rcv: 0x41
+[13523000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=13527000 Node00 (VC0) src=0x3 pkt_id=13 len=20 matches prediction
+[13527000 ns] Node 00 (VC0) rcv: 0x43
+[13531000 ns] Node 00 (VC0) rcv: 0x10
+[13535000 ns] Node 00 (VC0) rcv: 0x11
+[13539000 ns] Node 00 (VC0) rcv: 0x12
+[13543000 ns] Node 00 (VC0) rcv: 0x13
+[13547000 ns] Node 00 (VC0) rcv: 0x14
+[13551000 ns] Node 00 (VC0) rcv: 0x15
+[13555000 ns] Node 00 (VC0) rcv: 0x16
+[13559000 ns] Node 00 (VC0) rcv: 0x17
+[13563000 ns] Node 00 (VC0) rcv: 0x18
+[13567000 ns] Node 00 (VC0) rcv: 0x19
+[13571000 ns] Node 00 (VC0) rcv: 0x1a
+[13575000 ns] Node 00 (VC0) rcv: 0x1b
+[13579000 ns] Node 00 (VC0) rcv: 0x1c
+[13583000 ns] Node 00 (VC0) rcv: 0x1d
+[13587000 ns] Node 00 (VC0) rcv: 0x1e
+[13591000 ns] Node 00 (VC0) rcv: 0x1f
+[13595000 ns] Node 00 (VC0) rcv: 0x20
+[13599000 ns] Node 00 (VC0) rcv: 0x21
+[13607000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=13615000 Node00 (VC0) src=0x1 pkt_id=3 len=20 matches prediction
+[13615000 ns] Node 00 (VC0) rcv: 0x23
+[13619000 ns] Node 00 (VC0) rcv: 0x20
+[13623000 ns] Node 00 (VC0) rcv: 0x21
+[13627000 ns] Node 00 (VC0) rcv: 0x22
+[13631000 ns] Node 00 (VC0) rcv: 0x23
+[13635000 ns] Node 00 (VC0) rcv: 0x24
+[13639000 ns] Node 00 (VC0) rcv: 0x25
+[13643000 ns] Node 00 (VC0) rcv: 0x26
+[13647000 ns] Node 00 (VC0) rcv: 0x27
+[13651000 ns] Node 00 (VC0) rcv: 0x28
+[13655000 ns] Node 00 (VC0) rcv: 0x29
+[13659000 ns] Node 00 (VC0) rcv: 0x2a
+[13663000 ns] Node 00 (VC0) rcv: 0x2b
+[13667000 ns] Node 00 (VC0) rcv: 0x2c
+[13671000 ns] Node 00 (VC0) rcv: 0x2d
+[13675000 ns] Node 00 (VC0) rcv: 0x2e
+[13679000 ns] Node 00 (VC0) rcv: 0x2f
+[13683000 ns] Node 00 (VC0) rcv: 0x30
+[13687000 ns] Node 00 (VC0) rcv: 0x31
+[13691000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=13695000 Node00 (VC0) src=0x2 pkt_id=8 len=20 matches prediction
+[13695000 ns] Node 00 (VC0) rcv: 0x33
+[13699000 ns] Node 00 (VC0) rcv: 0x30
+[13703000 ns] Node 00 (VC0) rcv: 0x31
+[13707000 ns] Node 00 (VC0) rcv: 0x32
+[13711000 ns] Node 00 (VC0) rcv: 0x33
+[13715000 ns] Node 00 (VC0) rcv: 0x34
+[13719000 ns] Node 00 (VC0) rcv: 0x35
+[13723000 ns] Node 00 (VC0) rcv: 0x36
+[13727000 ns] Node 00 (VC0) rcv: 0x37
+[13731000 ns] Node 00 (VC0) rcv: 0x38
+[13735000 ns] Node 00 (VC0) rcv: 0x39
+[13739000 ns] Node 00 (VC0) rcv: 0x3a
+[13743000 ns] Node 00 (VC0) rcv: 0x3b
+[13747000 ns] Node 00 (VC0) rcv: 0x3c
+[13751000 ns] Node 00 (VC0) rcv: 0x3d
+[13755000 ns] Node 00 (VC0) rcv: 0x3e
+[13759000 ns] Node 00 (VC0) rcv: 0x3f
+[13763000 ns] Node 00 (VC0) rcv: 0x40
+[13767000 ns] Node 00 (VC0) rcv: 0x41
+[13771000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=13775000 Node00 (VC0) src=0x3 pkt_id=14 len=20 matches prediction
+[13775000 ns] Node 00 (VC0) rcv: 0x43
+[13779000 ns] Node 00 (VC0) rcv: 0x20
+[13783000 ns] Node 00 (VC0) rcv: 0x21
+[13787000 ns] Node 00 (VC0) rcv: 0x22
+[13791000 ns] Node 00 (VC0) rcv: 0x23
+[13795000 ns] Node 00 (VC0) rcv: 0x24
+[13799000 ns] Node 00 (VC0) rcv: 0x25
+[13803000 ns] Node 00 (VC0) rcv: 0x26
+[13807000 ns] Node 00 (VC0) rcv: 0x27
+[13811000 ns] Node 00 (VC0) rcv: 0x28
+[13815000 ns] Node 00 (VC0) rcv: 0x29
+[13819000 ns] Node 00 (VC0) rcv: 0x2a
+[13823000 ns] Node 00 (VC0) rcv: 0x2b
+[13827000 ns] Node 00 (VC0) rcv: 0x2c
+[13831000 ns] Node 00 (VC0) rcv: 0x2d
+[13835000 ns] Node 00 (VC0) rcv: 0x2e
+[13839000 ns] Node 00 (VC0) rcv: 0x2f
+[13843000 ns] Node 00 (VC0) rcv: 0x30
+[13847000 ns] Node 00 (VC0) rcv: 0x31
+[13851000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=13855000 Node00 (VC0) src=0x2 pkt_id=9 len=20 matches prediction
+[13855000 ns] Node 00 (VC0) rcv: 0x33
+[13859000 ns] Node 00 (VC0) rcv: 0x30
+[13863000 ns] Node 00 (VC0) rcv: 0x31
+[13867000 ns] Node 00 (VC0) rcv: 0x32
+[13871000 ns] Node 00 (VC0) rcv: 0x33
+[13875000 ns] Node 00 (VC0) rcv: 0x34
+[13879000 ns] Node 00 (VC0) rcv: 0x35
+[13883000 ns] Node 00 (VC0) rcv: 0x36
+[13887000 ns] Node 00 (VC0) rcv: 0x37
+[13891000 ns] Node 00 (VC0) rcv: 0x38
+[13895000 ns] Node 00 (VC0) rcv: 0x39
+[13899000 ns] Node 00 (VC0) rcv: 0x3a
+[13903000 ns] Node 00 (VC0) rcv: 0x3b
+[13907000 ns] Node 00 (VC0) rcv: 0x3c
+[13911000 ns] Node 00 (VC0) rcv: 0x3d
+[13915000 ns] Node 00 (VC0) rcv: 0x3e
+[13919000 ns] Node 00 (VC0) rcv: 0x3f
+[13923000 ns] Node 00 (VC0) rcv: 0x40
+[13927000 ns] Node 00 (VC0) rcv: 0x41
+[13931000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=13935000 Node00 (VC0) src=0x3 pkt_id=15 len=20 matches prediction
+[13935000 ns] Node 00 (VC0) rcv: 0x43
+[13939000 ns] Node 00 (VC0) rcv: 0x20
+[13943000 ns] Node 00 (VC0) rcv: 0x21
+[13947000 ns] Node 00 (VC0) rcv: 0x22
+[13951000 ns] Node 00 (VC0) rcv: 0x23
+[13955000 ns] Node 00 (VC0) rcv: 0x24
+[13959000 ns] Node 00 (VC0) rcv: 0x25
+[13963000 ns] Node 00 (VC0) rcv: 0x26
+[13967000 ns] Node 00 (VC0) rcv: 0x27
+[13971000 ns] Node 00 (VC0) rcv: 0x28
+[13975000 ns] Node 00 (VC0) rcv: 0x29
+[13979000 ns] Node 00 (VC0) rcv: 0x2a
+[13983000 ns] Node 00 (VC0) rcv: 0x2b
+[13987000 ns] Node 00 (VC0) rcv: 0x2c
+[13991000 ns] Node 00 (VC0) rcv: 0x2d
+[13995000 ns] Node 00 (VC0) rcv: 0x2e
+[13999000 ns] Node 00 (VC0) rcv: 0x2f
+[14003000 ns] Node 00 (VC0) rcv: 0x30
+[14007000 ns] Node 00 (VC0) rcv: 0x31
+[14011000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=14015000 Node00 (VC0) src=0x2 pkt_id=10 len=20 matches prediction
+[14015000 ns] Node 00 (VC0) rcv: 0x33
+[14019000 ns] Node 00 (VC0) rcv: 0x30
+[14023000 ns] Node 00 (VC0) rcv: 0x31
+[14027000 ns] Node 00 (VC0) rcv: 0x32
+[14031000 ns] Node 00 (VC0) rcv: 0x33
+[14035000 ns] Node 00 (VC0) rcv: 0x34
+[14039000 ns] Node 00 (VC0) rcv: 0x35
+[14043000 ns] Node 00 (VC0) rcv: 0x36
+[14047000 ns] Node 00 (VC0) rcv: 0x37
+[14051000 ns] Node 00 (VC0) rcv: 0x38
+[14055000 ns] Node 00 (VC0) rcv: 0x39
+[14059000 ns] Node 00 (VC0) rcv: 0x3a
+[14063000 ns] Node 00 (VC0) rcv: 0x3b
+[14067000 ns] Node 00 (VC0) rcv: 0x3c
+[14071000 ns] Node 00 (VC0) rcv: 0x3d
+[14075000 ns] Node 00 (VC0) rcv: 0x3e
+[14079000 ns] Node 00 (VC0) rcv: 0x3f
+[14083000 ns] Node 00 (VC0) rcv: 0x40
+[14087000 ns] Node 00 (VC0) rcv: 0x41
+[14091000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=14095000 Node00 (VC0) src=0x3 pkt_id=0 len=20 matches prediction
+[14095000 ns] Node 00 (VC0) rcv: 0x43
+
+[TB] --- Test 6 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Sustained Hot-Spot Contention
+=================================================
+ [Node00 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 1899 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 952 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 527 | Stalls: 2113 (79.2%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 529 | Stalls: 244 (30.5%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 110 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 20 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=136 Mismatched=0 Pending=0
+=================================================
+
+=================================================
+ FAIRNESS REPORT: share of flits injected toward Node00
+=================================================
+ [Node10] 952 flits (47%)
+ [Node01] 527 flits (26%)
+ [Node11] 529 flits (26%)
+ min share = 26%  (เกณฑ์ผ่าน >= 10%)
+-------------------------------------------------
+ node00 ingress: 1899 flits / 2000 สูงสุด = 95.0% ของ NoC line rate
+                 (บนบอร์ดจริง PATTERN=1 วัดได้ 57.5%)
+=================================================
+ Test 6 PASS - ทุกแหล่งได้ส่วนแบ่งเกินเกณฑ์
+$finish called at time : 33523500 ps : File "D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv" Line 612
+## quit
+INFO: [Common 17-206] Exiting xsim at Wed Aug 19 15:56:53 2026...
+
+
+===================================================
+ SIM REGRESSION RESULT
+===================================================
+  tests finished        : 6 / 6   (เทสต์ที่จบ: 1 2 3 4 5 6)
+  final scoreboard      : Matched=136  Mismatched=0  Pending=0
+  baseline              : Mismatched=0  Pending=0  (Matched แปรได้ เพราะ Test 6
+                          ยิงตามเวลา ไม่ได้ตามจำนวนแพ็กเกจคงที่)
+
+  >>> PASS — ตรงกับ baseline
+  error markers in log  : 0
+===================================================

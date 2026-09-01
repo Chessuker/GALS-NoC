@@ -1,8 +1,8 @@
 -------------------------------------
 | Tool Version : Vivado v.2025.2
-| Date         : Tue Aug 11 14:42:19 2026
+| Date         : Tue Sep  1 16:22:14 2026
 | Host         : LAPTOP-QOCHRTAO
-| Design       : design_1
+| Design       : checkpoint_arty_stress_top
 | Device       : xc7a100t-csg324-1--
 -------------------------------------
 

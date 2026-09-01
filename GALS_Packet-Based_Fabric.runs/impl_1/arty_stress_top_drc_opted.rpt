@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (win64) Build 6299465 Fri Nov 14 19:35:11 GMT 2025
-| Date         : Tue Aug 11 14:42:02 2026
+| Date         : Tue Sep  1 16:21:50 2026
 | Host         : LAPTOP-QOCHRTAO running 64-bit major release  (build 9200)
 | Command      : report_drc -file arty_stress_top_drc_opted.rpt -pb arty_stress_top_drc_opted.pb -rpx arty_stress_top_drc_opted.rpx
 | Design       : arty_stress_top
@@ -20,7 +20,7 @@ Table of Contents
 1. REPORT SUMMARY
 -----------------
             Netlist: netlist
-          Floorplan: design_1
+          Floorplan: checkpoint_arty_stress_top
       Design limits: <entire design considered>
            Ruledeck: default
              Max checks: <unlimited>
