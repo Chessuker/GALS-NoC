@@ -1,6 +1,6 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-08-19. Branch `feature/1-testbenchs`, last commit `3baabaf`.
+Last updated: 2026-09-01. Branch `feature/1-testbenchs`, last commit `e1571ba`.
 
 Read this first if you're picking the project up cold.
 
@@ -8,14 +8,14 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Three real RTL bugs were found. **All three are fixed and verified in simulation.**
-Bug #3's fix has NOT yet been confirmed on the board.
+Three real RTL bugs were found. **All three are fixed, and all three are confirmed
+in simulation and on the board.**
 
 | # | bug | status |
 |---|-----|--------|
 | 1 | `packet_arbiter` released an output port mid-packet, corrupting packets | **fixed** |
 | 2 | `packet_arbiter` round-robin mask latched; one input took 100% of a contended port | **fixed** |
-| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | **fixed in sim — needs a board run** |
+| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | **fixed** |
 
 All three predate this work and would have shipped. None was caught by the
 five original simulation tests or by the permutation hardware stress run.
@@ -73,7 +73,7 @@ up (gotcha 6). 0 means the top module isn't `arty_stress_top`.
 
 ---
 
-## 3. Bug #3 — fixed in simulation, not yet on hardware
+## 3. Bug #3 — fixed
 
 ### Symptom (before the fix)
 
@@ -164,11 +164,23 @@ no latches, no combinational loops, WNS 3.207 ns -> **3.131 ns** (76 ps cost —
 now depends on `m_ready`, one extra level), 866 -> **967 LUTs** per router, registers
 unchanged at 199. About 400 extra LUTs across the 4-router mesh, ~2% of the part.
 
-### Still to do
+### Confirmed on hardware — 2026-09-01
 
-**Rebuild the board and confirm.** `set PATTERN 1 ; set VC_MODE 2` should now read close to
-the `VC_MODE=0` number (100.0%) instead of 57.5%. That is the one claim here that
-simulation cannot make for you.
+`PATTERN=1 ; VC_MODE=2`, rebuilt from the fixed RTL, 924 `MARK_DEBUG` nets,
+synthesis clean (0 errors, 0 critical warnings):
+
+| | before | after |
+|---|---|---|
+| node 00 local port utilisation | 57.5% | **97.0%** |
+| sequence errors, all agents | 0 | **0** |
+| VC split at the sink | — | 50.0 / 50.0 |
+
+Simulation predicted 97.2% for the same configuration; the board came in at 97.0%.
+The 50/50 VC split confirms both channels flow — neither starves the other.
+Log: `hw_logs/ila_vc2_pattern1_20260901_FIXED.log`.
+
+The board's own `VC_MODE=2` figure is now essentially the `VC_MODE=0` figure, which is
+what "the two VCs no longer cross-block" was supposed to mean.
 
 ## 4. Gotchas that cost real time
 
@@ -198,7 +210,13 @@ simulation cannot make for you.
 
 ## 5. Still open, beyond bug #3
 
-- **Bug #3 has not been confirmed on hardware** — see the end of section 3.
+- **Fairness is still 48/28/24 (spread 50%) on hardware.** Unchanged by the bug #3 fix,
+  and identical in `VC_MODE=0` and `VC_MODE=2`, so it is not a side effect of this work —
+  but it is the one number the fix did not move. Simulation agrees (min share 25-26%,
+  which clears Test 6's 10% bar, so the regression will not flag it). `agent_01` is
+  mesh idx1 (gotcha 3) and sits one hop from node 00 while idx2/idx3 converge, so some
+  of the spread is topology rather than arbitration — worth confirming before treating
+  it as a bug.
 - ECC (`ecc_secded_*`, `dual_port_ram_ecc`) has never been exercised — no error injection.
 - Seven formal `.sby` files sit unused in `sources_1/new/old/`. `arbiter_formal.sby` claims
   to prove "channel cannot be stolen mid-packet" — plausibly catches bug #1 at source, and
