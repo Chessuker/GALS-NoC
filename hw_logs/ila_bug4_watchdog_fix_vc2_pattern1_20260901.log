@@ -1,0 +1,54 @@
+===================================================
+ GALS NoC - hardware ILA run (analyze_ila.py)
+ date     : 2026-09-01
+ build    : PATTERN=1 (hot-spot 01/10/11 -> node 00), VC_MODE=2 (alternating)
+ RTL      : bug #4 fix (agent finishes packet before leaving S_RUN)
+            + liveness watchdog + max_gap probe
+ purpose  : ยืนยันบนบอร์ดว่า (1) watchdog ไม่ false-trip แล้ว
+            (2) การไม่ตัดแพ็กเกจกลางคันทำให้ node ช้าได้ throughput คืนมา
+ csv      : GALS_Packet-Based_Fabric.runs/impl_1/ila_bug4_watchdog_fix_vc2_pattern1
+===================================================
+
+agent       clk MHz   mode   state   TX/cyc   stall%   RX/cyc   TX MB/s  errors  dest
+-------------------------------------------------------------------------------------
+agent_00     100.00  final     [3]   0.0000      0.0   0.7755      0.00       0   [0]
+agent_01      71.43  final     [3]   0.5418     45.8   0.0000     38.70       0   [0]
+agent_10      83.33  final     [3]   0.2326     76.7   0.0000     19.39       0   [0]
+agent_11      71.43  final     [3]   0.3092     69.1   0.0000     22.08       0   [0]
+
+  VC split: agent_00 VC0 6,505,683 (50.0%)  VC1 6,505,808 (50.0%)
+
+  local output port ของ node 00 : 77.6 / 80 Mflit/s = 96.9% utilisation
+  รวม injected                  : 80.2 MB/s
+
+  fairness: agent_01 48.3%  agent_10 24.2%  agent_11 27.5%   spread 49.9%
+
+sequence errors รวมทุก agent : 0   ->  PASS
+liveness : ทุก node (4) มี flit ขยับตลอด S_RUN   ->  PASS
+
+===================================================
+ เทียบก่อน/หลังแก้ bug #4 (บอร์ด, config เดียวกัน)
+===================================================
+  agent        ก่อน        หลัง      เปลี่ยน     sim ทำนายไว้
+  agent_01   33.25 MB/s  38.70 MB/s   +16.4%     +16%
+  agent_11   16.62 MB/s  22.08 MB/s   +32.9%     +32.9%
+  agent_10   19.39 MB/s  19.39 MB/s    0.0%      ไม่เปลี่ยน
+  รวม        69.3  MB/s  80.2  MB/s   +15.7%
+
+  liveness   FAIL (01,11)  PASS
+  node00     97.0%         96.9%      (ไม่เปลี่ยน - หน้าต่างของ sink ปิดก่อน
+                                       ช่วงที่เคยค้าง ตัวเลขนี้จึงไม่เคยได้รับผล)
+
+  -> sim ทำนาย delta ของทั้งสาม agent ตรงกับบอร์ดในระดับเศษเปอร์เซ็นต์
+     tb_noc_stress_tester ใช้แทนการ build จริงเพื่อไล่ปัญหาได้
+
+===================================================
+ ข้อสังเกตเรื่อง fairness (ยังเปิดอยู่ ดู HANDOFF ข้อ 5)
+===================================================
+  สัดส่วนตอนนี้ 48.3 / 24.2 / 27.5 เข้าใกล้ 50/25/25 ตามรูปทรง tree
+    idx0 LOCAL มีสองขาเข้า: EAST (agent_01) กับ NORTH (agent_10 + agent_11)
+    -> agent_01 ชนะ 1 ใน 2, ส่วน agent_10/11 ชนะ 1 ใน 2 แล้วมาแบ่งกันอีก 1 ใน 2
+  ก่อนแก้ bug #4 สัดส่วนคือ 48 / 28 / 24 (agent_11 เสียเปรียบเพราะโดนล็อกค้าง)
+  หลังแก้ agent_11 กลับมาได้ส่วนแบ่งใกล้เคียง agent_10 ตามที่ควรเป็น
+  -> spread 50% น่าจะเป็นเรื่อง topology ไม่ใช่ arbiter ไม่ยุติธรรม
+     ยืนยันได้ด้วยการรัน PATTERN=0 ซึ่งทุก node อยู่ห่างเท่ากัน
