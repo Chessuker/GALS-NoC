@@ -115,6 +115,33 @@ module tb_noc_stress_tester;
     //      (state: 0=WARMUP 1=RUN 2=DRAIN 3=DONE)
     // GEN_ARB[0] = LOCAL output ของ router idx0 = ทางเข้า node 00
     `define ARB0 uut_noc_top.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst
+    // ---- นับ flit ที่ผ่านเข้า LOCAL port ของ idx0 (= ทางเข้า node 00) แยกตามขาเข้า
+    //
+    // จุดประสงค์: แยก "arbiter ยุติธรรมหรือเปล่า" ออกจาก "รูปทรง tree ทำให้ไม่เท่ากัน"
+    //   สัดส่วนที่วัดได้ที่ตัว agent คือ 48 / 24 / 27 ซึ่งดูเหมือน agent_01 ได้เปรียบ
+    //   แต่ที่ arbiter ตัวนี้มีขาเข้าแค่สองขาที่มีของ:
+    //     EAST  (bit 3) = agent_01 ตัวเดียว
+    //     NORTH (bit 1) = agent_10 + agent_11 ที่ merge กันมาแล้วตั้งแต่ idx2
+    //   ถ้า round-robin ที่นี่ยุติธรรม EAST:NORTH ต้องราว 50:50
+    //   แล้ว agent_10/11 ค่อยไปแบ่งครึ่งของ NORTH กันเองอีกชั้น -> 50/25/25
+    //   ซึ่งตรงกับที่วัดได้ แปลว่าไม่ใช่บั๊กของ arbiter แต่เป็นรูปทรงของ tree
+    //
+    // นับเฉพาะไซเคิลที่ "ย้าย flit ได้จริง" (grant && valid && ready)
+    //   grant เฉยๆ ไม่พอ เพราะตอน LOCKED มันค้าง grant ไว้ได้ทั้งที่ยังไม่มีของ
+    localparam int LOCAL_P = 0, NORTH_P = 1, SOUTH_P = 2, EAST_P = 3, WEST_P = 4;
+    int unsigned xfer_in [5] = '{default: 0};
+
+    always @(posedge clk_noc) begin
+        if (rst_n) begin
+            for (int p = 0; p < 5; p++) begin
+                if (`ARB0.grant_vc0[p] && `ARB0.valid_vc0[p] && `ARB0.ready_out_vc0)
+                    xfer_in[p]++;
+                if (`ARB0.grant_vc1[p] && `ARB0.valid_vc1[p] && `ARB0.ready_out_vc1)
+                    xfer_in[p]++;
+            end
+        end
+    end
+
     logic rep01 = 0, rep11 = 0;
     always @(posedge clk_h01) begin
         if (!rep01 && u_stress.agent_01.stuck_cnt == 20000) begin
@@ -189,6 +216,22 @@ module tb_noc_stress_tester;
         end
 
         $display("\n  pass_group1=%0b pass_group2=%0b any_fail=%0b", pass_g1, pass_g2, any_fail);
+        //-------------------------------------------------- arbiter fairness
+        begin
+            automatic int unsigned e = xfer_in[EAST_P];
+            automatic int unsigned n = xfer_in[NORTH_P];
+            automatic int unsigned tot = e + n;
+            $display("");
+            $display("  flit ที่เข้า LOCAL port ของ idx0 แยกตามขาเข้า:");
+            $display("    EAST  (agent_01 เดี่ยว)      : %0d", e);
+            $display("    NORTH (agent_10 + agent_11) : %0d", n);
+            $display("    LOCAL/SOUTH/WEST            : %0d / %0d / %0d",
+                     xfer_in[LOCAL_P], xfer_in[SOUTH_P], xfer_in[WEST_P]);
+            if (tot > 0)
+                $display("    -> EAST %0d%%  NORTH %0d%%  (ยุติธรรม = 50/50)",
+                         (e*100)/tot, (n*100)/tot);
+        end
+
         //-------------------------------------------------- เกณฑ์ตัดสิน
         // GAP_MAX_OK ตั้งจากที่วัดได้จริง (สูงสุด 136 cycle) เผื่อไว้ ~15 เท่า
         //   ถ้า agent กลับไปตัดแพ็กเกจกลางคันอีก ตัวเลขจะพุ่งไป ~37,000 ทันที
@@ -221,6 +264,23 @@ module tb_noc_stress_tester;
                 fails++;
             end else
                 $display("  [PASS] sink received %0d flits", rx0);
+
+            // round-robin ที่ LOCAL port ของ idx0 ต้องแบ่งขาเข้าสองขาราวครึ่งต่อครึ่ง
+            // เผื่อ +-5% กันความแปรปรวนของ GALS (แต่ละขามาคนละโดเมนนาฬิกา)
+            begin
+                automatic int unsigned e = xfer_in[EAST_P];
+                automatic int unsigned n = xfer_in[NORTH_P];
+                automatic int unsigned tot = e + n;
+                automatic int unsigned ep = (tot > 0) ? (e*100)/tot : 0;
+                if (tot == 0) begin
+                    $display("  [FAIL] ไม่มี flit ผ่าน LOCAL port ของ idx0 เลย");
+                    fails++;
+                end else if (ep < 45 || ep > 55) begin
+                    $display("  [FAIL] arbiter ไม่ยุติธรรม: EAST %0d%% / NORTH %0d%%", ep, 100-ep);
+                    fails++;
+                end else
+                    $display("  [PASS] arbiter แบ่งขาเข้า EAST %0d%% / NORTH %0d%%", ep, 100-ep);
+            end
 
             $display("");
             if (fails == 0) $display("  >>> tb_noc_stress_tester PASS");

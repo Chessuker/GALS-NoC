@@ -346,20 +346,22 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   lock/unlock logic as bug #1 — run the full regression plus `tb_noc_stress_tester`
   before trusting one.
 - Bug #4's fix and the liveness watchdog are both confirmed on hardware (section 3b).
-- **Fairness is 48.3/24.2/27.5 (spread ~50%) on hardware** — likely topology, not a bug.
-  `idx0`'s LOCAL port has two inputs: EAST (agent_01) and NORTH (agent_10 + agent_11), so
-  round-robin at each level gives 50/25/25, which is close to what is now measured. Before
-  bug #4 was fixed it read 48/28/24 with agent_11 unfairly low; fixing the wedge moved
-  agent_11 back up to parity with agent_10, which is what the tree shape predicts.
-  A `PATTERN=0` run (all nodes equidistant) would settle it — if the spread collapses
-  there, close this item.
-- (historical) **Fairness was 48/28/24 (spread 50%).** Unchanged by the bug #3 fix,
-  and identical in `VC_MODE=0` and `VC_MODE=2`, so it is not a side effect of this work —
-  but it is the one number the fix did not move. Simulation agrees (min share 25-26%,
-  which clears Test 6's 10% bar, so the regression will not flag it). `agent_01` is
-  mesh idx1 (gotcha 3) and sits one hop from node 00 while idx2/idx3 converge, so some
-  of the spread is topology rather than arbitration — worth confirming before treating
-  it as a bug.
+- ~~Fairness spread of 50% (48/24/27) might be arbiter unfairness~~ — **closed, it is
+  topology.** `tb_noc_stress_tester` now counts transfers per input port at `idx0`'s LOCAL
+  arbiter and measures **EAST 49% / NORTH 51%** — round-robin is fair to within 1%.
+  The agent-level split follows from the tree, not the arbiter: `agent_01` arrives alone on
+  EAST, while `agent_10` and `agent_11` are already merged onto NORTH back at `idx2`, so
+  fair 50/50 at this port necessarily yields 50/25/25 at the agents. Conservation confirms
+  the wiring: EAST = 142,112 = agent_01's exact tx count; NORTH = 142,176 =
+  61,104 + 81,072 exactly. The test asserts EAST stays within 45-55%.
+
+  Note `PATTERN=0` is *not* the experiment for this — permutation deliberately gives every
+  flow its own link with no output-port contention at all, so there is no split to measure.
+
+  Still slightly uneven *within* NORTH (agent_10 43% / agent_11 57%), but most of that is
+  gotcha 4: agent_10 runs at 83.33 MHz and agent_11 at 71.43 MHz, so agent_11's
+  equal-cycle window is 17% longer in wall-clock time. Comparing their raw totals is
+  exactly the trap gotcha 4 warns about.
 - ECC (`ecc_secded_*`, `dual_port_ram_ecc`) has never been exercised — no error injection.
 - Seven formal `.sby` files sit unused in `sources_1/new/old/`. `arbiter_formal.sby` claims
   to prove "channel cannot be stolen mid-packet" — plausibly catches bug #1 at source, and
