@@ -70,9 +70,10 @@ drive xsim with a `run all; quit` tclbatch. Verified to reproduce
 Then: Set Up Debug -> Run Implementation -> bitstream -> program -> Hardware Manager ->
 **Trigger Immediately** -> export each ILA to CSV -> `python analyze_ila.py <csv-folder>`.
 
-Expect **1024** `MARK_DEBUG` nets: 924 original + 4 `stuck_seen` + 96 `max_gap`
-(24 bits x 4 agents). 928 means a build from before `max_gap` was added; 924 means before
-the watchdog entirely; either way Set Up Debug hasn't been re-run since (gotcha 6) and
+Expect **1064** `MARK_DEBUG` nets: 924 original + 4 `stuck_seen` + 96 `max_gap`
+(24 bits x 4 agents) + 40 ECC (`ecc_sbe_node`/`ecc_dbe_node` 4 each, `ecc_sbe_cnt`/
+`ecc_dbe_cnt` 16 each). 1024 means a build from before the ECC flags were wired;
+928 means before `max_gap`; 924 means before the watchdog entirely; either way Set Up Debug hasn't been re-run since (gotcha 6) and
 `analyze_ila.py` will say the liveness result is unprovable rather than claim a pass.
 668 means the `mon_*` perf-monitor probes weren't picked up (gotcha 6). 0 means the top
 module isn't `arty_stress_top`.
@@ -362,7 +363,39 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   gotcha 4: agent_10 runs at 83.33 MHz and agent_11 at 71.43 MHz, so agent_11's
   equal-cycle window is 17% longer in wall-clock time. Comparing their raw totals is
   exactly the trap gotcha 4 warns about.
-- ECC (`ecc_secded_*`, `dual_port_ram_ecc`) has never been exercised — no error injection.
+- ~~ECC has never been exercised~~ — **done.** `tb_ecc_secded.sv` proves the SECDED (13,8)
+  exhaustively: all 256 values clean, every single-bit flip (256 x 13), every double-bit
+  flip (256 x C(13,2)), plus writes through a real `dual_port_ram_ecc` with bits flipped
+  directly in `mem`. 23,792 cases, 0 failures. Mutating the decoder's data extraction or
+  its single/double decision fails 1,904 and 23,248 cases respectively, so the test has
+  teeth. The logic was correct all along.
+
+  **The real defect was that nobody could hear it.** `ecc_single_err`/`ecc_double_err` were
+  left dangling at `gals_node_wrapper` (`.ecc_double_err()`), so an uncorrectable error was
+  detected and then discarded — corrupt data flowed on silently. Now wired end to end:
+
+  - `async_fifo` qualifies the raw flags with `ecc_read_valid` (the cycle after a real
+    read). Without this the decoder runs on an uninitialised RAM word and cries wolf
+    before anything has been written.
+  - `gals_node_wrapper` latches them sticky per clock domain (TX flags are `clk_noc`,
+    RX flags are `clk_host`) and crosses the host ones over with `sync_2stage` — safe
+    because a sticky flag never falls, the same argument used for the `done`/`err` flags.
+  - `gals_noc_top` aggregates all four nodes into `ecc_sbe_node`/`ecc_dbe_node` and
+    edge-counts them into `ecc_sbe_cnt`/`ecc_dbe_cnt`, all `mark_debug` + `dont_touch`.
+  - `arty_stress_top` folds an uncorrectable error into `led[3]` **and gates the pass
+    LEDs off it** — same lesson as the liveness watchdog: a green light that stays lit
+    while data is corrupt is a green light that lies.
+
+  `tb_noc_stress_tester` covers both directions: a clean run must show zero flags (catches
+  false alarms), and `INJECT_ECC=1` flips two bits in live FIFO data and requires the flag
+  to reach the top *and* the endpoint to see real sequence errors (247 of them).
+  Note single-shot injection at a fixed address does not work — the FIFO overwrites an
+  address faster than it is read, so the injector corrupts each word as it is written.
+
+- **ECC scope limit:** SECDED guarantees correct-1 / detect-2 only. Three or more bit
+  errors can be misreported as `single_err` with a bogus "correction" (the syndrome can
+  point at positions 13-15, which do not exist in a 12-bit word). Not a bug, but do not
+  read `ecc_single_err` as proof the data is good.
 - Seven formal `.sby` files sit unused in `sources_1/new/old/`. `arbiter_formal.sby` claims
   to prove "channel cannot be stolen mid-packet" — plausibly catches bug #1 at source, and
   a liveness property would catch bug #2. The `FORMAL` block in `vc_port_arbiter.sv` was
