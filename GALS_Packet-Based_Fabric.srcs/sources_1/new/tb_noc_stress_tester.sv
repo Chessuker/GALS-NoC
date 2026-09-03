@@ -40,6 +40,13 @@ module tb_noc_stress_tester;
     // 0 = รันสะอาด ธง ECC ต้องเป็น 0 ตลอด (จับ false alarm)
     // 1 = ฉีดบิตเน่าเข้า RAM ของ FIFO จริง ธง ECC ต้องขึ้นถึงยอด (จับสายที่ไม่ได้ต่อ)
     parameter int INJECT_ECC = 0;
+    // 0 = ปกติ
+    // 1 = ตัด tx_tvalid ของ agent_11 ทิ้งกลางแพ็กเกจ = จำลองโหนดที่ดับ/รีเซ็ต
+    //     แพ็กเกจครึ่งท่อนจะไหลเข้า fabric แล้วไม่มี tlast ตามมาอีกเลย
+    //     packet_arbiter ปลายทางจะล็อกพอร์ตค้างรอ tlast ที่ไม่มีวันมา
+    //     agent อื่นที่ใช้พอร์ตเดียวกันต้องอดตายตามไปด้วย
+    //     เกณฑ์: fabric ต้องฟื้นได้ = ช่องว่างของ agent อื่นต้องไม่ระเบิด
+    parameter int KILL_MIDPKT = 0;
 
     logic clk_noc = 0, clk_h00 = 0, clk_h01 = 0, clk_h10 = 0, clk_h11 = 0;
     logic rst_n;
@@ -203,6 +210,16 @@ module tb_noc_stress_tester;
         repeat (40) @(posedge clk_noc);
         rst_n = 1;
 
+        // ---- ตัดโหนดทิ้งกลางแพ็กเกจ (bug: packet_arbiter ล็อกค้างถาวร)
+        if (KILL_MIDPKT != 0) begin
+            repeat (5000) @(posedge clk_noc);
+            // ต้องตัดตอนอยู่กลางแพ็กเกจจริงๆ ถ้าตัดที่ขอบแพ็กเกจจะไม่เกิดอาการ
+            wait (u_stress.agent_11.flit_idx != 0 && t11_tx_tvalid);
+            $display("  [kill] ตัด tx_tvalid ของ agent_11 ที่ flit_idx=%0d (กลางแพ็กเกจ)",
+                     u_stress.agent_11.flit_idx);
+            force t11_tx_tvalid = 1'b0;
+        end
+
         // ---- เปิดหน้าต่างฉีดบิตเน่า (ตัวฉีดจริงอยู่ใน always ข้างล่าง)
         if (INJECT_ECC != 0) begin
             repeat (5000) @(posedge clk_noc);
@@ -275,6 +292,25 @@ module tb_noc_stress_tester;
             if (u_stress.agent_10.max_gap > worst) worst = u_stress.agent_10.max_gap;
             if (u_stress.agent_11.max_gap > worst) worst = u_stress.agent_11.max_gap;
 
+            // ตอนตัดโหนดทิ้ง agent_11 ต้องเงียบอยู่แล้ว (เราตัดมันเอง)
+            // แต่ agent_01/agent_10 ที่ยังเป็นๆ ต้องเดินต่อได้ ไม่โดนล็อกพลอย
+            if (KILL_MIDPKT != 0) begin
+                automatic int unsigned g01 = u_stress.agent_01.max_gap;
+                automatic int unsigned g10 = u_stress.agent_10.max_gap;
+                automatic int unsigned gsurv = (g01 > g10) ? g01 : g10;
+                $display("");
+                $display("    ตัด agent_11 ทิ้งกลางแพ็กเกจแล้ว: ช่องว่างของโหนดที่ยังเป็นๆ");
+                $display("      agent_01 max_gap=%0d  agent_10 max_gap=%0d", g01, g10);
+                if (gsurv > GAP_MAX_OK) begin
+                    $display("  [FAIL] โหนดที่ยังเป็นๆ ถูกล็อกตายตาม (gap %0d > %0d)",
+                             gsurv, GAP_MAX_OK);
+                    $display("         = packet_arbiter ล็อกพอร์ตค้างรอ tlast ที่ไม่มีวันมา");
+                    fails++;
+                end else
+                    $display("  [PASS] fabric ฟื้นได้ โหนดที่ยังเป็นๆ เดินต่อปกติ (gap %0d)", gsurv);
+                worst = 0;   // ข้าม gap check รวม เพราะ agent_11 ถูกตัดโดยเจตนา
+            end
+
             $display("");
             if (worst > GAP_MAX_OK) begin
                 $display("  [FAIL] gap %0d cycle > limit %0d", worst, GAP_MAX_OK);
@@ -311,7 +347,11 @@ module tb_noc_stress_tester;
                 automatic int unsigned n = xfer_in[NORTH_P];
                 automatic int unsigned tot = e + n;
                 automatic int unsigned ep = (tot > 0) ? (e*100)/tot : 0;
-                if (tot == 0) begin
+                // เกณฑ์ 50/50 ใช้ได้เฉพาะตอนทุกโหนดยังเป็นๆ
+                // ถ้าตัด agent_11 ทิ้ง NORTH จะเหลือแค่ agent_10 สัดส่วนย่อมเบี้ยว
+                if (KILL_MIDPKT != 0) begin
+                    $display("  [SKIP] ข้ามเกณฑ์ fairness (EAST %0d%% / NORTH %0d%%) เพราะตัดโหนดทิ้งไปตัวหนึ่ง", ep, 100-ep);
+                end else if (tot == 0) begin
                     $display("  [FAIL] ไม่มี flit ผ่าน LOCAL port ของ idx0 เลย");
                     fails++;
                 end else if (ep < 45 || ep > 55) begin
