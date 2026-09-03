@@ -183,26 +183,33 @@ module uart_noc_host #(
     end
  
     //-------------------------------------------------------------- ILA taps
-    `ifdef DEBUG_BUILD
-        (* mark_debug = "true" *) logic        rx_tvalid_dbg;
-        (* mark_debug = "true" *) logic [7:0]  rx_tdata_dbg;
-        (* mark_debug = "true" *) logic [1:0]  rx_tid_dbg;
-        (* mark_debug = "true" *) logic [1:0]  d_state_dbg;
-        (* mark_debug = "true" *) logic [7:0]  noc_data_reg_dbg;
-        (* mark_debug = "true" *) logic        uart_tx_valid_dbg;
-        (* mark_debug = "true" *) logic        uart_tx_ready_dbg;
-        (* mark_debug = "true" *) logic [1:0]  p_state_dbg;
-        (* mark_debug = "true" *) logic [7:0]  tx_tdata_dbg;
-    
-        assign rx_tvalid_dbg     = rx_tvalid;
-        assign rx_tdata_dbg      = rx_tdata;
-        assign rx_tid_dbg        = rx_tid;
-        assign d_state_dbg       = d_state;
-        assign noc_data_reg_dbg  = noc_data_reg;
-        assign uart_tx_valid_dbg = uart_tx_valid;
-        assign uart_tx_ready_dbg = uart_tx_ready;
-        assign p_state_dbg       = p_state;
-        assign tx_tdata_dbg      = tx_tdata;
-    `endif
+    //-------------------------------------------------------------- ILA taps
+    // 🔴 เดิมบล็อกนี้ครอบด้วย `ifdef DEBUG_BUILD ซึ่งไม่มีใครนิยามไว้ที่ไหนเลย
+    //    ผล: UART build ไม่มี instrumentation แม้แต่เส้นเดียว (HANDOFF gotcha 5)
+    //    define ที่ต้อง "จำไว้ตั้ง" หลุดไปแล้วหนึ่งครั้ง จึงเอาออกทั้งอัน
+    //    ให้ probe ติดมาเสมอ แบบเดียวกับ traffic_node_agent ที่พิสูจน์แล้วว่าใช้ได้
+    //
+    //    และต้องมี dont_touch คู่กับ mark_debug ด้วย (gotcha 1):
+    //    เส้นพวกนี้ไม่มี fanout จริง synthesis จะกวาดทิ้งก่อน Set Up Debug จะเห็น
+    //    ใส่ mark_debug เฉยๆ ไม่พอ — นี่คือเหตุผลที่ 668 vs 924 เคยเกิดขึ้น
+    (* mark_debug = "true", dont_touch = "true" *) logic        rx_tvalid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0]  rx_tdata_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0]  rx_tid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0]  d_state_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0]  noc_data_reg_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic        uart_tx_valid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic        uart_tx_ready_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0]  p_state_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0]  tx_tdata_dbg;
+
+    assign rx_tvalid_dbg     = rx_tvalid;
+    assign rx_tdata_dbg      = rx_tdata;
+    assign rx_tid_dbg        = rx_tid;
+    assign d_state_dbg       = d_state;
+    assign noc_data_reg_dbg  = noc_data_reg;
+    assign uart_tx_valid_dbg = uart_tx_valid;
+    assign uart_tx_ready_dbg = uart_tx_ready;
+    assign p_state_dbg       = p_state;
+    assign tx_tdata_dbg      = tx_tdata;
  
 endmodule

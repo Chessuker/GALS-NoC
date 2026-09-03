@@ -327,9 +327,16 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
    This is not only a reporting trap — nodes therefore **stop at different wall-clock
    times**, and that stagger is what exposed bug #4 (section 3b). Any reasoning about the
    tail of a run has to account for it.
-5. **`DEBUG_BUILD` is no longer defined anywhere.** `loopback_node_agent` and
-   `uart_noc_host` gate all their ILA taps on it, so the UART build currently has zero
-   instrumentation and the old `debug.xdc` would fail against it.
+5. **~~`DEBUG_BUILD` is no longer defined anywhere~~ — fixed by deleting the guard.**
+   `loopback_node_agent` and `uart_noc_host` gated every ILA tap on `` `ifdef DEBUG_BUILD ``,
+   which nothing defines, so the UART build had zero instrumentation. A define you have to
+   remember to set had already been lost once, so the guard is gone rather than restored —
+   the probes are now unconditional, matching `traffic_node_agent`.
+
+   They also carried `mark_debug` **without** `dont_touch`. Those taps have no fanout, so
+   even with the define restored they would have been swept before Set Up Debug saw them
+   (gotcha 1). Both attributes are now present, and all 144 probes survive synthesis:
+   296 -> **440** nets (37 x 3 loopback + 33 uart).
 6. **Set Up Debug wrote its cores into `arty.xdc`** (pins + debug in one file). New
    `mark_debug` nets aren't probed until you re-run Set Up Debug. A clean pins-only
    `arty.xdc` is in `backup_20260804/constrs/`.
@@ -396,12 +403,31 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   errors can be misreported as `single_err` with a bogus "correction" (the syndrome can
   point at positions 13-15, which do not exist in a 12-bit word). Not a bug, but do not
   read `ecc_single_err` as proof the data is good.
-- Seven formal `.sby` files sit unused in `sources_1/new/old/`. `arbiter_formal.sby` claims
-  to prove "channel cannot be stolen mid-packet" — plausibly catches bug #1 at source, and
-  a liveness property would catch bug #2. The `FORMAL` block in `vc_port_arbiter.sv` was
-  updated alongside the bug #3 fix (`assert_no_vc1_during_override` is now conditioned on
-  `vc0_can_move`, plus new `assert_vc1_yields_when_stalled` and two covers), but **none of
-  it has been run** — no solver is installed here.
-- UART build (`arty_gals_noc_wrapper`) not rebuilt since `debug.xdc` was dropped (gotcha 5).
+- **Formal now runs.** WSL `Ubuntu-24.04` + OSS CAD Suite in `/opt/eda`
+  (Yosys 0.68, SBY 0.68, Z3 4.15.5). Yosys reads this SystemVerilog directly with
+  `read_verilog -sv -formal` — no `sv2v` needed. Run with `cd formal && sby -f <file>.sby`.
+
+  **`arbiter_formal.sby` never verified an arbiter.** It targets `hw_queue_descriptor`, a
+  module from a different project (`gals_mpmc_scalable`); so does `mpmc.sby`. Both are dead.
+  The earlier claim here that it guarded bug #1 was wrong. `formal/packet_arbiter.sby` is
+  the first script that actually proves the arbiter, and it passes basecase **and**
+  induction.
+
+  Of the seven old scripts, four target live modules and are still unrun:
+  `fifo_formal`, `fifo_fwft_farmal`, `gray_formal`, `sync_formal`, plus `ram_ecc_formal`
+  for the ECC RAM. Worth running now that the toolchain exists.
+
+  `vc_port_arbiter.sv`'s `FORMAL` block was updated alongside the bug #3 fix
+  (`assert_no_vc1_during_override` conditioned on `vc0_can_move`, plus
+  `assert_vc1_yields_when_stalled` and two covers) but still has **no `.sby` and has never
+  been run** — the same trap that hid the false `assert_channel_lock`.
+- **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
+  `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
+  ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —
+  and note `arty.xdc` still holds the *stress* build's 64 debug-core lines, which reference
+  `u_stress/agent_*` nets absent from this top. Synthesis ignores them (implementation-only
+  constraints) but implementation will not, so Set Up Debug must be re-run for this top
+  before Run Implementation; it overwrites the stale cores. That is gotcha 6 again, and the
+  durable fix is to stop letting Set Up Debug write into the pins file at all.
 - `final_src/` diverges from `sources_1/new/` in 16 of 19 shared files. Stale July snapshot,
   historical reference only. Do not build from it.
