@@ -36,6 +36,12 @@ def load(path):
         mm = re.search(r'agent_\d\d/(\w+)', h)
         if mm:
             cols[mm.group(1)] = i
+        else:
+            # เน็ตระดับ gals_noc_top (uut_noc_top/...) เช่นตัวนับ ECC
+            # ILA แต่ละตัวเห็นเน็ตพวกนี้เหมือนกันหมด อ่านจากไฟล์ไหนก็ได้
+            mt = re.search(r'uut_noc_top/(\w+)', h)
+            if mt:
+                cols['top_' + mt.group(1)] = i
     def col(name):
         return [int(r[cols[name]], 16) for r in data] if name in cols else None
     return agent, {k: col(k) for k in cols}, len(data)
@@ -199,6 +205,36 @@ def main(folder):
         print('           ตัวเลข throughput ข้างบนจึงเชื่อไม่ได้ ให้ไล่ที่ arbiter ก่อน')
     else:
         print(f'liveness : ทุก node ({len(have_probe)}) มี flit ขยับตลอด S_RUN   ->  PASS')
+    # ---- ECC : ธงจาก dual_port_ram_ecc ที่เพิ่งถูกต่อสายขึ้นมาถึง top
+    # ก่อนหน้านี้พอร์ตพวกนี้ถูกปล่อยลอย double-bit error จึงเงียบมาตลอด
+    ecc = {}
+    for a in A:
+        d = A[a][0]
+        for k in ('top_ecc_sbe_cnt', 'top_ecc_dbe_cnt',
+                  'top_ecc_sbe_node', 'top_ecc_dbe_node'):
+            if d.get(k) and k not in ecc:
+                ecc[k] = max(d[k])
+    print('')
+    if not ecc:
+        print('ECC      : ไม่มีคอลัมน์ ecc_*_cnt ใน CSV ชุดนี้')
+        print('           = build ก่อนต่อสาย ECC หรือยังไม่ได้ re-run Set Up Debug')
+        print('           (ต้องเห็น MARK_DEBUG 1064 เส้น ไม่ใช่ 1024/928/924)')
+    else:
+        sbe = ecc.get('top_ecc_sbe_cnt', 0)
+        dbe = ecc.get('top_ecc_dbe_cnt', 0)
+        nsb = ecc.get('top_ecc_sbe_node', 0)
+        ndb = ecc.get('top_ecc_dbe_node', 0)
+        print(f'ECC      : single(ซ่อมได้)={sbe}  double(ซ่อมไม่ได้)={dbe}'
+              f'   node_sbe={nsb:04b} node_dbe={ndb:04b}')
+        if dbe:
+            print('           ->  FAIL : มี double-bit error = ข้อมูลเสียที่ซ่อมไม่ได้')
+            print('                 บิต node_dbe บอกว่าโหนดไหน (0=00 1=01 2=10 3=11)')
+        elif sbe:
+            print('           ->  WARN : เจอ single-bit error แต่ซ่อมได้หมด ข้อมูลยังถูกต้อง')
+            print('                 ถ้าเลขนี้ไต่ขึ้นเรื่อยๆ แปลว่าหน่วยความจำเริ่มมีปัญหาจริง')
+        else:
+            print('           ->  PASS : ไม่เจอ bit error เลย')
+
     if any(res[a]['mode']=='delta' for a in res):
         print('\nหมายเหตุ: บาง agent จับกลางรัน (mode=delta) ค่าที่ได้คืออัตรา ณ ช่วงนั้น')
         print('          ห้ามเอายอดสะสมของคนละ agent มาเทียบกันตรงๆ เพราะ trigger คนละจังหวะ')
