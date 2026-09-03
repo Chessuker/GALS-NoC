@@ -67,6 +67,8 @@ module async_fifo#(
 
     `else
         logic [7:0] rdata_ecc;
+        logic       raw_ecc_sbe, raw_ecc_dbe;
+        logic       ecc_read_valid;
 
         // 1. RAM สำหรับ Payload (8 บิตล่าง) - มี ECC ป้องกัน Error
         dual_port_ram_ecc #(
@@ -81,9 +83,22 @@ module async_fifo#(
             .r_en(r_en && !rempty),
             .raddr(raddr),
             .rdata(rdata_ecc),
-            .ecc_single_err(ecc_single_err),
-            .ecc_double_err(ecc_double_err)
+            .ecc_single_err(raw_ecc_sbe),
+            .ecc_double_err(raw_ecc_dbe)
         );
+
+        // ธง ECC เป็นค่า combinational บน rdata ของ RAM ซึ่งค้างค่าล่าสุดไว้เสมอ
+        // ก่อนจะมีการอ่านจริงครั้งแรก rdata ยังไม่ได้ init (X ใน sim / 0 บนบอร์ด)
+        // ปล่อยดิบๆ ออกไปจะกลายเป็นสัญญาณเตือนหลอกตั้งแต่ยังไม่มีใครใช้งาน
+        // จึงเปิดธงเฉพาะไซเคิลถัดจากการอ่านจริง = ธงนี้อธิบาย "คำที่เพิ่งอ่านออกมา"
+        // ปลายทางเป็น latch แบบ sticky อยู่แล้ว พัลส์ไซเคิลเดียวจึงพอ
+        always_ff @(posedge rclk or negedge rrst_n) begin
+            if (!rrst_n) ecc_read_valid <= 1'b0;
+            else         ecc_read_valid <= (r_en && !rempty);
+        end
+
+        assign ecc_single_err = raw_ecc_sbe && ecc_read_valid;
+        assign ecc_double_err = raw_ecc_dbe && ecc_read_valid;
 
         // 2. RAM สำหรับ Control Bits (บิตที่ 8 ขึ้นไป) - ไม่มี ECC
         generate

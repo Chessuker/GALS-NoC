@@ -56,7 +56,13 @@ module gals_node_wrapper #(
     input  logic [3:0]        s_noc_tdest,
     input  logic [DATA_W-1:0] s_noc_tdata,
     input  logic [NUM_VCS-1:0]s_noc_tid,
-    output logic [NUM_VCS-1:0]s_noc_ready
+    output logic [NUM_VCS-1:0]s_noc_ready,
+
+    // ---- ECC จาก async FIFO ทั้ง 4 ตัวของโหนดนี้ (sticky, โดเมน clk_noc)
+    // เดิมพอร์ตพวกนี้ถูกปล่อยลอย ( .ecc_double_err() ) แปลว่า double-bit error
+    // ถูกตรวจเจอแล้วโยนทิ้ง ข้อมูลเสียไหลต่อไปเงียบๆ
+    output logic              ecc_single_err,   // ซ่อมได้ (เตือน)
+    output logic              ecc_double_err    // ซ่อมไม่ได้ = ข้อมูลเสียแน่นอน
 );
 
     localparam PACK_W = 1 + 4 + DATA_W; 
@@ -68,6 +74,10 @@ module gals_node_wrapper #(
     logic [PACK_W-1:0] tx_wdata, tx_rdata [NUM_VCS];
     logic tx_empty [NUM_VCS], tx_full [NUM_VCS];
     assign tx_wdata = {s_host_tlast, s_host_tdest, s_host_tdata};
+
+    // ธง ECC ต่อ VC — TX อ่านด้วย clk_noc, RX อ่านด้วย clk_host (คนละโดเมน)
+    logic tx_sbe [NUM_VCS], tx_dbe [NUM_VCS];
+    logic rx_sbe [NUM_VCS], rx_dbe [NUM_VCS];
 
     genvar v;
     generate
@@ -81,7 +91,8 @@ module gals_node_wrapper #(
                 .r_en(m_noc_valid && m_noc_tid[v] && m_noc_ready[v]), 
                 .rdata(tx_rdata[v]), .rempty(tx_empty[v]),            
                 
-                .almost_full(), .prog_full_thresh('0), .ecc_single_err(), .ecc_double_err()
+                .almost_full(), .prog_full_thresh('0),
+                .ecc_single_err(tx_sbe[v]), .ecc_double_err(tx_dbe[v])
             );
             assign s_host_ready[v] = ~tx_full[v];
         end
@@ -119,7 +130,8 @@ module gals_node_wrapper #(
                 .r_en(m_host_valid && m_host_tid[v] && m_host_ready[v]),
                 .rdata(rx_rdata[v]), .rempty(rx_empty[v]),            
                 
-                .almost_full(), .prog_full_thresh('0), .ecc_single_err(), .ecc_double_err()
+                .almost_full(), .prog_full_thresh('0),
+                .ecc_single_err(rx_sbe[v]), .ecc_double_err(rx_dbe[v])
             );
             assign s_noc_ready[v] = ~rx_full[v];
         end
@@ -137,6 +149,48 @@ module gals_node_wrapper #(
             {m_host_tlast, m_host_tdest, m_host_tdata} = rx_rdata[0];
         end
     end
+    // =========================================================
+    // ECC error reporting
+    // ธงที่ออกมาจาก async_fifo เป็นพัลส์ไซเคิลเดียวต่อการอ่านหนึ่งครั้ง
+    // ต้องแลตช์ค้างไว้ ไม่งั้น ILA ที่ trigger ทีหลังจะไม่มีวันเห็น
+    // แลตช์ในโดเมนของตัวเองก่อน แล้วค่อยข้ามมา clk_noc
+    // =========================================================
+    logic sbe_noc_q, dbe_noc_q;
+    always_ff @(posedge clk_noc or negedge rst_n) begin
+        if (!rst_n) begin
+            sbe_noc_q <= 1'b0;
+            dbe_noc_q <= 1'b0;
+        end else begin
+            for (int i = 0; i < NUM_VCS; i++) begin
+                if (tx_sbe[i]) sbe_noc_q <= 1'b1;
+                if (tx_dbe[i]) dbe_noc_q <= 1'b1;
+            end
+        end
+    end
+
+    logic sbe_host_q, dbe_host_q;
+    always_ff @(posedge clk_host or negedge rst_n) begin
+        if (!rst_n) begin
+            sbe_host_q <= 1'b0;
+            dbe_host_q <= 1'b0;
+        end else begin
+            for (int i = 0; i < NUM_VCS; i++) begin
+                if (rx_sbe[i]) sbe_host_q <= 1'b1;
+                if (rx_dbe[i]) dbe_host_q <= 1'b1;
+            end
+        end
+    end
+
+    // ตั้งแล้วไม่มีวันกลับ = level นิ่งยาว ข้ามโดเมนด้วย 2FF ได้ปลอดภัย
+    // (เหตุผลเดียวกับที่ noc_stress_tester ใช้ sync_2stage กับธง done/err)
+    logic [1:0] host_flags_sync;
+    sync_2stage #(.WIDTH(2)) u_ecc_cdc (
+        .clk(clk_noc), .rst(~rst_n),
+        .d({dbe_host_q, sbe_host_q}),
+        .q(host_flags_sync)
+    );
+
+    assign ecc_single_err = sbe_noc_q | host_flags_sync[0];
+    assign ecc_double_err = dbe_noc_q | host_flags_sync[1];
 
 endmodule
-

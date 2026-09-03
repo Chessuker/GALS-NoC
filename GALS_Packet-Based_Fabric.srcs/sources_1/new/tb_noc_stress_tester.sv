@@ -37,6 +37,9 @@ module tb_noc_stress_tester;
     // PATTERN/VC_MODE override ได้จาก command line: xelab -generic_top "PATTERN=0"
     parameter int PATTERN = 1;
     parameter int VC_MODE = 2;
+    // 0 = รันสะอาด ธง ECC ต้องเป็น 0 ตลอด (จับ false alarm)
+    // 1 = ฉีดบิตเน่าเข้า RAM ของ FIFO จริง ธง ECC ต้องขึ้นถึงยอด (จับสายที่ไม่ได้ต่อ)
+    parameter int INJECT_ECC = 0;
 
     logic clk_noc = 0, clk_h00 = 0, clk_h01 = 0, clk_h10 = 0, clk_h11 = 0;
     logic rst_n;
@@ -142,6 +145,23 @@ module tb_noc_stress_tester;
         end
     end
 
+    // ---- ตัวฉีด ECC error
+    // ฉีดครั้งเดียวที่ address คงที่ใช้ไม่ได้: FIFO วนเขียนทับ address เดิม
+    // เร็วกว่าที่คำนั้นจะถูกอ่านออกไป บิตที่พลิกไว้เลยถูกลบทิ้งก่อนเสมอ
+    // ต้องพลิก "คำที่เพิ่งเขียนลงไป" ทุกครั้ง ถึงจะการันตีว่าของเสียถูกอ่านจริง
+    // พลิก 2 บิต = double error = ซ่อมไม่ได้ ต้องถูกตรวจเจอและรายงานถึง top
+    logic inject_on = 1'b0;
+    always @(posedge clk_noc) begin
+        if (inject_on && uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.w_en) begin
+            automatic int wa = uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.waddr;
+            #1;  // ให้การเขียนลง mem เสร็จก่อน แล้วค่อยพลิก
+            uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.mem[wa][0] =
+              ~uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.mem[wa][0];
+            uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.mem[wa][5] =
+              ~uut_noc_top.wrap_00.RX_VC[0].rx_fifo.core_fifo.dp_ram_ecc_inst.core_ram.mem[wa][5];
+        end
+    end
+
     logic rep01 = 0, rep11 = 0;
     always @(posedge clk_h01) begin
         if (!rep01 && u_stress.agent_01.stuck_cnt == 20000) begin
@@ -182,6 +202,16 @@ module tb_noc_stress_tester;
         rst_n = 0;
         repeat (40) @(posedge clk_noc);
         rst_n = 1;
+
+        // ---- เปิดหน้าต่างฉีดบิตเน่า (ตัวฉีดจริงอยู่ใน always ข้างล่าง)
+        if (INJECT_ECC != 0) begin
+            repeat (5000) @(posedge clk_noc);
+            $display("  [inject] เริ่มฉีดบิตเน่าเข้า RX FIFO VC0 ของ node 00");
+            inject_on = 1'b1;
+            repeat (2000) @(posedge clk_noc);
+            inject_on = 1'b0;
+            $display("  [inject] หยุดฉีด");
+        end
 
         // รอจนทุก agent ถึง S_DONE
         wait (u_stress.agent_00.state == 2'd3 && u_stress.agent_01.state == 2'd3 &&
@@ -253,7 +283,16 @@ module tb_noc_stress_tester;
             end else
                 $display("  [PASS] gap %0d cycle <= limit %0d", worst, GAP_MAX_OK);
 
-            if (u_stress.agent_00.rx_err_cnt != 0) begin
+            // ตอนฉีด ECC error ข้อมูลเสียจริง scoreboard จึงต้องเห็น sequence error
+            // ถ้าไม่เห็นแปลว่าของเสียไม่ได้ไหลไปถึงปลายทาง = เทสต์ไม่ได้พิสูจน์อะไร
+            if (INJECT_ECC != 0) begin
+                if (u_stress.agent_00.rx_err_cnt == 0) begin
+                    $display("  [FAIL] ฉีดของเสียแล้วแต่ปลายทางไม่เห็น sequence error");
+                    fails++;
+                end else
+                    $display("  [PASS] ของเสียไหลถึงปลายทางจริง (sequence errors = %0d)",
+                             u_stress.agent_00.rx_err_cnt);
+            end else if (u_stress.agent_00.rx_err_cnt != 0) begin
                 $display("  [FAIL] sequence errors = %0d", u_stress.agent_00.rx_err_cnt);
                 fails++;
             end else
@@ -280,6 +319,24 @@ module tb_noc_stress_tester;
                     fails++;
                 end else
                     $display("  [PASS] arbiter แบ่งขาเข้า EAST %0d%% / NORTH %0d%%", ep, 100-ep);
+            end
+
+            // ---- ECC : ธงต้องเงียบตอนรันสะอาด และต้องดังตอนฉีดของเสีย
+            $display("    ECC: sbe_cnt=%0d dbe_cnt=%0d  node_sbe=%04b node_dbe=%04b",
+                     uut_noc_top.ecc_sbe_cnt, uut_noc_top.ecc_dbe_cnt,
+                     uut_noc_top.ecc_sbe_node, uut_noc_top.ecc_dbe_node);
+            if (INJECT_ECC == 0) begin
+                if (uut_noc_top.ecc_sbe_cnt != 0 || uut_noc_top.ecc_dbe_cnt != 0) begin
+                    $display("  [FAIL] ECC ยกธงทั้งที่ไม่ได้ฉีดอะไรเลย = false alarm");
+                    fails++;
+                end else
+                    $display("  [PASS] ECC เงียบตลอดการรันสะอาด");
+            end else begin
+                if (uut_noc_top.ecc_dbe_cnt == 0) begin
+                    $display("  [FAIL] ฉีด double-bit error แล้วแต่ไม่มีธงขึ้นถึง top");
+                    fails++;
+                end else
+                    $display("  [PASS] ฉีด double-bit error แล้วธงขึ้นถึง top จริง");
             end
 
             $display("");
