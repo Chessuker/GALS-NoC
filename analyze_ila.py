@@ -27,10 +27,12 @@ def load(path):
     rows = list(csv.reader(open(path, newline='')))
     hdr  = rows[0]
     data = [r for r in rows[2:] if len(r) == len(hdr)]
+    # Set Up Debug แยก ILA ตามโดเมนนาฬิกา เน็ตของ clk_noc (ตัวนับ ECC)
+    # จึงไปอยู่ใน core ของตัวเอง ไฟล์นั้นไม่มีคอลัมน์ agent_XX เลยสักอัน
+    # ห้าม return None ทิ้งทั้งไฟล์ ไม่งั้นข้อมูล ECC หายไปเงียบๆ
+    # แล้วรายงานว่า "ไม่มีคอลัมน์" ทั้งที่ ILA จับมาให้เรียบร้อยแล้ว
     m = re.search(r'(agent_\d\d)', ' '.join(hdr))
-    if not m:
-        return None
-    agent = m.group(1)
+    agent = m.group(1) if m else None
     cols = {}
     for i, h in enumerate(hdr):
         mm = re.search(r'agent_\d\d/(\w+)', h)
@@ -52,10 +54,23 @@ def main(folder):
         print(f'ไม่พบ iladata*.csv ใน {folder}')
         return 1
     A = {}
+    TOP = {}
     for f in files:
         r = load(f)
-        if r:
-            A[r[0]] = (r[1], r[2], os.path.basename(f))
+        if not r:
+            continue
+        agent, d, n = r
+        # เน็ตระดับ top เก็บจากไฟล์ไหนก็ได้ที่มี ไม่ผูกกับ agent
+        # (ILA ของ clk_noc ไม่มีคอลัมน์ agent เลย แต่มีตัวนับ ECC อยู่)
+        for k, v in d.items():
+            if k.startswith('top_') and v and k not in TOP:
+                TOP[k] = max(v)
+        if agent:
+            A[agent] = (d, n, os.path.basename(f))
+
+    if not A:
+        print('ไม่พบคอลัมน์ agent_XX ในไฟล์ใดเลย — export ILA ของ agent มาด้วยหรือยัง?')
+        return 1
 
     print(f'พบ {len(A)} agent: {", ".join(sorted(A))}\n')
 
@@ -207,13 +222,7 @@ def main(folder):
         print(f'liveness : ทุก node ({len(have_probe)}) มี flit ขยับตลอด S_RUN   ->  PASS')
     # ---- ECC : ธงจาก dual_port_ram_ecc ที่เพิ่งถูกต่อสายขึ้นมาถึง top
     # ก่อนหน้านี้พอร์ตพวกนี้ถูกปล่อยลอย double-bit error จึงเงียบมาตลอด
-    ecc = {}
-    for a in A:
-        d = A[a][0]
-        for k in ('top_ecc_sbe_cnt', 'top_ecc_dbe_cnt',
-                  'top_ecc_sbe_node', 'top_ecc_dbe_node'):
-            if d.get(k) and k not in ecc:
-                ecc[k] = max(d[k])
+    ecc = {k: v for k, v in TOP.items() if k.startswith('top_ecc_')}
     print('')
     if not ecc:
         print('ECC      : ไม่มีคอลัมน์ ecc_*_cnt ใน CSV ชุดนี้')
