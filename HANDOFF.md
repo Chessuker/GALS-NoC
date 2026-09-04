@@ -337,9 +337,40 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
    even with the define restored they would have been swept before Set Up Debug saw them
    (gotcha 1). Both attributes are now present, and all 144 probes survive synthesis:
    296 -> **440** nets (37 x 3 loopback + 33 uart).
-6. **Set Up Debug wrote its cores into `arty.xdc`** (pins + debug in one file). New
-   `mark_debug` nets aren't probed until you re-run Set Up Debug. A clean pins-only
-   `arty.xdc` is in `backup_20260804/constrs/`.
+6. **~~Set Up Debug wrote its cores into `arty.xdc`~~ — fixed at the root.** The cause was
+   one project property: `TargetConstrsFile` pointed at `arty.xdc`, the pins file, and the
+   wizard always writes to whatever that names. It now points at `constrs_1/new/debug_auto.xdc`,
+   and `arty.xdc` is back to pins-only (23 lines, verified identical to
+   `backup_20260804/constrs/arty.xdc`).
+
+   Better still, **the GUI step is gone**. `setup_debug.tcl` builds the ILA cores straight
+   from the `MARK_DEBUG` nets, so the whole flow is scriptable and reviewable in git:
+
+       open_run synth_1
+       source .../setup_debug.tcl
+       launch_runs impl_1 -to_step write_bitstream -jobs 8
+
+   It groups nets into one core per clock domain and merges `foo[n]` bits into one wide
+   probe, and it refuses to run if the target ever points back at `arty.xdc`.
+
+   Three traps it works around, all found the hard way:
+
+   - **`save_constraints` orders the file wrongly.** It writes every core's `probe0` block
+     *before* all the `create_debug_core` lines, so re-reading the XDC at implementation
+     gives `Debug core 'u_ila_0' was not found` and the run dies. The script therefore
+     composes the XDC text itself, in the wizard's order.
+   - **`save_constraints` also reformats every other file in `constrs_1`.** It collapsed the
+     line continuations in `timing.xdc`'s commented-out reference constraints. The active
+     `set_clock_groups` was unaffected, but writing the file directly avoids touching
+     anything else.
+   - **Clock lookup silently narrows probes.** `get_clocks -of_objects <net>` returns nothing
+     for these nets, so the clock has to be found by walking to the driving cell — `-leaf`,
+     since nets at a hierarchy boundary are driven by a module pin with no clock pin, then
+     back through combinational logic for things like `ecc_single_err = |ecc_sbe`. That walk
+     resolved `dest_err_node[0]` but not `[1..3]`, which would have made a 4-bit probe 1 bit
+     wide: a working-looking ILA with missing data and no warning. Bits now inherit the
+     clock of other bits in the same bus, and the script warns if probe bits ever fail to
+     equal net count.
 7. **Simulation is blind to fairness by default.** Test 4 sends one packet per node then
    stops — proves delivery, not bandwidth sharing. Test 6 (sustained contention) was added
    for exactly this and is what catches bug #2 class failures.
@@ -615,13 +646,27 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   because Vivado's synthesis front end tolerates it while the simulator's does not. The
   declarations moved above the instance, so `arty_stress_top` can be compiled by `xvlog` at
   all now. All 25 RTL and TB files parse clean.
-- **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
-  `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
-  ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —
-  and note `arty.xdc` still holds the *stress* build's 64 debug-core lines, which reference
-  `u_stress/agent_*` nets absent from this top. Synthesis ignores them (implementation-only
-  constraints) but implementation will not, so Set Up Debug must be re-run for this top
-  before Run Implementation; it overwrites the stale cores. That is gotcha 6 again, and the
-  durable fix is to stop letting Set Up Debug write into the pins file at all.
+- **UART build: built, bitstream and probes on disk.** `setup_uart_build.tcl` drives it
+  (top = `arty_gals_noc_wrapper`). Synthesis gives **463** `MARK_DEBUG` nets = 440 + 20
+  (`dest_err_node` 4 + `dest_err_cnt` 16) + 3 new taps. Implementation is clean:
+
+  | | |
+  |---|---|
+  | bitstream | `impl_1/arty_gals_noc_wrapper.bit` (3.8 MB) |
+  | probes | `impl_1/arty_gals_noc_wrapper.ltx` |
+  | timing | WNS **+1.120 ns**, WHS **+0.021 ns**, TNS/THS 0 |
+  | errors | 0 |
+  | ILA | 5 cores / 56 probes / 463 bits, one core per clock domain |
+
+  This top had left `ecc_single_err`, `ecc_double_err` and (once it existed) `dest_err`
+  completely unconnected — errors detected and discarded, the same pattern as the original
+  dangling-ECC bug. They are now tapped with `mark_debug` + `dont_touch` so the ILA can see
+  them. They are deliberately **not** wired to the LEDs: this build's LEDs are UART activity
+  indicators (`led[1]`/`led[2]` mirror rx/tx, `led[3]` is any-TX), not a pass/fail verdict
+  like `arty_stress_top`'s, so there is no green light here that could lie. LED semantics
+  are unchanged.
+
+  Host side: `noc_host.py` at 3,000,000 baud, `COM_PORT` hardcoded to `COM3` — check Device
+  Manager first. Eight other test scripts sit alongside it. **Not yet run against hardware.**
 - `final_src/` diverges from `sources_1/new/` in 16 of 19 shared files. Stale July snapshot,
   historical reference only. Do not build from it.
