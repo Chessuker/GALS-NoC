@@ -22,13 +22,16 @@ def noc_receiver(ser):
                 
                 # แกะบิตจาก Header (ตามโปรโตคอลที่เราออกแบบไว้)
                 tlast = (header >> 7) & 0x01
-                tid   = (header >> 5) & 0x03
+                tid   = (header >> 5) & 0x03   # one-hot: 01 = VC0, 10 = VC1
                 tdest = header & 0x0F
+                # แปลง one-hot กลับเป็นหมายเลขเลนเพื่อให้อ่านง่าย
+                vc_num = {0b01: 0, 0b10: 1}.get(tid, None)
+                vc_disp = vc_num if vc_num is not None else f"?({tid:02b})"
                 
                 # แปลง Payload เป็นตัวอักษรถ้าเป็นไปได้ (ASCII 32-126)
                 char_disp = chr(payload) if 32 <= payload <= 126 else '.'
                 
-                print(f"[RX] Dest: {tdest:04b} | VC: {tid} | Last: {tlast} | Data: 0x{payload:02X} ('{char_disp}')")
+                print(f"[RX] Dest: {tdest:04b} | VC: {vc_disp} | Last: {tlast} | Data: 0x{payload:02X} ('{char_disp}')")
         except Exception as e:
             print(f"RX Error: {e}")
             break
@@ -44,7 +47,17 @@ def send_complex_payload(ser, target_dest, vc_id, data_bytes):
         is_last = 1 if i == (len(data_bytes) - 1) else 0
         
         # ประกอบ Header: [7]tlast | [6:5]tid | [4]0 | [3:0]tdest
-        header = (is_last << 7) | (vc_id << 5) | (target_dest & 0x0F)
+        #
+        # ฟิลด์ [6:5] ถูกส่งตรงเข้า tx_tid ของ uart_noc_host โดยไม่แปลงอะไรเลย
+        # (uart_noc_host.sv: tx_tid <= header_reg[6:5]) และ tid ในดีไซน์นี้เป็น
+        # one-hot: 01 = VC0, 10 = VC1 ไม่ใช่เลขเลน
+        # ของเดิมยัด vc_id ดิบๆ ลงไป ผลคือ vc_id=1 ได้ VC0 (ไม่ใช่ VC1 อย่างที่
+        # ตั้งใจ) และ vc_id=0 ได้ tid=00 ซึ่งไม่ตรงกับเลนไหนเลย —
+        # vc_input_buffer กับ gals_node_wrapper and tid กับ valid ไว้ทั้งคู่
+        # (fifo_we = s_valid && s_tid[v]) flit จึงถูกทิ้งเงียบๆ ไม่มีธงอะไรขึ้น
+        # ยืนยันบนบอร์ดแล้ว: dest 0100 ที่ tid=00 ไม่เคยกลับมา ส่วน tid=01/10
+        # กลับมาครบทั้งสองปลายทาง
+        header = (is_last << 7) | ((1 << vc_id) << 5) | (target_dest & 0x0F)
         
         # ส่งข้อมูล 2 ไบต์ออกไปที่บอร์ด
         ser.write(bytes([header, data]))

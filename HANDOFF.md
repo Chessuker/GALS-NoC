@@ -666,7 +666,41 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   like `arty_stress_top`'s, so there is no green light here that could lie. LED semantics
   are unchanged.
 
-  Host side: `noc_host.py` at 3,000,000 baud, `COM_PORT` hardcoded to `COM3` — check Device
-  Manager first. Eight other test scripts sit alongside it. **Not yet run against hardware.**
+  **Run on hardware and working.** Programmed to the Arty A7-100T over Digilent JTAG; all 5
+  ILA cores enumerate with exactly the probe counts `setup_debug.tcl` generated
+  (9/17/10/10/10), which is end-to-end proof the scripted debug flow reaches silicon. A
+  149-byte packet sent to node 3 (h11) on VC1 came back to node 00 byte-identical with
+  `tlast` correct. Reading the `clk_noc` ILA core over 1024 samples: `ecc_sbe_cnt`,
+  `ecc_dbe_cnt`, `dest_err_cnt` and every per-node flag are **0**.
+
+  **`noc_host.py`'s VC field was wrong — a host-script bug, not RTL.** Its second packet
+  never came back. `uart_noc_host.sv` does `tx_tid <= header_reg[6:5]`, passing the header's
+  VC field straight through as the **one-hot** `tid` (`01` = VC0, `10` = VC1), but the
+  script passed a lane *number*. So `vc_id=1` silently meant VC0, and `vc_id=0` produced
+  `tid=00`, which matches no lane at all — and every consumer gates on `s_valid && s_tid[v]`,
+  so those flits were dropped with no flag. Same silent-loss shape as the dangling-ECC bug.
+  Confirmed on the board before changing anything:
+
+  | dest | tid | echoed |
+  |---|---|---|
+  | 0101 | 01 (VC0) | yes |
+  | 0101 | 10 (VC1) | yes |
+  | 0100 | 01 (VC0) | yes |
+  | 0100 | 10 (VC1) | yes |
+  | 0100 | 00 (what the script sent) | **no** |
+
+  All four valid one-hot combinations round-trip on both destinations and both VCs, so the
+  fabric is fine. The header now builds `(1 << vc_id) << 5` and the RX display decodes
+  one-hot back to a lane number; both packets return. Note this is the same one-hot `tid`
+  contract the formal work assumes (`$onehot(s_tid)`) and that nothing in the RTL enforces.
+
+  Two host-side traps worth remembering. Run it as `python -u`: with stdout piped to a file
+  and the process killed by `timeout`, block buffering swallows the tail and makes a
+  complete packet look truncated — that cost a false "147/149 flits, no tlast" alarm.
+  And set `PYTHONIOENCODING=utf-8`, or the script dies on its own emoji under the cp1252
+  console codepage before it prints anything.
+
+  Host side: `noc_host.py` at 3,000,000 baud, `COM_PORT` hardcoded to `COM3` — verified
+  present in Device Manager. Eight other test scripts sit alongside it.
 - `final_src/` diverges from `sources_1/new/` in 16 of 19 shared files. Stale July snapshot,
   historical reference only. Do not build from it.
