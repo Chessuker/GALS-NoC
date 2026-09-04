@@ -702,5 +702,47 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
 
   Host side: `noc_host.py` at 3,000,000 baud, `COM_PORT` hardcoded to `COM3` — verified
   present in Device Manager. Eight other test scripts sit alongside it.
+- **Stress build re-run on hardware and fully green** (`PATTERN=1` hot-spot, `VC_MODE=2`
+  alternate — the config that exposed bugs #3 and #4). Built with `setup_stress_build.tcl`
+  then the scripted `setup_debug.tcl`: 1084 `MARK_DEBUG` nets, 5 ILA cores, 53 probes,
+  1080 bits. Log: `hw_logs/ila_stress_vc2_pattern1_20260904.log`.
+
+  | check | result |
+  |---|---|
+  | sequence errors | 0 — PASS |
+  | liveness (all 4 nodes) | PASS — `stuck_seen`=0 everywhere |
+  | ECC single / double | 0 / 0 — PASS |
+  | `dest_err_cnt` | 0 — PASS |
+  | node 00 local port | 97.0% utilisation, 80.2 MB/s injected |
+  | VC split at agent_00 | 50.0% / 50.0% |
+  | `max_gap` per agent | 219 / 40 / 138 / 108 cycles |
+
+  This is the silicon regression for bugs #4, #5 and #6 in one run. The previous hardware
+  run of this exact config reported `liveness FAIL` on agent_01 and agent_11; now every node
+  moves throughout `S_RUN`, and the worst gap is 219 cycles against a 65536 threshold.
+
+  The "arbiter fairness spread = 49.9%" line looks alarming but is not: it compares the
+  three senders individually, while node 00's arbiter actually splits between two *input
+  ports* — EAST carries agent_01 alone (48.3%) and NORTH carries agent_10 + agent_11
+  (24.2 + 27.5 = 51.7%). That is the same ~50/50 the simulation reports (EAST 49% /
+  NORTH 51%), so silicon and sim agree.
+
+  `analyze_ila.py` gained a `dest_err` section alongside the ECC one; it predated the flag
+  and would otherwise stay silent about it.
+- **Two new traps in the scripted debug flow**, both found by running it and both now
+  handled in `setup_debug.tcl`:
+  - **Stale cores follow you across a build switch.** `open_run` applies all of `constrs_1`,
+    including the *previous* build's `debug_auto.xdc`, so the design already contains
+    `u_ila_0..N` wired to nets of a different top. `create_debug_core` then collides, and
+    `get_clocks` starts returning ILA-derived clocks (`u_ila_0_clk_out1_clk_wiz_0`) instead
+    of the real `clk_wiz` outputs — which mis-groups probes and ends in "debug port has N
+    unconnected channels" at implementation. The script now deletes every pre-existing
+    debug core first. This is gotcha 6 wearing a new hat: splitting the file stopped the
+    *text* mixing, not the *state* carrying over.
+  - **Implementation must run in a fresh Vivado session.** Calling `launch_runs impl_1` in
+    the same session that just wrote `debug_auto.xdc` produces a bitstream with no error and
+    no debug cores at all — no `.ltx`, no ILA on the board. Vivado uses its cached
+    constraint state rather than re-reading the file. Session A does synth + `setup_debug`,
+    session B does implementation.
 - `final_src/` diverges from `sources_1/new/` in 16 of 19 shared files. Stale July snapshot,
   historical reference only. Do not build from it.

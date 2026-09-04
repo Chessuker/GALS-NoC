@@ -7,6 +7,13 @@
 #   open_run synth_1 ก่อน แล้ว
 #   source D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/setup_debug.tcl
 #
+# *** ต้องรัน implementation ใน session ใหม่ ***
+#   ถ้า launch_runs impl_1 ใน session เดียวกับที่เพิ่งเขียน debug_auto.xdc
+#   implementation จะไม่เห็น debug core เลย: บิตสตรีมออกมาได้ปกติ ไม่มี error
+#   แต่ไม่มีไฟล์ .ltx และไม่มี ILA ในบอร์ด (Vivado ใช้สถานะ constraint ที่แคชไว้
+#   ในหน่วยความจำ ไม่ได้อ่านไฟล์ที่เพิ่งถูกเขียนทับ) เจอจริงตอน build ตัว stress
+#   ท่าที่ใช้ได้: session A = synth + setup_debug แล้วปิด, session B = impl
+#
 # ทำไมต้องมีไฟล์นี้ (gotcha 6):
 #   ตัว wizard เขียน debug core ลง "target constraint file" ของ constrs_1
 #   ซึ่งเคยชี้ไปที่ arty.xdc = ไฟล์ pin ทำให้ pin กับ debug core ปนกันอยู่ไฟล์เดียว
@@ -26,6 +33,23 @@ if {[current_design -quiet] eq ""} {
 }
 
 set DEPTH 1024
+
+# ---- 0. ล้าง debug core เก่าทิ้งก่อนเสมอ
+#
+# open_run อ่าน constrs_1 ทั้งชุด ซึ่งรวม debug_auto.xdc ของ build ที่แล้วด้วย
+# ดีไซน์จึงมี u_ila_0..N ของ top คนละตัวติดมาแล้วตั้งแต่ยังไม่เริ่ม
+# ถ้าไม่ล้างก่อน:
+#   - create_debug_core u_ila_0 ไปชนตัวเดิม
+#   - get_clocks เริ่มคืนคล็อกที่ ILA เก่าสร้างขึ้น (u_ila_0_clk_out1_clk_wiz_0)
+#     แทนคล็อกจริงจาก clk_wiz ทำให้จัดกลุ่มผิดและ probe หายไปบางเส้น
+#   - จบด้วย "debug port has N unconnected channels" ตอน implementation
+# นี่คือ gotcha 6 ในรูปแบบใหม่: ย้ายไฟล์แล้วแต่ของเก่ายังตามมาได้อยู่ดี
+# เจอจริงตอนสลับจาก build ตัว UART มา build ตัว stress
+set old_cores [get_debug_cores -quiet]
+if {[llength $old_cores] > 0} {
+    puts "setup_debug: ล้าง debug core เก่า [llength $old_cores] ตัว (ของ build ก่อนหน้า)"
+    foreach c $old_cores { catch {delete_debug_core $c} }
+}
 
 # ---- 1. เก็บเน็ตที่ติด MARK_DEBUG
 set dbg_nets [get_nets -hier -filter {MARK_DEBUG == 1}]
