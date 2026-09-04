@@ -413,18 +413,21 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   the first script that actually proves the arbiter, and it passes basecase **and**
   induction.
 
-  **The whole set is now green.** Seven modules, `prove` passing on both basecase *and*
-  induction, so these are unbounded proofs rather than bounded BMC:
+  **The whole set is green.** Nine modules. The first seven pass `prove` on both basecase
+  *and* induction, so those are unbounded proofs; the last two are bounded (`bmc`), for the
+  reason given below the table:
 
-  | module | prove | cover |
-  |---|---|---|
-  | `packet_arbiter` | PASS | PASS |
-  | `vc_port_arbiter` | PASS | PASS |
-  | `gray_counter` | PASS | PASS |
-  | `sync_2stage` | PASS | PASS |
-  | `async_fifo` | PASS | PASS |
-  | `async_fifo_fwft` | PASS | PASS (cover needs depth 40) |
-  | `dual_port_ram_ecc` | PASS | PASS |
+  | module | mode | result | cover |
+  |---|---|---|---|
+  | `packet_arbiter` | prove | PASS | PASS |
+  | `vc_port_arbiter` | prove | PASS | PASS |
+  | `gray_counter` | prove | PASS | PASS |
+  | `sync_2stage` | prove | PASS | PASS |
+  | `async_fifo` | prove | PASS | PASS |
+  | `async_fifo_fwft` | prove | PASS | PASS (cover needs depth 40) |
+  | `dual_port_ram_ecc` | prove | PASS | PASS |
+  | `vc_input_buffer` | bmc, depth 16 | PASS | PASS |
+  | `router_5port_mesh_vc` | bmc, depth 16 | PASS | PASS |
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
@@ -440,9 +443,58 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   bare filenames while the sources are in `new/`. `arbiter_formal.sby` and `mpmc.sby` stay
   dead (wrong project); the rest are superseded.
 
-  Still unproven by formal: `router_5port_mesh_vc`, `vc_input_buffer`, `noc_mesh_2x2_vc`
-  and `gals_node_wrapper` have no `FORMAL` blocks at all, so there is nothing to run yet.
-  Those are where a routing or crossbar bug would hide.
+  **`vc_input_buffer` and `router_5port_mesh_vc` now have `FORMAL` blocks too.**
+  `vc_input_buffer` is checked with a black-box shadow FIFO: the block keeps its own copy
+  of what should be queued, using its own counters, and never touches inside `sync_fifo`.
+  That one comparison covers the VC demux, the `{tlast,tdest,tdata}` pack/unpack slicing
+  and FIFO ordering at once — head-of-queue must be exactly the flit written at that
+  position, nothing lost, nothing duplicated, nothing crossing lanes.
+  `router_5port_mesh_vc` checks the two pieces the arbiter proofs never reached: the XY
+  decoder (one output port per valid flit, eject to LOCAL iff the flit is home) and the
+  crossbar (grant one-hot across inputs *and* across VCs, output data equal to the granted
+  input's, `m_tid` matching the granting VC, and no input granted by two output ports at
+  once).
+
+  **Both are `bmc`, not `prove`, and that is a limit of induction, not of the properties.**
+  Both tie state that lives in a FIFO to state that lives outside it, and induction starts
+  from a queue holding arbitrary contents. It can therefore invent "arbiter locked to an
+  input whose head has already changed route", or "shadow queue disagrees with real queue",
+  with no input history that reaches those states. The bounded runs go deep enough to fill
+  and drain the queues several times over.
+
+  **Finding: nothing enforces one destination per packet, and the router misroutes if that
+  is broken.** The first router run produced a real counterexample on
+  `assert_grant_matches_route_vc0` (out=NORTH, in=WEST): `packet_arbiter` holds an output
+  port locked for the length of a packet, so if the head flit's `tdest` changes mid-packet
+  the lock stays on the old output while the routing decoder points at the new one — and
+  the crossbar still emits that flit out the locked port. It is a silent misroute; no flag
+  is raised, and the arbiter only lets go after `STALL_MAX` (the bug #5 release path). The
+  agents in this project do hold `tdest` constant per packet, so the board is not affected,
+  but the RTL never checks it, and a new master that varied `tdest` mid-packet would break
+  routing with no diagnostic. The assumption is now written explicitly in the `f_wf`
+  generate block in `router_5port_mesh_vc.sv`, so the contract is at least recorded.
+
+  **Two tooling notes for these two scripts.** Yosys's own SystemVerilog frontend cannot
+  parse unpacked array ports (`output logic m_valid [NUM_VCS]` in `vc_input_buffer`), so
+  both scripts use `plugin -i slang; read_slang` instead of `read_verilog -sv`. Slang has
+  no `$onehot`/`$onehot0`, hence the local `f_onehot`/`f_onehot0` helpers, and it names
+  assert cells straight from the label, so duplicate labels inside a plain `for` loop crash
+  yosys in `rtlil.cc` (`count_id`) — that is why the router's properties sit in `generate`
+  blocks with genvars, which give each label a unique hierarchical prefix.
+
+  **`memory_map` is what makes these runs finish.** With the arrays left as memories, z3
+  needed over 28 minutes to get 10 steps into `vc_input_buffer`; with `memory_map` the full
+  depth-16 run takes 67 seconds. The router additionally needs `abc bmc3` rather than z3
+  (z3 reached step 8 in 40 minutes and stalled; abc does all 16 steps in 99 seconds) —
+  cover still runs on z3 because abc has no cover mode.
+
+  `packet_arbiter` and `vc_port_arbiter` gained `` `ifndef FORMAL_TOP_INTEGRATION `` guards
+  so the router run does not have to discharge their assertions again; the convention
+  matches `gray_counter` and `sync_2stage`. Both still pass `prove` and `cover` on their
+  own scripts, checked after the change.
+
+  Still unproven by formal: `noc_mesh_2x2_vc` and `gals_node_wrapper` have no `FORMAL`
+  blocks at all.
 - **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
   `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
   ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —

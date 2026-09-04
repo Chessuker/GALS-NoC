@@ -193,4 +193,242 @@ module router_5port_mesh_vc #(
         end
     end
 
+
+    // =================================================================
+    // FORMAL
+    //
+    // เราพิสูจน์ arbiter ไปแล้วทั้งสองชั้น แต่ router ที่ห่อมันอยู่ยังไม่เคย
+    // ถูกแตะเลย ทั้งที่ชิ้นส่วนที่เหลืออีกสองชิ้นเป็นจุดที่บั๊กเส้นทางจะซ่อนอยู่:
+    //   - ตัวถอด XY : ส่งผิดทาง หรือเด้งแพกเกจของคนอื่นออก LOCAL
+    //   - crossbar  : เป็น AND-OR mux ซึ่งถูกต้องได้ก็ต่อเมื่อ grant เป็น one-hot
+    //                 ถ้ามีสอง input ได้ไฟเขียวพร้อมกัน ผลลัพธ์คือ OR ของข้อมูล
+    //                 สองชุด = flit ประกอบร่างใหม่แบบเงียบๆ ไม่มีธงอะไรขึ้นเลย
+    //
+    // property ที่แรงที่สุดในบล็อกนี้คือ assert_no_grant_fanout_*:
+    // arbiter ล็อกช่องข้ามไซเคิลได้ (packet lock) ถ้าหัวคิวของ input เดิม
+    // เปลี่ยนเส้นทางกลางแพกเกจ arbiter ตัวเก่าจะยังถือ grant อยู่ ขณะที่ arbiter
+    // ของพอร์ตใหม่ก็ให้ grant ด้วย พอร์ตออกสองพอร์ตจึงอ่าน input buffer เดียวกัน
+    // แต่ buf_ready ถูก OR รวมเป็นเส้นเดียว = FIFO ถูกอ่านครั้งเดียว แต่ flit
+    // ถูกคายออกสองทาง นั่นคือ flit ถูกโคลน
+    //
+    // property เป็น structural บนสาย grant/route ไม่ขึ้นกับเนื้อใน FIFO
+    // จึงพิสูจน์แบบ unbounded (prove) ได้ ต่างจาก vc_input_buffer ที่ต้องเทียบ
+    // เนื้อคิวจึงได้แค่ bounded
+    //
+    // ทำไมใช้ generate/genvar ไม่ใช่ for ธรรมดา: frontend slang ตั้งชื่อเซลล์
+    // assert ตาม label ตรงๆ ป้ายซ้ำใน loop ธรรมดาจะชนกันแล้ว yosys assert-fail
+    // ที่ rtlil.cc (count_id) — generate ทำให้ label ได้ prefix ลำดับชั้นที่ไม่ซ้ำ
+    // =================================================================
+    `ifdef FORMAL
+        reg f_past_valid = 1'b0;
+        always @(posedge clk) f_past_valid <= 1'b1;
+
+        // FIFO ใน vc_input_buffer และ state ของ arbiter ไม่มีค่า init
+        // solver จึงเริ่มจากสถานะที่ล็อกช่องไว้แล้วโดยไม่เคยมีใครขอ
+        // บังคับให้ผ่านรีเซ็ตก่อนหนึ่งไซเคิล (rst_n เป็น async ค่าจึงถูกล้างทันที)
+        reg f_init = 1'b1;
+        always @(posedge clk) f_init <= 1'b0;
+        always @(*) if (f_init) assume(!rst_n);
+
+        // yosys+slang ยังไม่รองรับ $onehot/$onehot0 จึงเขียนเองด้วยเลขฐานสอง
+        // v มีบิตเดียว <=> v != 0 และ (v & (v-1)) == 0
+        function automatic bit f_onehot0(input logic [15:0] v);
+            f_onehot0 = ((v & (v - 16'd1)) == 16'd0);
+        endfunction
+        function automatic bit f_onehot(input logic [15:0] v);
+            f_onehot = (v != 16'd0) && ((v & (v - 16'd1)) == 16'd0);
+        endfunction
+
+        // ---------------------------------------------------------
+        // สมมติฐานฝั่งต้นทางของทั้ง 5 พอร์ต (AXI4-Stream + tid one-hot)
+        // ---------------------------------------------------------
+        generate
+            for (genvar p = 0; p < 5; p++) begin : f_src
+                always @(*) begin
+                    if (rst_n && s_valid[p]) begin
+                        assume(f_onehot(s_tid[p]));
+                        assume((s_tid[p] & ~s_ready[p]) == '0);
+                    end
+                end
+            end
+        endgenerate
+
+        // ---------------------------------------------------------
+        // ทราฟฟิกที่ถูกรูปแบบ: ทุก flit ในแพกเกจเดียวกันต้องจ่าหน้าที่เดียวกัน
+        //
+        // ข้อนี้ *ต้องมี* ไม่ใช่เพื่อความสวยงาม: ถ้าไม่ assume solver จะสร้างเคส
+        // ที่หัวคิวเปลี่ยนปลายทางกลางแพกเกจขณะที่ arbiter ยังล็อกช่องอยู่ แล้ว
+        // crossbar จะคาย flit นั้นออกพอร์ตเดิม = ส่งผิดทาง (พบเป็น counterexample
+        // ของ assert_grant_matches_route_vc0 ที่ out=NORTH in=WEST จริงๆ)
+        //
+        // RTL ไม่ได้บังคับข้อนี้ไว้ที่ไหนเลย มันเป็นสัญญาที่ตัวส่งต้องรักษา
+        // ตัว agent ในโปรเจกต์นี้รักษาอยู่ (tdest คงที่ต่อแพกเกจ) แต่ถ้าวันหนึ่ง
+        // มีคนต่อ master ตัวใหม่ที่สลับ tdest กลางแพกเกจ router จะส่งผิดทาง
+        // แบบเงียบๆ ไม่มีธงขึ้น และ arbiter จะปลดล็อกได้ก็ต่อเมื่อครบ STALL_MAX
+        // ---------------------------------------------------------
+        generate
+            for (genvar p = 0; p < 5; p++) begin : f_wf
+                for (genvar vc = 0; vc < NUM_VCS; vc++) begin : f_wf_vc
+                    logic       f_in_pkt;
+                    logic [3:0] f_in_dest;
+                    wire f_acc = s_valid[p] && s_tid[p][vc] && s_ready[p][vc];
+
+                    always_ff @(posedge clk or negedge rst_n) begin
+                        if (!rst_n) begin
+                            f_in_pkt <= 1'b0;
+                        end else if (f_acc) begin
+                            if (s_tlast[p]) begin
+                                f_in_pkt <= 1'b0;
+                            end else begin
+                                f_in_pkt  <= 1'b1;
+                                f_in_dest <= s_tdest[p];
+                            end
+                        end
+                    end
+
+                    always @(*) begin
+                        if (rst_n && f_in_pkt && s_valid[p] && s_tid[p][vc])
+                            assume(s_tdest[p] == f_in_dest);
+                    end
+                end
+            end
+        endgenerate
+
+        // ---------------------------------------------------------
+        // 1. ตัวถอด XY
+        // ---------------------------------------------------------
+        generate
+            for (genvar ip = 0; ip < 5; ip++) begin : f_route_in
+                for (genvar vc = 0; vc < NUM_VCS; vc++) begin : f_route_vc
+                    always @(*) begin
+                        if (rst_n && f_past_valid) begin
+                            // ขอออกได้พอร์ตเดียวเป๊ะ ไม่ขอเลยก็ได้ แต่ห้ามสองพอร์ต
+                            assert_route_onehot:
+                                assert(f_onehot0(route_req[ip][vc]));
+
+                            // มี flit เมื่อไหร่ต้องมีปลายทางเสมอ ไม่มี flit ก็ห้ามขอ
+                            // ผิดข้อนี้ = flit ค้างในบัฟเฟอร์ตลอดกาล (ไม่มีใครมารับ)
+                            // หรือ arbiter ถูกปลุกด้วยคำขอผี
+                            assert_route_iff_valid:
+                                assert((|route_req[ip][vc]) == buf_valid[ip][vc]);
+
+                            if (buf_valid[ip][vc]) begin
+                                if (buf_tdest[ip][vc][3:2] == MY_X &&
+                                    buf_tdest[ip][vc][1:0] == MY_Y) begin
+                                    // ถึงบ้านแล้วต้องเด้งออก LOCAL ไม่งั้นวนในเมชไม่จบ
+                                    assert_eject_here:
+                                        assert(route_req[ip][vc][LOCAL]);
+                                end else begin
+                                    // ยังไม่ถึงบ้านห้ามเด้งออก LOCAL แพกเกจของคนอื่น
+                                    // จะถูกกินหายไปที่ node นี้
+                                    assert_no_false_eject:
+                                        assert(!route_req[ip][vc][LOCAL]);
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        endgenerate
+
+        // ---------------------------------------------------------
+        // 2. Crossbar
+        // ---------------------------------------------------------
+        generate
+            for (genvar op = 0; op < 5; op++) begin : f_out
+                always @(*) begin
+                    if (rst_n && f_past_valid) begin
+                        // เงื่อนไขที่ AND-OR mux ต้องมี ไม่งั้นข้อมูลถูก OR ปนกัน
+                        // ครอบทั้งข้าม input และข้าม VC (สายส่งออกมีเส้นเดียว)
+                        assert_xbar_onehot:
+                            assert(f_onehot0({grant_vc0[op], grant_vc1[op]}));
+
+                        // ห้ามมี valid ออกไปโดยไม่มีใครได้ grant
+                        assert_no_valid_without_grant:
+                            assert(!m_valid[op] ||
+                                   (|grant_vc0[op]) || (|grant_vc1[op]));
+
+                        // ป้าย VC ที่ติดไปกับ flit ต้องตรงกับ VC ที่ได้ grant จริง
+                        // ผิดข้อนี้ = flit ข้ามเลนตอนออกจาก router ปลายทางจับผิดคิว
+                        if (NUM_VCS == 2) begin
+                            if (|grant_vc1[op])
+                                assert_tid_vc1:  assert(m_tid[op] == 2'b10);
+                            else if (|grant_vc0[op])
+                                assert_tid_vc0:  assert(m_tid[op] == 2'b01);
+                            else
+                                assert_tid_idle: assert(m_tid[op] == 2'b00);
+                        end
+                    end
+                end
+
+                for (genvar ip = 0; ip < 5; ip++) begin : f_xbar_in
+                    always @(*) begin
+                        if (rst_n && f_past_valid) begin
+                            // grant ต้องมาจากคนที่ขอออกพอร์ตนี้จริง = ไม่ส่งผิดทาง
+                            // และของที่คายออกต้องเป็นของคนนั้นเป๊ะ ไม่ใช่ OR ของหลายคน
+                            if (grant_vc0[op][ip] && buf_valid[ip][0]) begin
+                                assert_grant_matches_route_vc0: assert(route_req[ip][0][op]);
+                                assert_xbar_data_vc0:  assert(m_tdata[op] == buf_tdata[ip][0]);
+                                assert_xbar_dest_vc0:  assert(m_tdest[op] == buf_tdest[ip][0]);
+                                assert_xbar_last_vc0:  assert(m_tlast[op] == buf_tlast[ip][0]);
+                                assert_xbar_valid_vc0: assert(m_valid[op]);
+                            end
+                            if (grant_vc1[op][ip] && buf_valid[ip][1]) begin
+                                assert_grant_matches_route_vc1: assert(route_req[ip][1][op]);
+                                assert_xbar_data_vc1:  assert(m_tdata[op] == buf_tdata[ip][1]);
+                                assert_xbar_dest_vc1:  assert(m_tdest[op] == buf_tdest[ip][1]);
+                                assert_xbar_last_vc1:  assert(m_tlast[op] == buf_tlast[ip][1]);
+                                assert_xbar_valid_vc1: assert(m_valid[op]);
+                            end
+                        end
+                    end
+                end
+            end
+        endgenerate
+
+        // ---------------------------------------------------------
+        // 3. input buffer หนึ่งตัวห้ามถูก grant จากสองพอร์ตออกพร้อมกัน
+        //    (เหตุผลเต็มอยู่หัวบล็อก นี่คือทางที่ flit จะถูกโคลน)
+        // ---------------------------------------------------------
+        generate
+            for (genvar ip = 0; ip < 5; ip++) begin : f_fanout
+                logic [4:0] gcol0, gcol1;
+                always @(*) begin
+                    for (int op = 0; op < 5; op++) begin
+                        gcol0[op] = grant_vc0[op][ip];
+                        gcol1[op] = grant_vc1[op][ip];
+                    end
+                end
+
+                always @(*) begin
+                    if (rst_n && f_past_valid) begin
+                        assert_no_grant_fanout_vc0: assert(f_onehot0(gcol0));
+                        assert_no_grant_fanout_vc1: assert(f_onehot0(gcol1));
+
+                        // credit ตีกลับได้เฉพาะตอนมีคนรับจริง ไม่งั้น FIFO ถูกอ่านทิ้ง
+                        assert_ready_needs_grant_vc0: assert(!buf_ready[ip][0] || (|gcol0));
+                        assert_ready_needs_grant_vc1: assert(!buf_ready[ip][1] || (|gcol1));
+                    end
+                end
+            end
+        endgenerate
+
+        // -------------------------------------------------------------
+        // COVER: พิสูจน์ว่า router เดินได้จริง ไม่ใช่ผ่านเพราะไม่มีอะไรเกิดขึ้น
+        // -------------------------------------------------------------
+        always @(posedge clk) begin
+            if (f_past_valid && $past(rst_n) && rst_n) begin
+                cover_eject_local:  cover(m_valid[LOCAL] && m_ready[LOCAL][0]);
+                cover_forward_east: cover(m_valid[EAST]);
+                cover_turn_xy:      cover(m_valid[NORTH] || m_valid[SOUTH]);
+
+                // สองพอร์ตออกทำงานพร้อมกัน = crossbar ขนานได้จริง ไม่ใช่ทางเดี่ยว
+                cover_two_outputs:  cover(m_valid[EAST] && m_valid[LOCAL]);
+
+                // สอง VC วิ่งพร้อมกันคนละพอร์ต
+                cover_both_vcs:     cover((|grant_vc0[EAST]) && (|grant_vc1[LOCAL]));
+            end
+        end
+    `endif
+
 endmodule

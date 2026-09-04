@@ -191,6 +191,8 @@ module packet_arbiter #(
     // FORMAL VERIFICATION: พิสูจน์ว่าช่องสัญญาณไม่มีทางถูกแย่งกลางคัน!
     // =================================================================
     `ifdef FORMAL
+    `ifndef FORMAL_TOP_INTEGRATION
+
         reg f_past_valid = 1'b0;
         always @(posedge clk) f_past_valid <= 1'b1;
 
@@ -226,6 +228,7 @@ module packet_arbiter #(
                 end
             end
         end
+    `endif
     `endif
 
 endmodule
