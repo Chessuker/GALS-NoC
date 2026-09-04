@@ -220,6 +220,7 @@ module router_5port_mesh_vc #(
     // ที่ rtlil.cc (count_id) — generate ทำให้ label ได้ prefix ลำดับชั้นที่ไม่ซ้ำ
     // =================================================================
     `ifdef FORMAL
+    `ifndef FORMAL_NO_ROUTER
         reg f_past_valid = 1'b0;
         always @(posedge clk) f_past_valid <= 1'b1;
 
@@ -429,6 +430,7 @@ module router_5port_mesh_vc #(
                 cover_both_vcs:     cover((|grant_vc0[EAST]) && (|grant_vc1[LOCAL]));
             end
         end
+    `endif
     `endif
 
 endmodule

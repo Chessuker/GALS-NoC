@@ -1,0 +1,75 @@
+# =============================================================================
+# gals_node_wrapper — formal
+#
+# ขอบ GALS: ทุก flit ที่ข้ามระหว่างโดเมน host กับโดเมน NoC ผ่านโมดูลนี้
+# async_fifo/async_fifo_fwft ข้างในถูกพิสูจน์แยกไปแล้ว ที่ยังไม่เคยถูกตรวจคือ
+# กาวรอบๆ มัน: MUX เลือก VC สองทิศ, การประกอบ/แกะ {tlast,tdest,tdata},
+# r_en ที่สร้างจาก valid/tid/ready ของฝั่งตรงข้าม และการแมป ready <-> full
+#
+# พิสูจน์ (ดูตัวไฟล์ gals_node_wrapper.sv):
+#   assert_tx_valid_iff_data / assert_rx_valid_iff_data - เสนอของเมื่อมีของ
+#   assert_tx_pick_vc1 / _vc0 (+ rx)                    - strict priority ถูกทิศ
+#   assert_tx_data_vc1 / _vc0 (+ rx)                    - payload ตรงกับ VC ที่เลือก
+#   assert_tx_idle_tid / _rx_idle_tid                   - ไม่มีของก็ไม่ติดป้าย VC
+#   assert_tx_tid_onehot / _rx_tid_onehot               - ป้าย VC เป็น one-hot
+#   assert_tx_no_pop_empty / assert_rx_no_pop_empty     - ห้ามป๊อป FIFO ว่าง
+#   assert_host_ready_map / assert_noc_ready_map        - ready สะท้อน full จริง
+#   assert_ecc_sbe_out / assert_ecc_dbe_out             - ธงออกครอบทั้งสองโดเมน
+#
+# assert_*_no_pop_empty คือตัวที่มีน้ำหนักที่สุด: r_en ประกอบจากสามสัญญาณคนละที่
+# ถ้าเงื่อนไขไหนหลุดจะกลายเป็นการอ่านขยะออกมาเป็น flit โดยไม่มีธงอะไรขึ้น
+#
+# multiclock on: clk_host กับ clk_noc เป็นคนละโดเมนจริง ไม่มีความสัมพันธ์กัน
+# ต่างจาก async_fifo.sby/async_fifo_fwft.sby ที่ไม่ได้เปิดไว้ ซึ่งเท่ากับให้
+# yosys มองสองคล็อกเป็นก้อนเดียว — ผ่านง่ายกว่าความเป็นจริง เปิดไว้ที่นี่เพราะ
+# property หลายข้อคร่อมสองโดเมน
+#
+# ขอบเขต ECC: เมื่อ FORMAL ถูกนิยาม async_fifo จะสลับไป dual_port_ram ธรรมดาและผูก
+# ecc_single_err/ecc_double_err ไว้ที่ 0 (ตามที่เขียนไว้ในตัว async_fifo.sv เอง)
+# แลตช์ ECC จึงไม่มีทางถูกยกขึ้นที่นี่ จงใจไม่ใส่ assertion เรื่องความ sticky ไว้:
+# RTL เขียนเป็น if (err) q <= 1'b1; ไม่มีกิ่งเคลียร์ ความ sticky เป็นเรื่องโครงสร้าง
+# assertion ที่เขียนทับก็แค่ท่องโค้ดซ้ำ และเคยทำ induction พังด้วย artefact
+# (สถานะเริ่มต้นที่ตัวเก็บ past เป็น 1 ขณะที่แลตช์เป็น 0 ซึ่งไปถึงไม่ได้จริง)
+# ตัว ECC จริงพิสูจน์ด้วย tb_ecc_secded (exhaustive) และตัวนับบนบอร์ด ไม่ใช่ที่นี่
+#
+# ใช้ frontend เดิม (read_verilog -sv) ไม่ใช่ slang: พอร์ตของโมดูลนี้และของ
+# async_fifo* เป็น packed ทั้งหมด จึงไม่ติดข้อจำกัด unpacked array port ของ yosys
+#
+#   cd formal && sby -f gals_node_wrapper.sby
+# =============================================================================
+
+[tasks]
+prove
+cover
+
+[options]
+multiclock on
+prove: mode prove
+prove: depth 16
+cover: mode cover
+cover: depth 16
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION dual_port_ram.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION gray_counter.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION sync_2stage.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION async_fifo.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION fwft_wrapper.sv
+read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION async_fifo_fwft.sv
+read_verilog -sv -formal gals_node_wrapper.sv
+chparam -set DATA_W 4 -set DEPTH 2 gals_node_wrapper
+prep -top gals_node_wrapper
+memory_map
+opt -fast
+
+[files]
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/dual_port_ram.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/gray_counter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_2stage.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/fwft_wrapper.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo_fwft.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/gals_node_wrapper.sv

@@ -413,9 +413,9 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   the first script that actually proves the arbiter, and it passes basecase **and**
   induction.
 
-  **The whole set is green.** Nine modules. The first seven pass `prove` on both basecase
-  *and* induction, so those are unbounded proofs; the last two are bounded (`bmc`), for the
-  reason given below the table:
+  **The whole set is green, and every RTL module in the datapath now has one.** Eleven
+  modules. Eight pass `prove` on both basecase *and* induction, so those are unbounded
+  proofs; three are bounded (`bmc`), for the reason given below the table:
 
   | module | mode | result | cover |
   |---|---|---|---|
@@ -426,8 +426,10 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   | `async_fifo` | prove | PASS | PASS |
   | `async_fifo_fwft` | prove | PASS | PASS (cover needs depth 40) |
   | `dual_port_ram_ecc` | prove | PASS | PASS |
+  | `gals_node_wrapper` | prove, multiclock | PASS | PASS |
   | `vc_input_buffer` | bmc, depth 16 | PASS | PASS |
   | `router_5port_mesh_vc` | bmc, depth 16 | PASS | PASS |
+  | `noc_mesh_2x2_vc` | bmc, depth 10 | PASS | PASS |
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
@@ -493,8 +495,78 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   matches `gray_counter` and `sync_2stage`. Both still pass `prove` and `cover` on their
   own scripts, checked after the change.
 
-  Still unproven by formal: `noc_mesh_2x2_vc` and `gals_node_wrapper` have no `FORMAL`
-  blocks at all.
+  **`noc_mesh_2x2_vc` and `gals_node_wrapper` now have `FORMAL` blocks too, so no RTL
+  module in the datapath is unproven any more.**
+
+  The mesh layer is almost pure wiring: 36 hand-written `assign`s plus the edge tie-offs.
+  That is exactly the shape a swapped-index bug hides in, and it is the kind a top-level
+  testbench struggles to catch, because packets still move — they just arrive at the wrong
+  node. Its two headline properties are `assert_eject_dest` (a flit ejected to node *i*'s
+  LOCAL port really is addressed to node *i*, which is mesh-level delivery correctness and
+  fails immediately if the `idx = y*2 + x` wiring is crossed) and `assert_edge_*` (no
+  router ever drives a valid off the edge of the board).
+
+  `gals_node_wrapper` is the GALS boundary itself. The FIFOs inside were already proved;
+  what had never been checked is the glue around them — the strict-priority VC mux in each
+  direction, the `{tlast,tdest,tdata}` pack/unpack, the `r_en` assembled from the far
+  side's valid/tid/ready, and the ready↔full mapping. The heaviest property there is
+  `assert_tx_no_pop_empty` / `assert_rx_no_pop_empty`: `r_en` is built from three separate
+  signals, and if any term slipped it would pop an empty FIFO and hand garbage onward as a
+  flit with no flag raised. It runs `multiclock on` — unlike `async_fifo.sby` and
+  `async_fifo_fwft.sby`, which leave it off and therefore let yosys treat the two clocks as
+  one, an easier problem than the real one. It passes `prove`, so this one *is* unbounded.
+
+  **Two things had to be got right for the mesh run to mean anything.** The routers are
+  read with `-D FORMAL_NO_ROUTER`, which switches off the router's own `FORMAL` block — not
+  for speed, but because that block `assume`s well-formed traffic on its `s_*` inputs, and
+  inside the mesh those are internal wires with drivers. Assumptions on driven wires can
+  contradict each other and make every assertion pass vacuously: green while proving
+  nothing. The router is proved separately, where its `s_*` really are free inputs. Second,
+  the mesh assumes `tdest` stays on the board (x and y each 0 or 1). `s_tdest` is 4 bits
+  and accepts up to 3 per axis, so an out-of-range destination routes a flit off the edge,
+  where `m_rdy_wire` is tied to 0 — it stalls there permanently and head-of-line-blocks
+  behind it. No flag, no timeout: one host can hang the whole mesh. The agents here only
+  emit in-range values, so the board is fine, but nothing in the RTL rejects it.
+
+  **One assertion I wrote was wrong, and the run caught it.** `assert_idle_tid` ("no tid
+  while valid is low") failed at step 3. The router's crossbar computes `m_tid` from grants
+  alone, `(2'b10 & {2{|grant_vc1}}) | (2'b01 & {2{|grant_vc0}})`, while `m_valid` also
+  needs `buf_valid` — so when an arbiter holds a grant after its source vanished mid-packet
+  (the bug #5 path), tid lingers with no valid. That is **not** a defect: AXI4-Stream
+  leaves sideband signals don't-care while `tvalid` is low, and every consumer here gates
+  tid with valid (`fifo_we = s_valid && s_tid[v]` in `vc_input_buffer`, `w_en =
+  s_noc_valid && s_noc_tid[v]` in `gals_node_wrapper`). The assertion was stricter than the
+  spec; it is now `assert_eject_tid_onehot0`, which checks the case that would actually
+  hurt — a multi-hot tid would write one flit into both VCs downstream.
+
+  **Also dropped: the ECC sticky-latch assertions.** They restated the RTL (`if (err) q <=
+  1'b1;` with no clearing branch, so stickiness is structural) and were vacuous anyway,
+  since `async_fifo` ties its ECC flags to 0 whenever `FORMAL` is defined. They also broke
+  induction with an artefact — a start state where the manual past register is 1 while the
+  latch is 0, which no transition reaches. The real ECC logic is covered by `tb_ecc_secded`
+  (exhaustive) and the board counters, not here. `assert_ecc_sbe_out` / `assert_ecc_dbe_out`
+  stay, because they check something real: both clock domains are ORed into the output.
+
+  **Duplicated dead code in `noc_mesh_2x2_vc.sv`, worth cleaning up separately.** Section 3
+  (the edge tie-offs) appears twice. The first copy ties only `r_valid` and `m_rdy_wire`;
+  the second ties `r_last`, `r_dst`, `r_dat` and `r_tid` as well. So every edge `r_valid`
+  and `m_rdy_wire` has two continuous assignments driving it, which SystemVerilog does not
+  allow for a `logic` variable. Vivado and slang both accept it today (both copies drive
+  the same constants, so behaviour is unaffected), but it is a latent portability problem
+  and the first copy is entirely redundant. Left alone here because it is an RTL change, not
+  a formal one.
+
+  **Duplicate assert labels are a hazard in both frontends.** Slang names assert cells
+  straight from the label, and classic `read_verilog` does too inside a genvar loop
+  (`gals_node_wrapper` hit "a cell with the same name was already created" from a two-VC
+  generate loop). Either put the properties in `generate` blocks with genvars, which give
+  each label a unique hierarchical prefix, or unroll and give every label its own name.
+
+  Every module in `sources_1/new/` that carries datapath logic now has a `FORMAL` block.
+  What remains unproven is the test infrastructure and the board tops — `traffic_node_agent`,
+  `noc_stress_tester`, `loopback_node_agent`, `uart_noc_host`, `uart_transceiver`,
+  `gals_noc_top`, `arty_stress_top`, `arty_gals_noc_wrapper` — which are covered by
+  simulation and by the board instead.
 - **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
   `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
   ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —

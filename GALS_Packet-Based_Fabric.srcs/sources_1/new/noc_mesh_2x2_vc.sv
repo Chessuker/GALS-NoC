@@ -217,5 +217,156 @@ module noc_mesh_2x2_vc #(
     assign r_valid[3][EAST]  = 1'b0; assign m_rdy_wire[3][EAST]  = '0;
     assign r_last[3][EAST]   = 1'b0; assign r_dst[3][EAST]  = '0; assign r_dat[3][EAST]  = '0; assign r_tid[3][EAST]  = '0;
 
+
+    // =================================================================
+    // FORMAL
+    //
+    // ชั้นนี้แทบไม่มีตรรกะเลย มีแต่ assign เดินสายด้วยมือ 36 บรรทัด กับ
+    // tie-off ปิดขอบ — ซึ่งเป็นทรงที่บั๊กแบบ "ต่อสลับดัชนี" ชอบซ่อนอยู่พอดี
+    // และเป็นบั๊กที่ testbench ระดับบนจับได้ยาก เพราะแพกเกจยังวิ่งได้ แค่ไป
+    // โผล่ผิดโหนด
+    //
+    // property หลักสองข้อ:
+    //   assert_eject_dest    - flit ที่เด้งออก LOCAL ของโหนด i ต้องจ่าหน้ามาที่
+    //                          โหนด i จริง นี่คือความถูกต้องปลายทางระดับเมช
+    //                          ถ้าเดินสายสลับ idx ข้อนี้จะพังทันที
+    //   assert_edge_*        - ไม่มี router ตัวไหนคาย valid ออกขอบกระดาน
+    //                          ขอบถูก tie m_rdy_wire = 0 ไว้ ถ้ามี flit วิ่งไปทางนั้น
+    //                          มันจะค้างตรงนั้นตลอดกาลและบล็อกหัวคิวตามมา
+    //
+    // ข้อสมมติที่ต้องมี และเป็น "สัญญา" ที่ RTL ไม่ได้บังคับไว้:
+    //   tdest ต้องอยู่ในกระดาน — x และ y ต้องเป็น 0 หรือ 1 เท่านั้น
+    //   s_tdest กว้าง 4 บิต (x=[3:2], y=[1:0]) รับค่าได้ถึง 3 แต่เมชมีแค่ 2x2
+    //   ยิง tdest ที่ x=2/3 หรือ y=2/3 เข้าไป XY routing จะพาออกขอบกระดาน
+    //   แล้ว flit จะค้างถาวร ไม่มีธง ไม่มี timeout — เป็นการแขวนเมชทั้งใบ
+    //   จาก host ตัวเดียว ตัว agent ในโปรเจกต์นี้ยิงแต่ค่าในช่วง จึงไม่เจอ
+    //
+    // routers ถูกอ่านด้วย -D FORMAL_NO_ROUTER เพื่อ *ปิด* บล็อก FORMAL ของมันเอง
+    // ไม่ใช่เพื่อความเร็ว แต่เพราะบล็อกนั้นมี assume เรื่องทราฟฟิกที่ถูกรูปแบบ
+    // ซึ่งในบริบทเมชจะไปตกอยู่บนสายภายในที่มีตัวขับอยู่แล้ว assume บนสายที่ถูกขับ
+    // อาจขัดแย้งกันเองจนทุก assertion ผ่านแบบ vacuous คือดูเขียวแต่ไม่ได้พิสูจน์อะไร
+    // ตัว router พิสูจน์แยกใน router_5port_mesh_vc.sby ที่ขา s_* เป็น input จริง
+    // =================================================================
+    `ifdef FORMAL
+        reg f_past_valid = 1'b0;
+        always @(posedge clk) f_past_valid <= 1'b1;
+
+        // FIFO และ state ของ arbiter ไม่มีค่า init บังคับให้ผ่านรีเซ็ตก่อนหนึ่งไซเคิล
+        reg f_init = 1'b1;
+        always @(posedge clk) f_init <= 1'b0;
+        always @(*) if (f_init) assume(!rst_n);
+
+        // yosys+slang ยังไม่รองรับ $onehot/$onehot0 จึงเขียนเองด้วยเลขฐานสอง
+        function automatic bit f_onehot0(input logic [15:0] v);
+            f_onehot0 = ((v & (v - 16'd1)) == 16'd0);
+        endfunction
+        function automatic bit f_onehot(input logic [15:0] v);
+            f_onehot = (v != 16'd0) && ((v & (v - 16'd1)) == 16'd0);
+        endfunction
+
+        // ---------------------------------------------------------
+        // ข้อสมมติที่ขา host ทั้ง 4 โหนด (เป็น input จริงของ top ตัวนี้)
+        // ---------------------------------------------------------
+        generate
+            for (genvar i = 0; i < 4; i++) begin : f_host
+                always @(*) begin
+                    if (rst_n && s_valid[i]) begin
+                        assume(f_onehot(s_tid[i]));
+                        assume((s_tid[i] & ~s_ready[i]) == '0);
+                        // ปลายทางต้องอยู่ในกระดาน 2x2 (เหตุผลเต็มอยู่หัวบล็อก)
+                        assume(s_tdest[i][3:2] <= 2'd1);
+                        assume(s_tdest[i][1:0] <= 2'd1);
+                    end
+                end
+
+                // ทุก flit ในแพกเกจเดียวกันต้องจ่าหน้าที่เดียวกัน
+                // (เหตุผลเต็มอยู่ใน router_5port_mesh_vc.sv บล็อก f_wf)
+                for (genvar vc = 0; vc < NUM_VCS; vc++) begin : f_host_vc
+                    logic       f_in_pkt;
+                    logic [3:0] f_in_dest;
+                    wire f_acc = s_valid[i] && s_tid[i][vc] && s_ready[i][vc];
+
+                    always_ff @(posedge clk or negedge rst_n) begin
+                        if (!rst_n) begin
+                            f_in_pkt <= 1'b0;
+                        end else if (f_acc) begin
+                            if (s_tlast[i]) begin
+                                f_in_pkt <= 1'b0;
+                            end else begin
+                                f_in_pkt  <= 1'b1;
+                                f_in_dest <= s_tdest[i];
+                            end
+                        end
+                    end
+
+                    always @(*) begin
+                        if (rst_n && f_in_pkt && s_valid[i] && s_tid[i][vc])
+                            assume(s_tdest[i] == f_in_dest);
+                    end
+                end
+            end
+        endgenerate
+
+        // ---------------------------------------------------------
+        // property ระดับเมช
+        // ---------------------------------------------------------
+        generate
+            for (genvar i = 0; i < 4; i++) begin : f_node
+                localparam logic [1:0] NX = i % 2;   // idx = y*2 + x
+                localparam logic [1:0] NY = i / 2;
+
+                always @(*) begin
+                    if (rst_n && f_past_valid) begin
+                        // ---- ไม่มีใครคาย valid ออกขอบกระดาน
+                        if (NX == 2'd0) begin
+                            assert_edge_west:  assert(!m_valid_wire[i][WEST]);
+                        end else begin
+                            assert_edge_east:  assert(!m_valid_wire[i][EAST]);
+                        end
+                        if (NY == 2'd0) begin
+                            assert_edge_south: assert(!m_valid_wire[i][SOUTH]);
+                        end else begin
+                            assert_edge_north: assert(!m_valid_wire[i][NORTH]);
+                        end
+
+                        // ---- ของที่เด้งออก LOCAL ต้องเป็นของโหนดนี้จริง
+                        if (m_valid[i]) begin
+                            assert_eject_dest: assert(m_tdest[i] == {NX, NY});
+                            assert_eject_tid:  assert(f_onehot(m_tid[i]));
+                        end
+
+                        // ป้าย VC ห้ามติดสองเลนพร้อมกัน ไม่ว่าจะมี valid หรือไม่
+                        // ถ้า multi-hot ปลายทางจะเขียน flit เดียวลงสอง VC = โคลน
+                        // (ข้อนี้ตรวจซ้ำจากฝั่งเมช โดยที่บล็อก FORMAL ของ router ปิดอยู่
+                        //  จึงเป็นการยืนยันอิสระ ไม่ได้อาศัย assert_xbar_onehot)
+                        assert_eject_tid_onehot0: assert(f_onehot0(m_tid[i]));
+                    end
+                end
+            end
+        endgenerate
+
+        // -------------------------------------------------------------
+        // COVER: เมชต้องส่งของถึงจริงทั้ง 4 โหนด และลิงก์ต้องมีของวิ่งจริง
+        // ข้อจำกัด: cover พวกนี้บอกได้แค่ว่า "มีของถึงโหนดนั้น" ไม่ได้แยกว่า
+        // มาจากเพื่อนบ้านหนึ่งฮ็อปหรือมาจากมุมตรงข้ามสองฮ็อป
+        // -------------------------------------------------------------
+        always @(posedge clk) begin
+            if (f_past_valid && $past(rst_n) && rst_n) begin
+                cover_deliver_n0: cover(m_valid[0] && (|m_ready[0]));
+                cover_deliver_n1: cover(m_valid[1] && (|m_ready[1]));
+                cover_deliver_n2: cover(m_valid[2] && (|m_ready[2]));
+                cover_deliver_n3: cover(m_valid[3] && (|m_ready[3]));
+
+                // ลิงก์แกนนอนและแกนตั้งมีของวิ่งจริง (ไม่ใช่เมชที่ตายอยู่)
+                cover_link_x: cover(m_valid_wire[0][EAST]);
+                cover_link_y: cover(m_valid_wire[0][NORTH]);
+
+                // สอง VC วิ่งพร้อมกันคนละโหนด
+                cover_both_vcs: cover(m_valid[0] && m_tid[0][0] &&
+                                      m_valid[3] && m_tid[3][1]);
+            end
+        end
+    `endif
+
 endmodule
 

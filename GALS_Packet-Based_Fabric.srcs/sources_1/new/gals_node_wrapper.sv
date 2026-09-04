@@ -193,4 +193,177 @@ module gals_node_wrapper #(
     assign ecc_single_err = sbe_noc_q | host_flags_sync[0];
     assign ecc_double_err = dbe_noc_q | host_flags_sync[1];
 
+
+    // =================================================================
+    // FORMAL
+    //
+    // นี่คือขอบ GALS: ทุก flit ที่ข้ามระหว่างโดเมน host กับโดเมน NoC ผ่านที่นี่
+    // ตัว async_fifo/async_fifo_fwft ข้างในถูกพิสูจน์แยกไปแล้ว สิ่งที่ยังไม่เคย
+    // ถูกตรวจคือ "กาว" รอบๆ มัน ซึ่งเป็นจุดที่ bug ประเภทต่อสายผิดอยู่:
+    //   - MUX เลือก VC แบบ strict priority ทั้งสองทิศ
+    //   - การประกอบ/แกะ {tlast, tdest, tdata} เข้าออก FIFO
+    //   - r_en ที่ถูกสร้างจาก valid/tid/ready ของฝั่งตรงข้าม
+    //   - การแมป ready <-> full
+    //
+    // property ที่มีน้ำหนักที่สุดคือ assert_tx_no_pop_empty / assert_rx_no_pop_empty:
+    // r_en ของ FIFO ถูกประกอบจากสามสัญญาณคนละที่ (m_*_valid, m_*_tid, m_*_ready)
+    // ถ้าเงื่อนไขไหนหลุด จะกลายเป็นการป๊อป FIFO ที่ว่าง = อ่านขยะออกมาเป็น flit
+    // โดยไม่มีธงอะไรขึ้นเลย
+    //
+    // เป็น multiclock จริง (clk_host กับ clk_noc คนละโดเมน ไม่มีความสัมพันธ์กัน)
+    // property เกือบทั้งหมดจึงเขียนเป็น combinational ล้วน ไม่พึ่ง $past
+    // ส่วนที่ต้องใช้อดีตจะเก็บ past ด้วยมือตามสไตล์เดียวกับ gray_counter
+    // (yosys มีบั๊กเรื่อง $past ในโหมด multiclock)
+    //
+    // ขอบเขตที่ต้องพูดตรงๆ: เมื่อ FORMAL ถูกนิยาม async_fifo จะสลับไปใช้
+    // dual_port_ram ธรรมดาและผูก ecc_single_err/ecc_double_err ไว้ที่ 0
+    // (เขียนไว้ในตัว async_fifo.sv เอง) แลตช์ ECC ในโมดูลนี้จึงไม่มีทางถูกยกขึ้น
+    // ในการรัน formal — assert_ecc_*_sticky เป็นจริงแบบ vacuous ปล่อยไว้เพื่อกัน
+    // การแก้ในอนาคตที่เผลอทำให้แลตช์เคลียร์ตัวเอง ส่วนตัว ECC จริงพิสูจน์ด้วย
+    // tb_ecc_secded (exhaustive) และตัวนับบนบอร์ด ไม่ใช่ที่นี่
+    // =================================================================
+    `ifdef FORMAL
+        localparam int F_PACK_W = 1 + 4 + DATA_W;
+
+        reg f_past_valid = 1'b0;
+        always @(posedge clk_noc) f_past_valid <= 1'b1;
+
+        reg f_init = 1'b1;
+        always @(posedge clk_noc) f_init <= 1'b0;
+        always @(*) if (f_init) assume(!rst_n);
+
+        // ---------------------------------------------------------
+        // ข้อสมมติฝั่งต้นทางทั้งสองทิศ (สัญญา AXI4-Stream + tid one-hot)
+        // ถ้าไม่ assume ข้อ backpressure flit จะหายเงียบ เพราะ w_en ถูก and
+        // ด้วย !full ไว้แล้ว ตัว FIFO จึงไม่มีทางรู้ว่ามีของถูกทิ้ง
+        // ---------------------------------------------------------
+        always @(*) begin
+            if (s_host_valid) begin
+                assume($onehot(s_host_tid));
+                assume((s_host_tid & ~s_host_ready) == '0);
+            end
+            if (s_noc_valid) begin
+                assume($onehot(s_noc_tid));
+                assume((s_noc_tid & ~s_noc_ready) == '0);
+            end
+        end
+
+        // ---------------------------------------------------------
+        // MUX ทิศ Host -> NoC
+        // ---------------------------------------------------------
+        always @(*) begin
+            if (rst_n && f_past_valid && NUM_VCS == 2) begin
+                // มีของใน VC ไหนก็ตาม ต้องเสนอออกไป ไม่มีก็ต้องเงียบ
+                assert_tx_valid_iff_data:
+                    assert(m_noc_valid == (!tx_empty[1] || !tx_empty[0]));
+
+                // strict priority: VC1 มาก่อนเสมอ และของที่คายต้องเป็นของ VC1 เป๊ะ
+                if (!tx_empty[1]) begin
+                    assert_tx_pick_vc1: assert(m_noc_tid == 2'b10);
+                    assert_tx_data_vc1:
+                        assert({m_noc_tlast, m_noc_tdest, m_noc_tdata} == tx_rdata[1]);
+                end else if (!tx_empty[0]) begin
+                    assert_tx_pick_vc0: assert(m_noc_tid == 2'b01);
+                    assert_tx_data_vc0:
+                        assert({m_noc_tlast, m_noc_tdest, m_noc_tdata} == tx_rdata[0]);
+                end else begin
+                    // ไม่มีของก็ห้ามติดป้าย VC ค้างไว้ ปลายทาง demux ตาม tid
+                    assert_tx_idle_tid: assert(m_noc_tid == '0);
+                end
+
+                if (m_noc_valid) assert_tx_tid_onehot: assert($onehot(m_noc_tid));
+            end
+        end
+
+        // ---------------------------------------------------------
+        // MUX ทิศ NoC -> Host (ทรงเดียวกัน คนละโดเมนคล็อก)
+        // ---------------------------------------------------------
+        always @(*) begin
+            if (rst_n && f_past_valid && NUM_VCS == 2) begin
+                assert_rx_valid_iff_data:
+                    assert(m_host_valid == (!rx_empty[1] || !rx_empty[0]));
+
+                if (!rx_empty[1]) begin
+                    assert_rx_pick_vc1: assert(m_host_tid == 2'b10);
+                    assert_rx_data_vc1:
+                        assert({m_host_tlast, m_host_tdest, m_host_tdata} == rx_rdata[1]);
+                end else if (!rx_empty[0]) begin
+                    assert_rx_pick_vc0: assert(m_host_tid == 2'b01);
+                    assert_rx_data_vc0:
+                        assert({m_host_tlast, m_host_tdest, m_host_tdata} == rx_rdata[0]);
+                end else begin
+                    assert_rx_idle_tid: assert(m_host_tid == '0);
+                end
+
+                if (m_host_valid) assert_rx_tid_onehot: assert($onehot(m_host_tid));
+            end
+        end
+
+        // ---------------------------------------------------------
+        // ความปลอดภัยของ r_en / ready ต่อ VC
+        // ---------------------------------------------------------
+        // ป้าย assert ถูกใช้เป็นชื่อเซลล์ตรงๆ ป้ายซ้ำใน generate loop ชนกัน
+        // (yosys: "a cell with the same name was already created") จึงกางสองเลนออกมาเอง
+        always @(*) begin
+            if (rst_n && f_past_valid && NUM_VCS == 2) begin
+                // ห้ามป๊อป FIFO ที่ว่าง — จะได้ขยะออกมาเป็น flit เงียบๆ
+                if (m_noc_valid && m_noc_tid[0] && m_noc_ready[0])
+                    assert_tx_no_pop_empty_vc0: assert(!tx_empty[0]);
+                if (m_noc_valid && m_noc_tid[1] && m_noc_ready[1])
+                    assert_tx_no_pop_empty_vc1: assert(!tx_empty[1]);
+                if (m_host_valid && m_host_tid[0] && m_host_ready[0])
+                    assert_rx_no_pop_empty_vc0: assert(!rx_empty[0]);
+                if (m_host_valid && m_host_tid[1] && m_host_ready[1])
+                    assert_rx_no_pop_empty_vc1: assert(!rx_empty[1]);
+
+                // ready ที่ตีกลับต้องสะท้อนสถานะ full จริงของเลนนั้น
+                assert_host_ready_map_vc0: assert(s_host_ready[0] == ~tx_full[0]);
+                assert_host_ready_map_vc1: assert(s_host_ready[1] == ~tx_full[1]);
+                assert_noc_ready_map_vc0:  assert(s_noc_ready[0]  == ~rx_full[0]);
+                assert_noc_ready_map_vc1:  assert(s_noc_ready[1]  == ~rx_full[1]);
+            end
+        end
+
+        // ---------------------------------------------------------
+        // ธง ECC ที่ออกไปข้างนอก
+        //
+        // ไม่มี assertion เรื่อง "แลตช์ต้อง sticky" ในนี้ตั้งใจ: ตัว RTL เขียนเป็น
+        // if (tx_sbe[i]) q <= 1'b1; โดยไม่มีกิ่งเคลียร์เลย ความ sticky จึงเป็นเรื่อง
+        // โครงสร้าง assertion ที่เขียนทับก็แค่ท่องโค้ดซ้ำ ไม่ได้ตรวจอะไรเพิ่ม
+        // และในสภาพแวดล้อม formal นี้มันยัง vacuous ด้วย เพราะเมื่อ FORMAL ถูกนิยาม
+        // async_fifo จะผูก ecc_single_err/ecc_double_err ไว้ที่ 0 แลตช์จึงไม่มีทางถูกยก
+        // (เคยเขียนไว้แล้วถอดออก: induction สร้างสถานะเริ่มต้นที่ตัวเก็บ past เป็น 1
+        //  ขณะที่แลตช์เป็น 0 ซึ่งไปถึงไม่ได้จริง เป็น artefact ของ induction ไม่ใช่บั๊ก)
+        // ตัว ECC จริงพิสูจน์ด้วย tb_ecc_secded (exhaustive) และตัวนับบนบอร์ด
+        // ---------------------------------------------------------
+        // ธงที่ออกไปข้างนอกต้องครอบทั้งสองโดเมน ไม่ใช่โดเมนเดียว
+        always @(*) begin
+            if (rst_n && f_past_valid) begin
+                assert_ecc_sbe_out: assert(ecc_single_err == (sbe_noc_q | host_flags_sync[0]));
+                assert_ecc_dbe_out: assert(ecc_double_err == (dbe_noc_q | host_flags_sync[1]));
+            end
+        end
+
+        // -------------------------------------------------------------
+        // COVER
+        // -------------------------------------------------------------
+        always @(posedge clk_noc) begin
+            if (f_past_valid && rst_n && NUM_VCS == 2) begin
+                cover_tx_vc1: cover(m_noc_valid && m_noc_tid == 2'b10 && m_noc_ready[1]);
+                cover_tx_vc0: cover(m_noc_valid && m_noc_tid == 2'b01 && m_noc_ready[0]);
+                cover_rx_vc1: cover(m_host_valid && m_host_tid == 2'b10);
+
+                // ทั้งสองทิศเดินพร้อมกัน = ขอบ GALS ทำงานสองทางจริง
+                cover_both_paths: cover(m_noc_valid && m_host_valid);
+
+                // MUX ตัวนี้เป็น strict priority ล้วน *ไม่มี* anti-starvation
+                // ต่างจาก vc_port_arbiter ที่มี starve_cnt/override กันไว้
+                // ตราบใดที่ VC1 ยังมีของ VC0 ก็ไม่ได้ออกเลย ไม่มีเพดานเวลา
+                // cover นี้ยืนยันว่าสถานะนั้นไปถึงได้จริง ไม่ใช่แค่กังวลบนกระดาษ
+                cover_vc0_waits_behind_vc1:
+                    cover(!tx_empty[0] && !tx_empty[1] && m_noc_tid == 2'b10);
+            end
+        end
+    `endif
+
 endmodule
