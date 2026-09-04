@@ -1,6 +1,6 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-01. Branch `feature/1-testbenchs`, last commit `5b794ce`.
+Last updated: 2026-09-04. Branch `feature/1-testbenchs`, last commit `1736d1b`.
 
 Read this first if you're picking the project up cold.
 
@@ -8,19 +8,67 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Three real RTL bugs were found. **All three are fixed, and all three are confirmed
-in simulation and on the board.**
+Six real RTL bugs found. **All six fixed.** Five confirmed on the board; bug #5's trigger
+can no longer occur, so it is proved and simulated rather than observed failing.
 
-| # | bug | status |
-|---|-----|--------|
-| 1 | `packet_arbiter` released an output port mid-packet, corrupting packets | **fixed** |
-| 2 | `packet_arbiter` round-robin mask latched; one input took 100% of a contended port | **fixed** |
-| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | **fixed** |
-| 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | **fixed** |
+| # | bug | found by | status |
+|---|-----|----------|--------|
+| 1 | `packet_arbiter` released an output port mid-packet, corrupting packets | sim | **fixed**, board-confirmed |
+| 2 | `packet_arbiter` round-robin mask latched; one input took 100% of a contended port | sim | **fixed**, board-confirmed |
+| 3 | `vc_port_arbiter` cross-blocks the two VCs; throughput collapse + deadlock | sim | **fixed**, board-confirmed |
+| 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | liveness watchdog, first board run | **fixed**, board-confirmed |
+| 5 | `packet_arbiter` force-release could fire mid-packet when a source returned on the saturation cycle | formal | **fixed**, proved + simulated |
+| 6 | out-of-range `tdest` routes off the mesh edge and stalls there forever, head-of-line-blocking the fabric | formal (mesh) | **fixed**, board-confirmed clean |
 
 Bugs 1-3 predate this work and would have shipped. None was caught by the five original
-simulation tests or by the permutation hardware stress run. Bug #4 was found by the
-liveness watchdog on its very first board run — see section 3b.
+simulation tests or by the permutation hardware stress run.
+
+### Verification status — all re-run against `1736d1b`
+
+**Formal: 11 modules, 22/22 tasks pass, 0 failures.** Eight prove unbounded (basecase +
+induction); three are bounded `bmc` because they tie state outside a FIFO to the FIFO's
+contents, which induction can violate from an unreachable start state.
+
+| unbounded (`prove`) | bounded (`bmc`) |
+|---|---|
+| `packet_arbiter`, `vc_port_arbiter`, `gray_counter`, `sync_2stage`, `async_fifo`, `async_fifo_fwft`, `dual_port_ram_ecc`, `gals_node_wrapper` | `vc_input_buffer`, `router_5port_mesh_vc`, `noc_mesh_2x2_vc` |
+
+Every RTL module carrying datapath logic now has a `FORMAL` block. What has none is the
+test infrastructure and the board tops (`traffic_node_agent`, `noc_stress_tester`,
+`loopback_node_agent`, `uart_noc_host`, `uart_transceiver`, `gals_noc_top`,
+`arty_stress_top`, `arty_gals_noc_wrapper`) — those are covered by simulation and the board.
+
+**Simulation: 3/3 testbenches pass.**
+
+| testbench | result |
+|---|---|
+| `tb_ecc_secded` | PASS — 23,792 exhaustive cases |
+| `tb_traffic_node_agent` | PASS — 10/10 liveness checks |
+| `tb_noc_stress_tester` | PASS — gap 136, 0 sequence errors, 203,504 flits, EAST 49% / NORTH 51%, ECC silent, no out-of-range dest |
+
+**Hardware: both builds run clean on the Arty A7-100T.**
+
+| build | result |
+|---|---|
+| stress (`PATTERN=1 VC_MODE=2`) | 0 sequence errors, liveness PASS on all 4 nodes, ECC 0/0, `dest_err_cnt` 0, node 00 at 97.0% utilisation, 80.2 MB/s, VC split 50/50 |
+| UART (`arty_gals_noc_wrapper`) | 149-byte packet round-trips byte-identical; both VCs and both destinations echo; ECC and `dest_err` counters 0 across 1024 samples |
+
+Logs in `hw_logs/`. The stress run is the silicon regression for bugs #4, #5 and #6 in one
+shot — the previous hardware run of that exact config reported `liveness FAIL` on agent_01
+and agent_11.
+
+### Known gaps, stated plainly
+
+- **The ECC alarm path has never been proved on silicon.** `tb_ecc_secded` proves the SECDED
+  logic exhaustively and the board counters read 0, but 0 is also what a disconnected flag
+  reads. An error-injection register would settle it; deliberately not built yet.
+- **`dest_err_node[3:0]` is absent from the stress build's ILA** (its clock did not resolve),
+  so per-node attribution is unavailable there. `dest_err_cnt` survives and answers whether
+  it happened. `analyze_ila.py` says so rather than staying silent.
+- **Bug #5 has no silicon failure to regress against** — the fix removes the trigger.
+- **`noc_mesh_2x2_vc` and the two arbiters carry the one-hot `tid` contract in `assume`s
+  only.** Nothing in RTL enforces one-hot `tid`; a multi-hot or zero `tid` is dropped
+  silently. That is exactly how `noc_host.py` lost every VC0 packet until it was fixed.
 
 ---
 
