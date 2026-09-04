@@ -66,6 +66,21 @@ module arty_gals_noc_wrapper (
     // =========================================================
     // GALS NoC Instance
     // =========================================================
+    // ธงความผิดพลาดจาก NoC — build นี้ปล่อยพอร์ตพวกนี้ลอยมาตลอด
+    // (ecc_single_err/ecc_double_err ไม่ถูกต่อเลย และ dest_err ก็เพิ่งมี)
+    // จึงตรวจเจอ error แล้วโยนทิ้งเงียบๆ แบบเดียวกับที่เคยเกิดใน gals_node_wrapper
+    //
+    // ที่นี่ *ไม่* เอาไปผูกกับ LED: LED ของ build นี้เป็นไฟบอกกิจกรรม UART
+    // (led1/led2 ตามสาย rx/tx, led3 = มี TX) ไม่ใช่ไฟตัดสินผลอย่าง build ตัว stress
+    // เอาแค่ให้ ILA มองเห็น ก็พอสำหรับการดีบัก ไม่ต้องเปลี่ยนความหมายของไฟ
+    //
+    // ต้องมี dont_touch คู่กับ mark_debug เพราะสายพวกนี้ไม่มีโหลด
+    // ไม่งั้นถูกกวาดทิ้งก่อน Set Up Debug จะเห็น (gotcha 1)
+    // โดเมน clk_noc ทั้งสามเส้น (sticky อยู่แล้วในตัว NoC)
+    (* mark_debug = "true", dont_touch = "true" *) logic ecc_sbe_noc;
+    (* mark_debug = "true", dont_touch = "true" *) logic ecc_dbe_noc;
+    (* mark_debug = "true", dont_touch = "true" *) logic dest_err_noc;
+
     gals_noc_top uut_noc_top (
         .clk_noc(clk_noc), .rst_n(global_rst_n),
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
@@ -80,7 +95,10 @@ module arty_gals_noc_wrapper (
         .h10_rx_tdata(t10_rx_data), .h10_rx_tdest(t10_rx_dest), .h10_rx_tid(t10_rx_tid), .h10_rx_tlast(t10_rx_tlast), .h10_rx_tvalid(t10_rx_valid), .h10_rx_tready(t10_rx_ready),
 
         .h11_tx_tdata(t11_tx_data), .h11_tx_tdest(t11_tx_dest), .h11_tx_tid(t11_tx_tid), .h11_tx_tlast(t11_tx_tlast), .h11_tx_tvalid(t11_tx_valid), .h11_tx_tready(t11_tx_ready),
-        .h11_rx_tdata(t11_rx_data), .h11_rx_tdest(t11_rx_dest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_valid), .h11_rx_tready(t11_rx_ready)
+        .h11_rx_tdata(t11_rx_data), .h11_rx_tdest(t11_rx_dest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_valid), .h11_rx_tready(t11_rx_ready),
+
+        .ecc_single_err(ecc_sbe_noc), .ecc_double_err(ecc_dbe_noc),
+        .dest_err(dest_err_noc)
     );
 
     // =========================================================
