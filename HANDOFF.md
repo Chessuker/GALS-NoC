@@ -413,14 +413,36 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   the first script that actually proves the arbiter, and it passes basecase **and**
   induction.
 
-  Of the seven old scripts, four target live modules and are still unrun:
-  `fifo_formal`, `fifo_fwft_farmal`, `gray_formal`, `sync_formal`, plus `ram_ecc_formal`
-  for the ECC RAM. Worth running now that the toolchain exists.
+  **The whole set is now green.** Seven modules, `prove` passing on both basecase *and*
+  induction, so these are unbounded proofs rather than bounded BMC:
 
-  `vc_port_arbiter.sv`'s `FORMAL` block was updated alongside the bug #3 fix
-  (`assert_no_vc1_during_override` conditioned on `vc0_can_move`, plus
-  `assert_vc1_yields_when_stalled` and two covers) but still has **no `.sby` and has never
-  been run** — the same trap that hid the false `assert_channel_lock`.
+  | module | prove | cover |
+  |---|---|---|
+  | `packet_arbiter` | PASS | PASS |
+  | `vc_port_arbiter` | PASS | PASS |
+  | `gray_counter` | PASS | PASS |
+  | `sync_2stage` | PASS | PASS |
+  | `async_fifo` | PASS | PASS |
+  | `async_fifo_fwft` | PASS | PASS (cover needs depth 40) |
+  | `dual_port_ram_ecc` | PASS | PASS |
+
+  `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
+  `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
+  checked by anything. They hold, so the fix running on the board is formally sound, not
+  just simulation-sound.
+
+  `async_fifo_fwft`'s wrap-around cover in `gray_counter` needs depth 40, not 20: with
+  `ADDR_WIDTH=4` the pointer is 5 bits, so wrapping takes ~32 increments. Depth limit, not
+  a defect — confirmed by raising the depth.
+
+  Scripts live in `formal/`, one per module, written fresh. The old ones in
+  `sources_1/new/old/` were unrunnable regardless of tooling: their `[files]` sections name
+  bare filenames while the sources are in `new/`. `arbiter_formal.sby` and `mpmc.sby` stay
+  dead (wrong project); the rest are superseded.
+
+  Still unproven by formal: `router_5port_mesh_vc`, `vc_input_buffer`, `noc_mesh_2x2_vc`
+  and `gals_node_wrapper` have no `FORMAL` blocks at all, so there is nothing to run yet.
+  Those are where a routing or crossbar bug would hide.
 - **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
   `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
   ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —
