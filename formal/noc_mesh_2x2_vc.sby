@@ -10,6 +10,13 @@
 #   assert_edge_*           - ไม่มี router ตัวไหนคาย valid ออกขอบกระดาน
 #   assert_eject_tid        - ป้าย VC ที่ส่งให้ host เป็น one-hot ตอนมี valid
 #   assert_eject_tid_onehot0 - ป้าย VC ไม่ multi-hot ไม่ว่ากรณีใด
+#   assert_bad_dest_blocked - flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมช
+#   assert_good_dest_passes - ตัวกรองไม่แตะของที่ถูกต้อง
+#
+# รอบก่อนต้อง assume ว่า s_tdest อยู่ในกระดาน ไม่งั้น assert_edge_* พังจริง
+# ตอนนี้หัวข้อ 0 ของตัวโมดูลกรอง flit นอกกระดานออกก่อนเข้าเมชแล้ว จึงถอด assume
+# ทิ้งและปล่อยให้ solver ยิง tdest ได้ทุกค่า 0..15 — ข้อสมมติเดิมกลายเป็นข้อพิสูจน์
+# cover_dest_err_raised คู่กันไว้กัน assert_bad_dest_blocked ผ่านแบบ vacuous
 #
 # หมายเหตุจากรอบแรก: เคยเขียน assert_idle_tid ว่า "ไม่มี valid ก็ห้ามมี tid ค้าง"
 # แล้วมันพังจริงที่สเต็ป 3 — crossbar ของ router คิด m_tid จาก grant ล้วน

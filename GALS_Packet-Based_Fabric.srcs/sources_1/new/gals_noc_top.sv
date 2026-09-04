@@ -102,10 +102,14 @@ module gals_noc_top (
 
     // ---- ECC รวมของทั้ง NoC (sticky, โดเมน clk_noc)
     output logic       ecc_single_err,
-    output logic       ecc_double_err
+    output logic       ecc_double_err,
+
+    // ---- มีคนยิงปลายทางนอกกระดาน 2x2 (sticky, โดเมน clk_noc)
+    output logic       dest_err
 );
 
     logic [3:0] ecc_sbe, ecc_dbe;   // ธง ECC ต่อโหนด (0=00 1=01 2=10 3=11)
+    logic [3:0] noc_dest_err;       // ธงปลายทางนอกกระดาน ต่อโหนดที่ยิงเข้ามา
 
     // ========================================================
     // 🧶 Internal Wires (สายไฟเชื่อม Wrapper <-> NoC Router)
@@ -143,7 +147,8 @@ module gals_noc_top (
         .m_tid      (noc_rx_tid),
         .m_tlast    (noc_rx_tlast),
         .m_valid    (noc_rx_tvalid),
-        .m_ready    (noc_rx_tready)
+        .m_ready    (noc_rx_tready),
+        .dest_err   (noc_dest_err)
     );
 
     // --- 2. GALS Wrappers (สะพานเชื่อมโดเมนนาฬิกา) ---
@@ -298,5 +303,34 @@ module gals_noc_top (
 
     assign ecc_single_err = |ecc_sbe;
     assign ecc_double_err = |ecc_dbe;
+
+    // =========================================================
+    // Out-of-range tdest aggregation
+    // เดินตามรูปแบบเดียวกับ ECC ข้างบนเป๊ะ: ธง sticky ต่อโหนด + ตัวนับขอบขาขึ้น
+    // ต้อง mark_debug + dont_touch ไม่งั้นโดนกวาดทิ้งตอน synth (gotcha 1)
+    //
+    // ตัวนับนับ "จำนวนโหนดที่เคยยิงปลายทางผิด" ไม่ใช่จำนวน flit ที่ถูกทิ้ง
+    // (ธงเป็น level ที่ตั้งแล้วค้าง เหมือน ECC) อ่านคู่กับ dest_err_node
+    // จะรู้ว่าโหนดไหนเป็นต้นเหตุ
+    // =========================================================
+    (* mark_debug = "true", dont_touch = "true" *) logic [3:0]  dest_err_node;
+    (* mark_debug = "true", dont_touch = "true" *) logic [15:0] dest_err_cnt;
+
+    assign dest_err_node = noc_dest_err;
+
+    logic [3:0] dest_err_q;
+    always_ff @(posedge clk_noc or negedge rst_n) begin
+        if (!rst_n) begin
+            dest_err_q   <= '0;
+            dest_err_cnt <= '0;
+        end else begin
+            dest_err_q <= noc_dest_err;
+            for (int i = 0; i < 4; i++) begin
+                if (noc_dest_err[i] && !dest_err_q[i]) dest_err_cnt <= dest_err_cnt + 1'b1;
+            end
+        end
+    end
+
+    assign dest_err = |noc_dest_err;
 
 endmodule

@@ -379,6 +379,19 @@ module tb_noc_stress_tester;
                     $display("  [PASS] ฉีด double-bit error แล้วธงขึ้นถึง top จริง");
             end
 
+            // ---- ปลายทางนอกกระดาน : agent ทุกตัวยิงแต่ค่าในช่วง ธงจึงต้องเงียบ
+            // ถ้าดังขึ้นแปลว่าตัวสร้าง tdest ของ agent เพี้ยน หรือตัวกรองไวเกิน
+            // แล้วกำลังทิ้ง flit ที่ถูกต้อง — สองอย่างนี้ร้ายทั้งคู่และหาไม่เจอ
+            // จากตัวเลข throughput เพราะแพกเกจแค่ "หาย" ไม่ได้ผิดค่า
+            $display("    DEST: err_cnt=%0d  node=%04b",
+                     uut_noc_top.dest_err_cnt, uut_noc_top.dest_err_node);
+            if (uut_noc_top.dest_err_cnt != 0) begin
+                $display("  [FAIL] มี flit จ่าหน้านอกกระดาน 2x2 ถูกทิ้ง (node=%04b)",
+                         uut_noc_top.dest_err_node);
+                fails++;
+            end else
+                $display("  [PASS] ไม่มี flit จ่าหน้านอกกระดานเลย");
+
             $display("");
             if (fails == 0) $display("  >>> tb_noc_stress_tester PASS");
             else            $display("  >>> tb_noc_stress_tester FAIL (%0d)", fails);

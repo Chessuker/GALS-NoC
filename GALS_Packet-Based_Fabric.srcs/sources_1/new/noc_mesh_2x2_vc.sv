@@ -42,7 +42,10 @@ module noc_mesh_2x2_vc #(
     output logic [3:0][3:0]         m_tdest,
     output logic [3:0][DATA_W-1:0]  m_tdata,
     output logic [3:0][NUM_VCS-1:0] m_tid,
-    input  logic [3:0][NUM_VCS-1:0] m_ready
+    input  logic [3:0][NUM_VCS-1:0] m_ready,
+
+    // ---- ปลายทางนอกกระดาน: sticky ต่อโหนดที่ยิงเข้ามา (โดเมน clk เดียวกับเมช)
+    output logic [3:0]              dest_err
 );
 
     localparam LOCAL = 0, NORTH = 1, SOUTH = 2, EAST = 3, WEST = 4;
@@ -86,12 +89,52 @@ module noc_mesh_2x2_vc #(
     endgenerate
 
     // =================================================================
+    // 0. ตรวจปลายทางก่อนปล่อยเข้าเมช
+    //
+    // s_tdest กว้าง 4 บิต (x=[3:2], y=[1:0]) รับค่าได้ถึง 3 ต่อแกน แต่กระดานมี 2x2
+    // ถ้าปล่อย flit ที่ x=2/3 หรือ y=2/3 เข้าไป ตัวถอด XY จะเห็น dx > MY_X เสมอ
+    // ทุกคอลัมน์ แล้วส่งมันไปทางขอบ ซึ่ง m_rdy_wire ถูก tie ไว้ที่ 0 — flit จะค้าง
+    // ตรงนั้นถาวร บล็อกหัวคิวตามมาทั้งสาย ไม่มีธง ไม่มี timeout
+    // host ตัวเดียวที่พิมพ์ปลายทางผิดจึงแขวนเมชได้ทั้งใบ
+    //
+    // ทางเลือกที่ไม่เอา: ดึง s_ready ลง (เท่ากับย้ายการค้างไปที่ผู้ส่งแทน) และ
+    // การหนีบค่าให้เข้าช่วง (flit จะไปโผล่โหนดที่ไม่ได้ตั้งใจแบบเงียบๆ)
+    // ที่เลือกคือ ทิ้ง flit ทิ้งไปเลยแต่ยังรับเข้ามาตามปกติ แล้วยกธง sticky
+    // ผู้ส่งไม่ค้าง เมชไม่ตัน แพกเกจที่ผิดหายไปทั้งใบ (tdest คงที่ต่อแพกเกจ
+    // เป็นสัญญาที่ router พึ่งอยู่แล้ว) และมีธงบอกว่าทำไมของถึงหาย
+    // เส้นทางรายงานเดินตาม ECC ทุกประการ: sticky ต่อโหนด -> รวมที่ gals_noc_top
+    // -> ตัวนับ mark_debug ให้ ILA อ่าน -> LED
+    // =================================================================
+    localparam logic [1:0] MAX_X = 2'd1;   // กระดาน 2x2 : x และ y ใช้ได้แค่ 0..1
+    localparam logic [1:0] MAX_Y = 2'd1;
+
+    logic [3:0] dest_ok;
+    always_comb begin
+        for (int i = 0; i < 4; i++) begin
+            dest_ok[i] = (s_tdest[i][3:2] <= MAX_X) && (s_tdest[i][1:0] <= MAX_Y);
+        end
+    end
+
+    // ยกธงตั้งแต่ตอน *เสนอ* flit ที่ผิด ไม่ต้องรอให้ถูกรับ — ความผิดอยู่ที่การยิง
+    // ปลายทางนอกกระดาน ไม่ใช่ที่จังหวะ handshake
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            dest_err <= '0;
+        end else begin
+            for (int i = 0; i < 4; i++) begin
+                if (s_valid[i] && !dest_ok[i]) dest_err[i] <= 1'b1;
+            end
+        end
+    end
+
+    // =================================================================
     // 2. เดินสายไฟ (WIRING LOGIC) ⚡
     // =================================================================
     generate
         for (genvar i = 0; i < 4; i++) begin : LOCAL_PORTS
             // 2.1 เชื่อมพอร์ต LOCAL (0) ลงไปหา Host (ผ่าน Wrapper)
-            assign r_valid[i][LOCAL] = s_valid[i];
+            // flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมชเลย (เหตุผลอยู่หัวข้อ 0)
+            assign r_valid[i][LOCAL] = s_valid[i] && dest_ok[i];
             assign r_last[i][LOCAL]  = s_tlast[i];
             assign r_dst[i][LOCAL]   = s_tdest[i];
             assign r_dat[i][LOCAL]   = s_tdata[i];
@@ -253,9 +296,11 @@ module noc_mesh_2x2_vc #(
                     if (rst_n && s_valid[i]) begin
                         assume(f_onehot(s_tid[i]));
                         assume((s_tid[i] & ~s_ready[i]) == '0);
-                        // ปลายทางต้องอยู่ในกระดาน 2x2 (เหตุผลเต็มอยู่หัวบล็อก)
-                        assume(s_tdest[i][3:2] <= 2'd1);
-                        assume(s_tdest[i][1:0] <= 2'd1);
+                        // ไม่มี assume เรื่องช่วงของ s_tdest แล้วโดยตั้งใจ:
+                        // เดิมต้อง assume ว่าปลายทางอยู่ในกระดาน ไม่งั้น assert_edge_*
+                        // พังจริง ตอนนี้หัวข้อ 0 กรอง flit นอกกระดานออกก่อนเข้าเมช
+                        // จึงปล่อยให้ solver ยิง tdest ได้ทุกค่า 0..15 แล้วพิสูจน์ว่า
+                        // ไม่มีอะไรหลุดออกขอบ = ข้อสมมติเดิมกลายเป็นข้อพิสูจน์
                     end
                 end
 
@@ -315,6 +360,16 @@ module noc_mesh_2x2_vc #(
                             assert_eject_tid:  assert(f_onehot(m_tid[i]));
                         end
 
+                        // ---- flit ที่จ่าหน้านอกกระดานต้องไม่ถูกปล่อยเข้าเมช
+                        // ถ้าหลุดเข้าไปได้ มันจะวิ่งไปตันที่ขอบและบล็อกหัวคิวถาวร
+                        if (s_valid[i] && !dest_ok[i]) begin
+                            assert_bad_dest_blocked: assert(!r_valid[i][LOCAL]);
+                        end
+                        // ตัวกรองห้ามแตะของที่ถูกต้อง ไม่ใช่แค่กันของผิด
+                        if (s_valid[i] && dest_ok[i]) begin
+                            assert_good_dest_passes: assert(r_valid[i][LOCAL]);
+                        end
+
                         // ป้าย VC ห้ามติดสองเลนพร้อมกัน ไม่ว่าจะมี valid หรือไม่
                         // ถ้า multi-hot ปลายทางจะเขียน flit เดียวลงสอง VC = โคลน
                         // (ข้อนี้ตรวจซ้ำจากฝั่งเมช โดยที่บล็อก FORMAL ของ router ปิดอยู่
@@ -344,6 +399,13 @@ module noc_mesh_2x2_vc #(
                 // สอง VC วิ่งพร้อมกันคนละโหนด
                 cover_both_vcs: cover(m_valid[0] && m_tid[0][0] &&
                                       m_valid[3] && m_tid[3][1]);
+
+                // ตัวกรองปลายทางถูกกระตุ้นได้จริง ไม่ใช่โค้ดที่ไม่มีทางทำงาน
+                // (ถ้า cover นี้ไม่ถึง แปลว่า assert_bad_dest_blocked ผ่านแบบ vacuous)
+                cover_dest_err_raised: cover(|dest_err);
+                cover_mesh_alive_after_bad_dest:
+                    cover((|dest_err) && (m_valid[0] || m_valid[1] ||
+                                          m_valid[2] || m_valid[3]));
             end
         end
     `endif

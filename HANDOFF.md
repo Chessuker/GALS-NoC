@@ -522,11 +522,10 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   inside the mesh those are internal wires with drivers. Assumptions on driven wires can
   contradict each other and make every assertion pass vacuously: green while proving
   nothing. The router is proved separately, where its `s_*` really are free inputs. Second,
-  the mesh assumes `tdest` stays on the board (x and y each 0 or 1). `s_tdest` is 4 bits
-  and accepts up to 3 per axis, so an out-of-range destination routes a flit off the edge,
-  where `m_rdy_wire` is tied to 0 — it stalls there permanently and head-of-line-blocks
-  behind it. No flag, no timeout: one host can hang the whole mesh. The agents here only
-  emit in-range values, so the board is fine, but nothing in the RTL rejects it.
+  the mesh *used to* assume `tdest` stays on the board. That assumption has since been
+  replaced by a real range check in the RTL, described in its own entry below, so the
+  formal environment now lets `s_tdest` take any of its 16 values and proves that nothing
+  escapes off the edge.
 
   **One assertion I wrote was wrong, and the run caught it.** `assert_idle_tid` ("no tid
   while valid is low") failed at step 3. The router's crossbar computes `m_tid` from grants
@@ -570,6 +569,52 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   `noc_stress_tester`, `loopback_node_agent`, `uart_noc_host`, `uart_transceiver`,
   `gals_noc_top`, `arty_stress_top`, `arty_gals_noc_wrapper` — which are covered by
   simulation and by the board instead.
+- **Out-of-range `tdest` is now rejected at the mesh boundary, and the fabric survives it.**
+  `s_tdest` is 4 bits (x = `[3:2]`, y = `[1:0]`) and accepts up to 3 per axis, but the mesh
+  is 2x2. Feeding in x=2/3 or y=2/3 made the XY decoder see `dx > MY_X` in every column and
+  send the flit toward the edge, where `m_rdy_wire` is tied to 0 — the flit stalled there
+  permanently and head-of-line-blocked everything behind it. No flag, no timeout: a single
+  host with a wrong destination could hang the entire fabric.
+
+  Section 0 of `noc_mesh_2x2_vc.sv` now computes `dest_ok[i]` per node and gates
+  `r_valid[i][LOCAL]` with it, so a bad flit never enters the mesh. The alternatives were
+  both worse: dropping `s_ready` only moves the stall to the sender, and clamping the
+  address into range delivers the packet to a node nobody intended, silently. What it does
+  instead is consume the flit normally and discard it, then raise a sticky flag. The sender
+  never stalls, the mesh never clogs, and the malformed packet disappears whole — `tdest` is
+  constant per packet, a contract the router already depends on.
+
+  Reporting follows the ECC path exactly, because that path already works: a sticky flag per
+  node out of the mesh, aggregated in `gals_noc_top` into `dest_err_node` and `dest_err_cnt`
+  (both `mark_debug` + `dont_touch`, per gotcha 1), one `dest_err` output, and on
+  `arty_stress_top` it joins `ecc_dbe_s` in both directions — `led[3]` lights and
+  `led[1]`/`led[2]` go dark. A dropped packet can never reach its destination, so a pass
+  light left on would be the same kind of lie the liveness watchdog was added to stop.
+
+  The counter counts *nodes that have ever offended*, not flits dropped, because the flag is
+  a level that latches — read it with `dest_err_node` to find the culprit. The flag is
+  raised when a bad flit is *offered*, not when it is accepted: the fault is aiming off the
+  board, not the handshake timing.
+
+  Verification turned an assumption into a proof. The mesh's range `assume` is gone,
+  `s_tdest` roams all 16 values, and `assert_edge_*` still holds, with
+  `assert_bad_dest_blocked` and `assert_good_dest_passes` added so the filter is checked
+  both for stopping bad flits *and* for leaving good ones alone. `cover_dest_err_raised` and
+  `cover_mesh_alive_after_bad_dest` are both reached, so the filter is reachable and the
+  mesh keeps delivering after it fires — containment demonstrated, not merely asserted. bmc
+  now takes 391 s at depth 10, up from ~100 s, because unconstraining `tdest` widens the
+  input space; all 9 covers pass. `tb_noc_stress_tester` gained a matching check and reports
+  `DEST: err_cnt=0` on a clean run, with 203,504 flits delivered, max gap 136 and a 49/51
+  arbiter split — identical to before the change, which is the point: legal traffic is
+  untouched.
+
+  One incidental fix came with it. `arty_stress_top.sv` declared `ecc_sbe_noc`/`ecc_dbe_noc`
+  *after* the `gals_noc_top` instance driving them, so they were implicitly declared at the
+  port connection first and `xvlog` rejected the file with "already implicitly declared".
+  That was pre-existing — the committed version fails identically — and it stayed hidden
+  because Vivado's synthesis front end tolerates it while the simulator's does not. The
+  declarations moved above the instance, so `arty_stress_top` can be compiled by `xvlog` at
+  all now. All 25 RTL and TB files parse clean.
 - **UART build**: synthesises clean again (440 `MARK_DEBUG` nets, 0 latches) and
   `setup_uart_build.tcl` now drives it, mirroring `setup_stress_build.tcl`. Adding the ECC
   ports to `gals_noc_top` did not break it. **Not yet implemented or run on hardware** —
