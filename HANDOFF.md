@@ -547,14 +547,17 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
   (exhaustive) and the board counters, not here. `assert_ecc_sbe_out` / `assert_ecc_dbe_out`
   stay, because they check something real: both clock domains are ORed into the output.
 
-  **Duplicated dead code in `noc_mesh_2x2_vc.sv`, worth cleaning up separately.** Section 3
-  (the edge tie-offs) appears twice. The first copy ties only `r_valid` and `m_rdy_wire`;
-  the second ties `r_last`, `r_dst`, `r_dat` and `r_tid` as well. So every edge `r_valid`
-  and `m_rdy_wire` has two continuous assignments driving it, which SystemVerilog does not
-  allow for a `logic` variable. Vivado and slang both accept it today (both copies drive
-  the same constants, so behaviour is unaffected), but it is a latent portability problem
-  and the first copy is entirely redundant. Left alone here because it is an RTL change, not
-  a formal one.
+  **Duplicated tie-off block in `noc_mesh_2x2_vc.sv`, found by this work and now removed.**
+  Section 3 (the edge tie-offs) appeared twice. The first copy tied only `r_valid` and
+  `m_rdy_wire`; the second tied `r_last`, `r_dst`, `r_dat` and `r_tid` as well. Every edge
+  `r_valid` and `m_rdy_wire` therefore had two continuous assignments driving it, which
+  SystemVerilog does not allow for a `logic` variable. Vivado and slang both accepted it
+  (both copies drove the same constants, so behaviour was unaffected) but it was a latent
+  portability problem, and the first copy was a strict subset of the second. Deleted in its
+  own commit, separate from the formal work: 20 lines, no behavioural change. Verified by
+  Vivado re-parsing all 17 files clean, every edge signal now having exactly one driver, and
+  `noc_mesh_2x2_vc.sby`, `router_5port_mesh_vc.sby` and `vc_input_buffer.sby` all still
+  passing.
 
   **Duplicate assert labels are a hazard in both frontends.** Slang names assert cells
   straight from the label, and classic `read_verilog` does too inside a genvar loop

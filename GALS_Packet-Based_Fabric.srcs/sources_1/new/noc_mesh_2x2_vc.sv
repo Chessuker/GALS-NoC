@@ -170,26 +170,6 @@ module noc_mesh_2x2_vc #(
     assign m_rdy_wire[3][SOUTH] = r_rdy[1][NORTH];
 
     // =================================================================
-    // 3. ปิดขอบกระดาน (Tie-off) ป้องกัน Undefined State
-    // =================================================================
-    // Node 00 (X=0, Y=0): ทิศ SOUTH, WEST ติดขอบ
-    assign r_valid[0][SOUTH] = 1'b0; assign m_rdy_wire[0][SOUTH] = '0;
-    assign r_valid[0][WEST]  = 1'b0; assign m_rdy_wire[0][WEST]  = '0;
-    
-    // Node 10 (X=1, Y=0): ทิศ SOUTH, EAST ติดขอบ
-    assign r_valid[1][SOUTH] = 1'b0; assign m_rdy_wire[1][SOUTH] = '0;
-    assign r_valid[1][EAST]  = 1'b0; assign m_rdy_wire[1][EAST]  = '0;
-    
-    // Node 01 (X=0, Y=1): ทิศ NORTH, WEST ติดขอบ
-    assign r_valid[2][NORTH] = 1'b0; assign m_rdy_wire[2][NORTH] = '0;
-    assign r_valid[2][WEST]  = 1'b0; assign m_rdy_wire[2][WEST]  = '0;
-    
-    // Node 11 (X=1, Y=1): ทิศ NORTH, EAST ติดขอบ
-    assign r_valid[3][NORTH] = 1'b0; assign m_rdy_wire[3][NORTH] = '0;
-    assign r_valid[3][EAST]  = 1'b0; assign m_rdy_wire[3][EAST]  = '0;
-
-
-    // =================================================================
     // 3. ปิดขอบกระดาน (Tie-off) ป้องกัน Undefined State และ Floating Wires
     // =================================================================
     
