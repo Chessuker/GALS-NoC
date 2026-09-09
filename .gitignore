@@ -1,0 +1,49 @@
+# =============================================================================
+# Vivado build artifacts
+#
+# ทุกอย่างในนี้ Vivado สร้างใหม่ได้จาก .xpr + .srcs/ ที่ยัง track อยู่
+# ก่อนหน้านี้ถูก commit เข้ามาด้วยทั้งหมด (528 ไฟล์) ทำให้ทุกครั้งที่ synth/impl
+# หรือจับ ILA มีไฟล์เปลี่ยนร้อยกว่าไฟล์ อ่าน git status ไม่รู้เรื่อง
+# และ merge ชนกันที่ไฟล์ไบนารี (.dcp/.wdb/.ila) ซึ่ง resolve ด้วยมือไม่ได้
+#
+# ที่ยัง track ต่อ (ห้ามใส่ในนี้):
+#   GALS_Packet-Based_Fabric.xpr            ตัวโปรเจกต์
+#   GALS_Packet-Based_Fabric.srcs/          RTL, testbench, constraint, .xci ตัวจริง
+#   formal/  hw_logs/  sim_logs/            สคริปต์ formal + หลักฐานการรัน
+#   *.tcl  *.py  *.md                       สคริปต์ build/วิเคราะห์ + เอกสาร
+# =============================================================================
+
+# ---- ผลลัพธ์ synthesis / implementation (สร้างใหม่ได้ด้วย launch_runs)
+GALS_Packet-Based_Fabric.runs/
+
+# ---- cache ของ IP และ webtalk
+GALS_Packet-Based_Fabric.cache/
+
+# ---- output product ของ IP (สร้างใหม่ได้จาก .srcs/sources_1/ip/*/*.xci)
+GALS_Packet-Based_Fabric.gen/
+
+# ---- ไฟล์ simulation ที่ Vivado gen ให้ (export_simulation)
+GALS_Packet-Based_Fabric.sim/
+GALS_Packet-Based_Fabric.ip_user_files/
+
+# ---- state ของ Hardware Manager + waveform config ของ ILA
+#      การจับ ILA ที่มีความหมายจริงเก็บเป็น log ไว้ใน hw_logs/ แล้ว
+GALS_Packet-Based_Fabric.hw/
+
+# ---- โฟลเดอร์ชั่วคราวของ Vivado
+.Xil/
+**/.Xil/
+
+# ---- journal / log ที่ Vivado ทิ้งไว้ตอนรัน (ไม่ใช่ log ใน sim_logs/ hw_logs)
+/vivado*.jou
+/vivado*.log
+/vivado_pid*.str
+/hs_err_pid*.log
+/.jobs/
+
+# ---- ไฟล์ที่ Vivado แอบเขียนทิ้งไว้ ไม่ใช่ซอร์ส (โผล่ทั้งที่รากโปรเจกต์และใน srcs)
+dfx_runtime.txt
+
+# ---- ผลลัพธ์ของ SymbiYosys (formal/<task>_<mode>/) — formal/.gitignore คุมอยู่แล้ว
+#      ใส่ซ้ำไว้กันเผลอ commit จากรากโปรเจกต์
+formal/*/
