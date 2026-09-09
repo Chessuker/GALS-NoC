@@ -1,0 +1,43 @@
+# =============================================================================
+# async_fifo_fwft — formal
+#
+# FIFO แบบ first-word-fall-through ที่ห่อ async_fifo อีกชั้น
+#
+# เขียนใหม่ใน formal/ แทนสคริปต์เดิมใน sources_1/new/old/ ซึ่งรันไม่ได้อยู่แล้ว:
+# มัน [files] ชื่อไฟล์แบบไม่มีพาธ แต่ซอร์สจริงอยู่ใน new/ ไม่ใช่ old/
+# (อีกเหตุผลที่ของพวกนี้ไม่เคยถูกรันเลย)
+#
+#   cd formal && sby -f async_fifo_fwft.sby
+# =============================================================================
+
+[tasks]
+prove
+cover
+
+[options]
+prove: mode prove
+prove: depth 20
+cover: mode cover
+# wrap-around cover ใน gray_counter ต้องนับครบ 2^(ADDR_WIDTH+1)=32 ครั้ง
+# depth 20 ไปไม่ถึง ต้องยาวกว่านั้น (ไม่ใช่บั๊ก เป็นข้อจำกัดความลึก)
+cover: depth 40
+
+[engines]
+smtbmc z3
+
+[script]
+read_verilog -sv -formal  dual_port_ram.sv
+read_verilog -sv -formal  gray_counter.sv
+read_verilog -sv -formal  sync_2stage.sv
+read_verilog -sv -formal  async_fifo.sv
+read_verilog -sv -formal  fwft_wrapper.sv
+read_verilog -sv -formal  async_fifo_fwft.sv
+prep -top async_fifo_fwft
+
+[files]
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/dual_port_ram.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/gray_counter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_2stage.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/fwft_wrapper.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/async_fifo_fwft.sv

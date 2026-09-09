@@ -89,6 +89,13 @@ module arty_stress_top #(
     // =========================================================
     // GALS NoC
     // =========================================================
+    // ประกาศไว้ *ก่อน* instance ที่ขับมัน: ถ้าประกาศทีหลัง สายพวกนี้จะถูก
+    // implicit-declare ตอนต่อพอร์ตก่อน แล้ว xvlog ฟ้อง "already implicitly
+    // declared" (Vivado synth ปล่อยผ่าน แต่ตัว simulator ไม่ยอม)
+    // ของเดิม ecc_sbe_noc/ecc_dbe_noc ก็ติดปัญหานี้อยู่แล้ว ย้ายขึ้นมาพร้อมกัน
+    logic ecc_sbe_noc, ecc_dbe_noc;   // sticky, โดเมน clk_noc
+    logic dest_err_noc;               // sticky, โดเมน clk_noc — ปลายทางนอกกระดาน
+
     gals_noc_top uut_noc_top (
         .clk_noc(clk_noc), .rst_n(global_rst_n),
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
@@ -103,7 +110,10 @@ module arty_stress_top #(
         .h10_rx_tdata(t10_rx_tdata), .h10_rx_tdest(t10_rx_tdest), .h10_rx_tid(t10_rx_tid), .h10_rx_tlast(t10_rx_tlast), .h10_rx_tvalid(t10_rx_tvalid), .h10_rx_tready(t10_rx_tready),
 
         .h11_tx_tdata(t11_tx_tdata), .h11_tx_tdest(t11_tx_tdest), .h11_tx_tid(t11_tx_tid), .h11_tx_tlast(t11_tx_tlast), .h11_tx_tvalid(t11_tx_tvalid), .h11_tx_tready(t11_tx_tready),
-        .h11_rx_tdata(t11_rx_tdata), .h11_rx_tdest(t11_rx_tdest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_tvalid), .h11_rx_tready(t11_rx_tready)
+        .h11_rx_tdata(t11_rx_tdata), .h11_rx_tdest(t11_rx_tdest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_tvalid), .h11_rx_tready(t11_rx_tready),
+
+        .ecc_single_err(ecc_sbe_noc), .ecc_double_err(ecc_dbe_noc),
+        .dest_err(dest_err_noc)
     );
 
     // =========================================================
@@ -139,11 +149,33 @@ module arty_stress_top #(
         else               heartbeat_cnt <= heartbeat_cnt + 1'b1;
     end
 
+    // =========================================================
+    // ECC : ธง sticky จาก NoC (โดเมน clk_noc) ข้ามมาที่ clk_h00 ก่อนใช้กับ LED
+    // ตั้งแล้วไม่กลับ จึงใช้ 2FF ได้ (เหตุผลเดียวกับธง done/err)
+    // =========================================================
+    logic [2:0] ecc_flags_sync;
+    sync_2stage #(.WIDTH(3)) u_ecc_led_sync (
+        .clk(clk_h00), .rst(~global_rst_n),
+        .d({dest_err_noc, ecc_dbe_noc, ecc_sbe_noc}),
+        .q(ecc_flags_sync)
+    );
+    logic ecc_sbe_s, ecc_dbe_s, dest_err_s;
+    assign ecc_sbe_s  = ecc_flags_sync[0];
+    assign ecc_dbe_s  = ecc_flags_sync[1];
+    assign dest_err_s = ecc_flags_sync[2];
+
     // PATTERN 0 : led1 = คู่ 00<->11 ผ่าน, led2 = คู่ 01<->10 ผ่าน
     // PATTERN 1 : led1 = ทุก agent จบ window, led2 = จบครบและ node 00 ไม่เจอ error
+    //
+    // double-bit ECC error = ข้อมูลเสียที่ซ่อมไม่ได้ ต้องนับเป็นสอบตกเสมอ
+    // ไฟผ่านจึงต้องดับด้วย ไม่ใช่แค่ติดไฟแดงเพิ่ม — บทเรียนเดียวกับ liveness:
+    // ไฟเขียวที่ยังติดตอนข้อมูลพัง คือไฟเขียวที่โกหก
+    //
+    // ปลายทางนอกกระดานก็นับเป็นสอบตกด้วยเหตุผลเดียวกัน: flit ถูกทิ้งไปแล้ว
+    // แพกเกจนั้นไม่มีทางไปถึงใคร ไฟผ่านที่ยังติดอยู่ก็คือไฟเขียวที่โกหกอีกแบบ
     assign led[0] = heartbeat_cnt[26];   // ยังมีชีวิต
-    assign led[1] = pass_g1;
-    assign led[2] = pass_g2;
-    assign led[3] = any_fail;            // เจอ sequence error
+    assign led[1] = pass_g1  & ~ecc_dbe_s & ~dest_err_s;
+    assign led[2] = pass_g2  & ~ecc_dbe_s & ~dest_err_s;
+    assign led[3] = any_fail | ecc_dbe_s | dest_err_s; // seq error / ECC ซ่อมไม่ได้ / ปลายทางผิด
 
 endmodule

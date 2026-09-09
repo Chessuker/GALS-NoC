@@ -28,6 +28,12 @@ module traffic_node_agent #(
     parameter int         WINDOW_LOG = 24,       // 2^24 cycle ~ 0.24 s ที่ 70 MHz
     parameter int         WARMUP_LOG = 10,
     parameter int         DRAIN_LOG  = 12,
+    parameter int         STUCK_LOG  = 16,       // เกณฑ์ตัดสิน: เงียบเกิน 2^STUCK_LOG
+                                                 // cycle ระหว่าง S_RUN = ถือว่าตาย
+    parameter int         GAP_W      = 24,       // ความกว้างของตัวจับช่องว่าง
+                                                 // ต้องกว้างกว่าเกณฑ์ เพื่อให้ max_gap
+                                                 // รายงานของจริงได้แม้ทะลุเกณฑ์ไปแล้ว
+                                                 // ไม่งั้นจะรู้แค่ "เกิน" ไม่รู้ "เกินเท่าไร"
     parameter bit         TX_EN      = 1'b1      // 0 = ปิดขาส่ง ทำหน้าที่เป็น sink อย่างเดียว
                                                  //     ใช้ตอนทดสอบ hot-spot ที่ node ปลายทาง
 )(
@@ -116,6 +122,34 @@ module traffic_node_agent #(
 
     // ทำเป็นรีจิสเตอร์ ไม่ใช่ assign combinational เพื่อให้ trigger ของ ILA สะอาด
     (* mark_debug = "true", dont_touch = "true" *) logic test_done;
+
+    //========================================================== liveness watchdog
+    // 🔴 state machine เดินตาม win_cnt อย่างเดียว ไม่เคยถาม fabric สักคำ
+    //    มันจึงไปถึง S_DONE แล้วชู done ขึ้นได้ ต่อให้ไม่มี flit ขยับเลยแม้แต่ตัวเดียว
+    //    (รัน VC_MODE=2 ก่อนแก้ bug #3 ไฟเขียวติดบน fabric ที่ deadlock สนิทมาแล้ว)
+    //    done จึงต้องมีหลักฐานว่า "ของเดินจริง" ไม่ใช่แค่ "นับครบ"
+    //
+    // sender  พิสูจน์ตัวเองด้วย tx_fire
+    // sink    (TX_EN=0) ไม่เคยส่ง จึงพิสูจน์ด้วย rx_fire แทน
+    //         ถ้าใช้ tx_fire กับ sink มันจะ false-fail ทุกครั้งโดยอัตโนมัติ
+    localparam logic [GAP_W-1:0] STUCK_LIMIT = (1 << STUCK_LOG);
+
+    logic [GAP_W-1:0] stuck_cnt;
+
+    // max_gap = ช่องว่างที่ยาวที่สุดที่เคยเจอตลอด S_RUN
+    //   นี่คือ "ตัววัด" ส่วน stuck_seen เป็นแค่ "คำตัดสิน"
+    //   มีตัววัดแล้วถึงจะตั้งเกณฑ์จากข้อมูลจริงได้ ไม่ใช่เดา
+    //   (เกณฑ์แรกตั้งไว้ 2^16 โดยเดาจาก traffic_gen ซึ่งเป็นคนละโมดูล คนละภาระงาน
+    //    ผลคือ agent_01/agent_11 false-trip บนบอร์ดทั้งที่ fabric วิ่ง 97%)
+    (* mark_debug = "true", dont_touch = "true" *) logic [GAP_W-1:0] max_gap;
+    (* mark_debug = "true", dont_touch = "true" *) logic stuck_seen;
+
+    logic live_fire;
+    assign live_fire = TX_EN ? tx_fire : rx_fire;
+
+    // หน้าต่างนับครบแล้วหรือยัง (แยกจากการ "ออกจาก S_RUN" เพราะต้องรอขอบแพ็กเกจ)
+    logic win_full;
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) test_done <= 1'b0;
         else        test_done <= (state == S_DONE);
@@ -126,6 +160,7 @@ module traffic_node_agent #(
             state        <= S_WARMUP;
             warm_cnt     <= '0;
             win_cnt      <= '0;
+            win_full     <= 1'b0;
             drain_cnt    <= '0;
             flit_idx     <= '0;
             vc_sel       <= (VC_MODE == 1);
@@ -133,6 +168,9 @@ module traffic_node_agent #(
             tx_seq[1]    <= '0;
             tx_flit_cnt  <= '0;
             tx_stall_cnt <= '0;
+            stuck_cnt    <= '0;
+            max_gap      <= '0;
+            stuck_seen   <= 1'b0;
             rx_vc0_cnt   <= '0;
             rx_vc1_cnt   <= '0;
             rx_err_cnt   <= '0;
@@ -159,6 +197,19 @@ module traffic_node_agent #(
                 if (tx_tvalid && !tx_fire)  tx_stall_cnt <= tx_stall_cnt + 1'b1;
             end
 
+            //---- นาฬิกาจับตาย: เฝ้าเฉพาะช่วง S_RUN
+            //     S_WARMUP ยังไม่มีอะไรวิ่ง / S_DRAIN ปิดขาส่งเองอยู่แล้ว
+            //     ถ้าเฝ้าสองสถานะนั้นด้วยจะ false-fail ทันที
+            if (state == S_RUN) begin
+                if (live_fire)          stuck_cnt <= '0;
+                else if (!(&stuck_cnt)) stuck_cnt <= stuck_cnt + 1'b1;
+
+                // เก็บสถิติช่องว่างที่ยาวที่สุดไว้เสมอ ไม่ว่าจะถึงเกณฑ์หรือไม่
+                if (stuck_cnt > max_gap)       max_gap    <= stuck_cnt;
+                // เกินเกณฑ์ = ติดธงถาวร ต่อให้หลังจากนั้นจะกลับมาวิ่งได้ก็ตาม
+                if (stuck_cnt >= STUCK_LIMIT)  stuck_seen <= 1'b1;
+            end
+
             //---- ตัวชี้ของ generator
             if (tx_fire) begin
                 tx_seq[vc_sel] <= tx_seq[vc_sel] + 1'b1;
@@ -177,8 +228,25 @@ module traffic_node_agent #(
                     if (&warm_cnt) state <= S_RUN;
                 end
                 S_RUN: begin
-                    win_cnt <= win_cnt + 1'b1;
-                    if (&win_cnt) state <= S_DRAIN;
+                    // 🔴 เดิม: พอ win_cnt เต็มก็ออกทันที ทำให้ tx_tvalid ตกกลางแพ็กเกจ
+                    //    แพ็กเกจครึ่งท่อนค้างใน fabric แล้ว packet_arbiter ปลายทาง
+                    //    ล็อกพอร์ตรอ tlast ที่ไม่มีวันมา -> พอร์ตนั้นตายถาวร
+                    //    (วัดได้จริง: idx0 LOCAL ล็อกที่ NORTH ทั้งที่ NORTH ไม่มีของ
+                    //     ส่วน EAST ที่มีของรออยู่ก็อดใช้ ทั้ง fabric เงียบ ~37k cycle)
+                    //    ปลดล็อกฉุกเฉินใน packet_arbiter ช่วยไม่ได้ เพราะมันยิงเฉพาะ
+                    //    ตอน has_transferred=0 เท่านั้น (เงื่อนไขที่ใส่ไว้แก้ bug #1)
+                    //
+                    // ใหม่: นับครบแล้วยังส่งต่อจนจบแพ็กเกจปัจจุบันก่อน ค่อยออก
+                    //    ยืดหน้าต่างออกไปอย่างมาก PKT_FLITS flit ซึ่งเทียบกับ 2^24 แล้วไม่มีผล
+                    if (!win_full) begin
+                        win_cnt <= win_cnt + 1'b1;
+                        if (&win_cnt) win_full <= 1'b1;
+                    end
+                    // sink ไม่มีแพ็กเกจค้าง ออกได้เลย
+                    // ถ้า fabric ตายจริงจน tx_fire ไม่มาเลย stuck_seen จะพาออกเอง
+                    // ไม่งั้นจะค้างใน S_RUN ตลอดกาลแล้วไม่มีใครได้รายงานผล
+                    if (win_full && (!TX_EN || (tx_fire && last_flit) || stuck_seen))
+                        state <= S_DRAIN;
                 end
                 S_DRAIN: begin                  // หยุดยิง รอ flit ที่ค้างในท่อ
                     drain_cnt <= drain_cnt + 1'b1;
@@ -191,7 +259,12 @@ module traffic_node_agent #(
     end
 
     //========================================================== สรุปผลออก port
-    assign done = test_done;
+    // done = "จบ window แล้ว และมีของเดินจริงตลอดทาง"
+    // ต่อตรงไป pass_group1/2 -> led[1]/led[2] ใน arty_stress_top
+    // ดังนั้นไฟเขียวจะไม่ติดบน fabric ที่ตายอีกต่อไป
+    // ILA ยังอ่าน test_done / state_dbg ดิบได้ตามเดิม ไว้แยกว่า
+    // "ยังไม่จบ" กับ "จบแต่ตาย" ออกจากกัน ส่วน stuck_seen บอกว่า node ไหนตาย
+    assign done = test_done && !stuck_seen;
     assign err  = (rx_err_cnt != 32'd0);
 
     //========================================================== ILA taps

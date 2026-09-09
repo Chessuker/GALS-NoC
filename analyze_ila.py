@@ -27,15 +27,23 @@ def load(path):
     rows = list(csv.reader(open(path, newline='')))
     hdr  = rows[0]
     data = [r for r in rows[2:] if len(r) == len(hdr)]
+    # Set Up Debug แยก ILA ตามโดเมนนาฬิกา เน็ตของ clk_noc (ตัวนับ ECC)
+    # จึงไปอยู่ใน core ของตัวเอง ไฟล์นั้นไม่มีคอลัมน์ agent_XX เลยสักอัน
+    # ห้าม return None ทิ้งทั้งไฟล์ ไม่งั้นข้อมูล ECC หายไปเงียบๆ
+    # แล้วรายงานว่า "ไม่มีคอลัมน์" ทั้งที่ ILA จับมาให้เรียบร้อยแล้ว
     m = re.search(r'(agent_\d\d)', ' '.join(hdr))
-    if not m:
-        return None
-    agent = m.group(1)
+    agent = m.group(1) if m else None
     cols = {}
     for i, h in enumerate(hdr):
         mm = re.search(r'agent_\d\d/(\w+)', h)
         if mm:
             cols[mm.group(1)] = i
+        else:
+            # เน็ตระดับ gals_noc_top (uut_noc_top/...) เช่นตัวนับ ECC
+            # ILA แต่ละตัวเห็นเน็ตพวกนี้เหมือนกันหมด อ่านจากไฟล์ไหนก็ได้
+            mt = re.search(r'uut_noc_top/(\w+)', h)
+            if mt:
+                cols['top_' + mt.group(1)] = i
     def col(name):
         return [int(r[cols[name]], 16) for r in data] if name in cols else None
     return agent, {k: col(k) for k in cols}, len(data)
@@ -46,10 +54,23 @@ def main(folder):
         print(f'ไม่พบ iladata*.csv ใน {folder}')
         return 1
     A = {}
+    TOP = {}
     for f in files:
         r = load(f)
-        if r:
-            A[r[0]] = (r[1], r[2], os.path.basename(f))
+        if not r:
+            continue
+        agent, d, n = r
+        # เน็ตระดับ top เก็บจากไฟล์ไหนก็ได้ที่มี ไม่ผูกกับ agent
+        # (ILA ของ clk_noc ไม่มีคอลัมน์ agent เลย แต่มีตัวนับ ECC อยู่)
+        for k, v in d.items():
+            if k.startswith('top_') and v and k not in TOP:
+                TOP[k] = max(v)
+        if agent:
+            A[agent] = (d, n, os.path.basename(f))
+
+    if not A:
+        print('ไม่พบคอลัมน์ agent_XX ในไฟล์ใดเลย — export ILA ของ agent มาด้วยหรือยัง?')
+        return 1
 
     print(f'พบ {len(A)} agent: {", ".join(sorted(A))}\n')
 
@@ -78,7 +99,11 @@ def main(folder):
                       err=max(d['rx_err_cnt']), dest=sorted(set(d['rx_tdest_dbg'])),
                       vc0=g('rx_vc0_cnt'), vc1=g('rx_vc1_cnt'),
                       tot_rx=d['rx_vc0_cnt'][-1]+d['rx_vc1_cnt'][-1],
-                      tot_tx=d['tx_flit_cnt'][-1], tot_stall=d['tx_stall_cnt'][-1])
+                      tot_tx=d['tx_flit_cnt'][-1], tot_stall=d['tx_stall_cnt'][-1],
+                      # stuck_seen: liveness watchdog ใน traffic_node_agent
+                      #   1 = node นี้เงียบสนิทเกิน 2^STUCK_LOG cycle ระหว่าง S_RUN
+                      #   None = CSV เก่าที่จับก่อนจะมี watchdog (ไม่มีคอลัมน์นี้)
+                      stuck=(max(d['stuck_seen']) if d.get('stuck_seen') else None))
 
     senders = [a for a in res if res[a]['rate_tx'] > 1e-9]
     hotspot = len(senders) == 3 and 'agent_00' not in senders
@@ -177,6 +202,71 @@ def main(folder):
 
     tot_err = sum(res[a]['err'] for a in res)
     print(f'\nsequence errors รวมทุก agent : {tot_err}   ->  {"PASS" if tot_err==0 else "FAIL"}')
+
+    # ---- liveness: node ไหนเคยเงียบสนิทจนนับว่าตายบ้าง
+    # ที่มา: state machine เดินตาม win_cnt อย่างเดียว มันจึงชู done ได้แม้ fabric ตาย
+    #        (VC_MODE=2 ก่อนแก้ bug #3 เคยติดไฟเขียวบน fabric ที่ deadlock)
+    #        watchdog ใน traffic_node_agent จับตรงนี้ แล้วกด done ลง
+    stuck_nodes = [a for a in sorted(res) if res[a]['stuck'] == 1]
+    have_probe  = [a for a in res if res[a]['stuck'] is not None]
+    print('')
+    if not have_probe:
+        print('liveness : ไม่มีคอลัมน์ stuck_seen ใน CSV ชุดนี้')
+        print('           = จับมาจาก build ก่อนจะมี watchdog หรือยังไม่ได้ re-run Set Up Debug')
+        print('           ไฟเขียวของรันนั้นพิสูจน์ไม่ได้ว่า fabric เดินจริง')
+    elif stuck_nodes:
+        print(f'liveness : {", ".join(stuck_nodes)}   ->  FAIL')
+        print('           node เหล่านี้เงียบสนิทเกินเกณฑ์ระหว่าง S_RUN = ตายกลางรัน')
+        print('           ตัวเลข throughput ข้างบนจึงเชื่อไม่ได้ ให้ไล่ที่ arbiter ก่อน')
+    else:
+        print(f'liveness : ทุก node ({len(have_probe)}) มี flit ขยับตลอด S_RUN   ->  PASS')
+    # ---- ECC : ธงจาก dual_port_ram_ecc ที่เพิ่งถูกต่อสายขึ้นมาถึง top
+    # ก่อนหน้านี้พอร์ตพวกนี้ถูกปล่อยลอย double-bit error จึงเงียบมาตลอด
+    ecc = {k: v for k, v in TOP.items() if k.startswith('top_ecc_')}
+    print('')
+    if not ecc:
+        print('ECC      : ไม่มีคอลัมน์ ecc_*_cnt ใน CSV ชุดนี้')
+        print('           = build ก่อนต่อสาย ECC หรือยังไม่ได้ re-run Set Up Debug')
+        print('           (ต้องเห็น MARK_DEBUG 1064 เส้น ไม่ใช่ 1024/928/924)')
+    else:
+        sbe = ecc.get('top_ecc_sbe_cnt', 0)
+        dbe = ecc.get('top_ecc_dbe_cnt', 0)
+        nsb = ecc.get('top_ecc_sbe_node', 0)
+        ndb = ecc.get('top_ecc_dbe_node', 0)
+        print(f'ECC      : single(ซ่อมได้)={sbe}  double(ซ่อมไม่ได้)={dbe}'
+              f'   node_sbe={nsb:04b} node_dbe={ndb:04b}')
+        if dbe:
+            print('           ->  FAIL : มี double-bit error = ข้อมูลเสียที่ซ่อมไม่ได้')
+            print('                 บิต node_dbe บอกว่าโหนดไหน (0=00 1=01 2=10 3=11)')
+        elif sbe:
+            print('           ->  WARN : เจอ single-bit error แต่ซ่อมได้หมด ข้อมูลยังถูกต้อง')
+            print('                 ถ้าเลขนี้ไต่ขึ้นเรื่อยๆ แปลว่าหน่วยความจำเริ่มมีปัญหาจริง')
+        else:
+            print('           ->  PASS : ไม่เจอ bit error เลย')
+
+    # ---- ปลายทางนอกกระดาน : ธงจากตัวกรองที่ขอบเมช (bug #6)
+    # flit ที่จ่าหน้า x หรือ y เกิน 1 จะถูกทิ้งตั้งแต่ยังไม่เข้าเมช ไม่งั้นมันจะ
+    # วิ่งไปตันที่ขอบแล้วบล็อกหัวคิวถาวร ตัวนับนับ "จำนวนโหนดที่เคยยิงผิด"
+    # ไม่ใช่จำนวน flit ที่ถูกทิ้ง เพราะธงเป็น level ที่ตั้งแล้วค้าง
+    print('')
+    if 'top_dest_err_cnt' not in TOP:
+        print('dest_err : ไม่มีคอลัมน์ dest_err_cnt ใน CSV ชุดนี้')
+        print('           = build ก่อนมีตัวกรองปลายทาง หรือ probe ยังไม่เข้า ILA')
+    else:
+        dcnt = TOP.get('top_dest_err_cnt', 0)
+        dnod = TOP.get('top_dest_err_node', None)
+        nod_s = f'{dnod:04b}' if dnod is not None else 'ไม่มี probe'
+        print(f'dest_err : โหนดที่เคยยิงปลายทางนอกกระดาน={dcnt}   node={nod_s}')
+        if dcnt:
+            print('           ->  FAIL : มี flit ถูกทิ้งเพราะจ่าหน้านอกเมช 2x2')
+            print('                 แพกเกจนั้นหายทั้งใบ ตัวเลข throughput จึงขาดไปด้วย')
+            print('                 ไล่ที่ตัวสร้าง tdest ของ agent ที่บิต node ชี้')
+        else:
+            print('           ->  PASS : ทุก flit จ่าหน้าในกระดาน')
+        if dnod is None:
+            print('           (หมายเหตุ: dest_err_node หลุดจาก ILA รอบนี้ ตัวนับยังอ่านได้')
+            print('            จึงยังตอบได้ว่า "เกิดขึ้นไหม" แค่ไม่รู้ว่าโหนดไหน)')
+
     if any(res[a]['mode']=='delta' for a in res):
         print('\nหมายเหตุ: บาง agent จับกลางรัน (mode=delta) ค่าที่ได้คืออัตรา ณ ช่วงนั้น')
         print('          ห้ามเอายอดสะสมของคนละ agent มาเทียบกันตรงๆ เพราะ trigger คนละจังหวะ')

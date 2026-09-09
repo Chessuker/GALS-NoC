@@ -45,7 +45,17 @@ module noc_stress_tester #(
     //   0 = VC0 อย่างเดียว   1 = VC1 อย่างเดียว   2 = สลับทุกแพ็กเกจ (ค่าเดิม)
     // ใช้ทดสอบว่าการสลับ VC คือสาเหตุที่ hot-spot บนบอร์ดได้แค่ 57.5%
     // (ใน sim การสลับ VC ทำให้ NoC ค้าง ส่วน VC0 อย่างเดียวได้ 95-99%)
-    parameter int VC_MODE = 2
+    parameter int VC_MODE = 2,
+
+    // ---- เวลาของ agent ส่งผ่านลงไปทั้ง 4 ตัว
+    // ค่า default = ค่าเดิมของ traffic_node_agent ของบนบอร์ดจึงไม่เปลี่ยน
+    // มีไว้ให้ testbench ย่อ window ลงได้ ไม่งั้น 2^24 cycle x 4 โดเมน
+    // จำลองไม่ไหว (0.2 วินาที) โครงสร้าง stress นี้จึงไม่เคยถูกจำลองเลย
+    parameter int WINDOW_LOG = 24,
+    parameter int WARMUP_LOG = 10,
+    parameter int DRAIN_LOG  = 12,
+    parameter int STUCK_LOG  = 16,
+    parameter int GAP_W      = 24
 )(
     input logic clk_h00, input logic clk_h01,
     input logic clk_h10, input logic clk_h11,
@@ -86,7 +96,9 @@ module noc_stress_tester #(
     localparam bit TXEN_00 = (PATTERN == 1) ? 1'b0 : 1'b1;
 
     // Node 00 -> h11 (PATTERN 0) / sink อย่างเดียว (PATTERN 1)
-    traffic_node_agent #(.DEST_ID(DEST_00), .SRC_TAG(2'b00), .TX_EN(TXEN_00), .VC_MODE(VC_MODE)) agent_00 (
+    traffic_node_agent #(.DEST_ID(DEST_00), .SRC_TAG(2'b00), .TX_EN(TXEN_00), .VC_MODE(VC_MODE),
+        .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
+        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_00 (
         .clk(clk_h00), .rst_n(rst_n),
         .tx_tdata(t00_tx_tdata), .tx_tdest(t00_tx_tdest), .tx_tid(t00_tx_tid), .tx_tlast(t00_tx_tlast), .tx_tvalid(t00_tx_tvalid), .tx_tready(t00_tx_tready),
         .rx_tdata(t00_rx_tdata), .rx_tdest(t00_rx_tdest), .rx_tid(t00_rx_tid), .rx_tlast(t00_rx_tlast), .rx_tvalid(t00_rx_tvalid), .rx_tready(t00_rx_tready),
@@ -94,7 +106,9 @@ module noc_stress_tester #(
     );
 
     // Node 11 -> h00 (ทั้งสอง pattern)
-    traffic_node_agent #(.DEST_ID(DEST_11), .SRC_TAG(2'b11), .VC_MODE(VC_MODE)) agent_11 (
+    traffic_node_agent #(.DEST_ID(DEST_11), .SRC_TAG(2'b11), .VC_MODE(VC_MODE),
+        .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
+        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_11 (
         .clk(clk_h11), .rst_n(rst_n),
         .tx_tdata(t11_tx_tdata), .tx_tdest(t11_tx_tdest), .tx_tid(t11_tx_tid), .tx_tlast(t11_tx_tlast), .tx_tvalid(t11_tx_tvalid), .tx_tready(t11_tx_tready),
         .rx_tdata(t11_rx_tdata), .rx_tdest(t11_rx_tdest), .rx_tid(t11_rx_tid), .rx_tlast(t11_rx_tlast), .rx_tvalid(t11_rx_tvalid), .rx_tready(t11_rx_tready),
@@ -102,7 +116,9 @@ module noc_stress_tester #(
     );
 
     // Node 01 -> h10 (PATTERN 0) / h00 (PATTERN 1)
-    traffic_node_agent #(.DEST_ID(DEST_01), .SRC_TAG(2'b01), .VC_MODE(VC_MODE)) agent_01 (
+    traffic_node_agent #(.DEST_ID(DEST_01), .SRC_TAG(2'b01), .VC_MODE(VC_MODE),
+        .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
+        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_01 (
         .clk(clk_h01), .rst_n(rst_n),
         .tx_tdata(t01_tx_tdata), .tx_tdest(t01_tx_tdest), .tx_tid(t01_tx_tid), .tx_tlast(t01_tx_tlast), .tx_tvalid(t01_tx_tvalid), .tx_tready(t01_tx_tready),
         .rx_tdata(t01_rx_tdata), .rx_tdest(t01_rx_tdest), .rx_tid(t01_rx_tid), .rx_tlast(t01_rx_tlast), .rx_tvalid(t01_rx_tvalid), .rx_tready(t01_rx_tready),
@@ -110,7 +126,9 @@ module noc_stress_tester #(
     );
 
     // Node 10 -> h01 (PATTERN 0) / h00 (PATTERN 1)
-    traffic_node_agent #(.DEST_ID(DEST_10), .SRC_TAG(2'b10), .VC_MODE(VC_MODE)) agent_10 (
+    traffic_node_agent #(.DEST_ID(DEST_10), .SRC_TAG(2'b10), .VC_MODE(VC_MODE),
+        .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
+        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_10 (
         .clk(clk_h10), .rst_n(rst_n),
         .tx_tdata(t10_tx_tdata), .tx_tdest(t10_tx_tdest), .tx_tid(t10_tx_tid), .tx_tlast(t10_tx_tlast), .tx_tvalid(t10_tx_tvalid), .tx_tready(t10_tx_tready),
         .rx_tdata(t10_rx_tdata), .rx_tdest(t10_rx_tdest), .rx_tid(t10_rx_tid), .rx_tlast(t10_rx_tlast), .rx_tvalid(t10_rx_tvalid), .rx_tready(t10_rx_tready),

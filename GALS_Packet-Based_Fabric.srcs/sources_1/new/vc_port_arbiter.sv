@@ -155,6 +155,8 @@ module vc_port_arbiter #(
     // FORMAL VERIFICATION: Unified BMC, Prove, and Cover
     // =================================================================
     `ifdef FORMAL
+    `ifndef FORMAL_TOP_INTEGRATION
+
         reg f_past_valid = 1'b0;
         always @(posedge clk) f_past_valid <= 1'b1;
 
@@ -243,6 +245,7 @@ module vc_port_arbiter #(
                 f_wait_cnt <= f_wait_cnt + 1'b1;
             end
         end
+    `endif
     `endif
 
 endmodule

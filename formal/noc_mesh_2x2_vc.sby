@@ -1,0 +1,75 @@
+# =============================================================================
+# noc_mesh_2x2_vc — formal
+#
+# ชั้นเมชแทบไม่มีตรรกะ มีแต่ assign เดินสายด้วยมือ 36 บรรทัดกับ tie-off ปิดขอบ
+# ซึ่งเป็นทรงที่บั๊ก "ต่อสลับดัชนี" ชอบซ่อนอยู่ และเป็นบั๊กที่ testbench ระดับบน
+# จับได้ยากเพราะแพกเกจยังวิ่งได้ แค่ไปโผล่ผิดโหนด
+#
+# พิสูจน์ (ดูตัวไฟล์ noc_mesh_2x2_vc.sv):
+#   assert_eject_dest       - flit ที่เด้งออก LOCAL ของโหนด i จ่าหน้ามาที่โหนด i จริง
+#   assert_edge_*           - ไม่มี router ตัวไหนคาย valid ออกขอบกระดาน
+#   assert_eject_tid        - ป้าย VC ที่ส่งให้ host เป็น one-hot ตอนมี valid
+#   assert_eject_tid_onehot0 - ป้าย VC ไม่ multi-hot ไม่ว่ากรณีใด
+#   assert_bad_dest_blocked - flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมช
+#   assert_good_dest_passes - ตัวกรองไม่แตะของที่ถูกต้อง
+#
+# รอบก่อนต้อง assume ว่า s_tdest อยู่ในกระดาน ไม่งั้น assert_edge_* พังจริง
+# ตอนนี้หัวข้อ 0 ของตัวโมดูลกรอง flit นอกกระดานออกก่อนเข้าเมชแล้ว จึงถอด assume
+# ทิ้งและปล่อยให้ solver ยิง tdest ได้ทุกค่า 0..15 — ข้อสมมติเดิมกลายเป็นข้อพิสูจน์
+# cover_dest_err_raised คู่กันไว้กัน assert_bad_dest_blocked ผ่านแบบ vacuous
+#
+# หมายเหตุจากรอบแรก: เคยเขียน assert_idle_tid ว่า "ไม่มี valid ก็ห้ามมี tid ค้าง"
+# แล้วมันพังจริงที่สเต็ป 3 — crossbar ของ router คิด m_tid จาก grant ล้วน
+# (2'b10 & {2{|grant_vc1}}) | (2'b01 & {2{|grant_vc0}}) ขณะที่ m_valid ต้องมี
+# buf_valid ด้วย ตอน arbiter ถือ grant ค้างไว้แต่ต้นทางหายไปกลางแพกเกจ (ทางเดียว
+# กับ bug #5) tid จึงค้างอยู่โดยไม่มี valid — แต่ *ไม่ใช่บั๊ก*: AXI4-Stream ระบุว่า
+# สัญญาณข้างเคียงเป็น don't-care ตอน tvalid ต่ำ และผู้ใช้ tid ทุกจุดในดีไซน์นี้
+# and กับ valid ไว้แล้ว (fifo_we = s_valid && s_tid[v] ใน vc_input_buffer,
+# w_en = s_noc_valid && s_noc_tid[v] ใน gals_node_wrapper) assertion เดิมจึงเข้ม
+# เกินสเปก เปลี่ยนมาตรวจ one-hot0 ซึ่งเป็นข้อที่พังจริงแล้วมีผลจริง
+#
+# routers อ่านด้วย -D FORMAL_NO_ROUTER เพื่อ *ปิด* บล็อก FORMAL ของ router เอง
+# ไม่ใช่เรื่องความเร็ว แต่เพราะบล็อกนั้นมี assume เรื่องทราฟฟิกที่ถูกรูปแบบ
+# ซึ่งในบริบทเมชจะไปตกบนสายภายในที่มีตัวขับอยู่แล้ว assume บนสายที่ถูกขับอาจ
+# ขัดแย้งกันเองจนทุก assertion ผ่านแบบ vacuous — เขียวโดยไม่ได้พิสูจน์อะไรเลย
+# router พิสูจน์แยกใน router_5port_mesh_vc.sby ที่ขา s_* เป็น input จริง
+#
+# bmc ไม่ใช่ prove ด้วยเหตุผลเดียวกับ router: property ผูก state ของ arbiter
+# เข้ากับหัวคิวใน FIFO ซึ่งไม่เป็น inductive
+#
+# engine เป็น abc bmc3: 4 router = 40 sync_fifo + 40 packet_arbiter
+# z3 ไม่ไหวตั้งแต่ระดับ router ตัวเดียวแล้ว
+# depth 10 พอให้ flit เดินจาก host เข้า FIFO ผ่าน arbiter ข้ามลิงก์ แล้วเด้งออก
+#
+#   cd formal && sby -f noc_mesh_2x2_vc.sby
+# =============================================================================
+
+[tasks]
+bmc
+cover
+
+[options]
+bmc: mode bmc
+bmc: depth 10
+cover: mode cover
+cover: depth 12
+
+[engines]
+bmc: abc bmc3
+cover: smtbmc z3
+
+[script]
+plugin -i slang
+read_slang -D FORMAL -D FORMAL_TOP_INTEGRATION -D FORMAL_NO_ROUTER --top noc_mesh_2x2_vc -G DATA_W=2 -G DEPTH=2 sync_fifo.sv vc_input_buffer.sv packet_arbiter.sv vc_port_arbiter.sv router_5port_mesh_vc.sv noc_mesh_2x2_vc.sv
+prep -top noc_mesh_2x2_vc
+# กาง array เป็น flip-flop ธรรมดา ไม่งั้น solver จมกับทฤษฎี array
+memory_map
+opt -fast
+
+[files]
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_fifo.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_input_buffer.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/packet_arbiter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_port_arbiter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/router_5port_mesh_vc.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/noc_mesh_2x2_vc.sv

@@ -21,7 +21,14 @@
 
 
 module packet_arbiter #(
-    parameter PORTS = 4
+    parameter PORTS = 4,
+    // ---- timeout กันพอร์ตตายถาวรเมื่อต้นทางหายไปกลางแพ็กเกจ
+    // นับเฉพาะไซเคิลที่ "ช่องที่ล็อกไว้ไม่มีข้อมูลเลย" (valid ตก)
+    // ปลายทางบล็อก (ready=0) จะไม่ทำให้ตัวนับเดิน เพราะ valid ยังสูงอยู่
+    // -> timeout นี้ไม่มีทางยิงเพราะ backpressure ยิงเฉพาะตอนต้นทางหายจริงๆ
+    // ช่องว่างที่ถูกต้องตามกลไก GALS (FIFO แห้งชั่วคราว) อยู่ระดับสิบไซเคิล
+    // 2^10 = 1024 จึงเผื่อไว้ ~100 เท่า
+    parameter int STALL_LOG = 10
 )(
     input  logic             clk,
     input  logic             rst_n,
@@ -39,6 +46,12 @@ module packet_arbiter #(
 
     logic [PORTS-1:0] locked_grant;
     logic [PORTS-1:0] mask; 
+
+    // ---- ตัวนับ/สัญญาณของ timeout (ดูคำอธิบายที่ parameter STALL_LOG)
+    localparam logic [STALL_LOG-1:0] STALL_MAX = {STALL_LOG{1'b1}};
+    logic [STALL_LOG-1:0] stall_cnt;
+    logic                 force_release;
+
     logic             locked_from_mask; // จำว่าคิวนี้ได้มาจากการเข้าคิวปกติ (1) หรือลัดคิว (0)
     logic             has_transferred;  // 🟢 เพิ่มใหม่: track ว่า locked_grant นี้ transfer สำเร็จไปแล้วอย่างน้อย 1 ครั้งไหม
     
@@ -65,6 +78,16 @@ module packet_arbiter #(
     logic single_xfer;
     assign single_xfer = |(grant & valid) && ready; // transfer สำเร็จในไซเคิลนี้ (ไม่ต้องรอ tlast)
 
+    // ปล่อยพอร์ตทิ้งเมื่อช่องที่ล็อกไว้เงียบนานเกินเกณฑ์ = ต้นทางหายไปแล้วจริง
+    //
+    // 🔴 ต้องมี !(|(locked_grant & valid)) ด้วย — formal จับได้ว่าขาดไม่ได้:
+    //    stall_cnt เป็นรีจิสเตอร์ ถ้าต้นทางกลับมาส่งในไซเคิลเดียวกับที่ตัวนับ
+    //    ชนเพดานพอดี จะเกิด force_release พร้อมกับที่มี flit จริงรออยู่
+    //    = ปล่อยช่องกลางแพ็กเกจทั้งที่ของยังมา = bug #1 กลับมาเลย
+    //    เงื่อนไขนี้ทำให้ "ต้นทางกลับมาทันเส้นตาย" ได้ล็อกต่อ ไม่ถูกตัดทิ้ง
+    assign force_release = (state == LOCKED) && (stall_cnt == STALL_MAX)
+                                            && !(|(locked_grant & valid));
+
     // -----------------------------------------------------------------
     // 3. สัญญาณ Output
     // -----------------------------------------------------------------
@@ -82,6 +105,7 @@ module packet_arbiter #(
             locked_grant     <= '0;
             locked_from_mask <= 1'b0;
             has_transferred  <= 1'b0;
+            stall_cnt        <= '0;
             mask             <= {PORTS{1'b1}}; 
         end else begin
             
@@ -114,6 +138,23 @@ module packet_arbiter #(
                         has_transferred  <= 1'b0;
                     end else if (single_xfer) begin
                         has_transferred  <= 1'b1;  // 🟢 มี transfer เกิดขึ้นแล้ว (แต่ไม่ใช่ tlast)
+                    end else if (force_release) begin
+                        // 🔴 BUG #5: ต้นทางหายไปกลางแพ็กเกจ (โหนดดับ/รีเซ็ต/ถูกตัด)
+                        //    tlast ไม่มีวันมา -> eop_transfer ไม่เกิด
+                        //    ปลดล็อคฉุกเฉินข้างล่างก็ยิงไม่ได้ เพราะ has_transferred=1
+                        //    (เงื่อนไขนั้นใส่ไว้แก้ bug #1 นี่คือช่องที่มันเปิดทิ้งไว้)
+                        //    ผล: พอร์ตนี้ตายถาวรจนกว่าจะรีเซ็ตทั้งระบบ
+                        //    วัดจริง: ตัด agent_11 กลางแพ็กเกจตัวเดียว
+                        //      -> agent_01 และ agent_10 ตายตามทั้งคู่ (gap ชนเพดาน)
+                        //      = โหนดเดียวล้ม ทั้ง NoC ล้มตาม
+                        //
+                        //    ทิ้งแพ็กเกจกำพร้าดีกว่าให้พอร์ตตายถาวร
+                        //    แพ็กเกจนั้นเสียอยู่แล้ว (ไม่มี tlast) และปลายทาง
+                        //    จะเห็นเป็น sequence error ซึ่งรายงานได้อยู่แล้ว
+                        state            <= IDLE;
+                        locked_grant     <= '0;
+                        locked_from_mask <= 1'b0;
+                        has_transferred  <= 1'b0;
                     end else if (!has_transferred && !(|(locked_grant & valid))) begin
                         // 🟢 ปลดล็อคฉุกเฉินได้เฉพาะกรณี "ยังไม่เคย transfer เลยสักครั้ง" เท่านั้น
                         state            <= IDLE;
@@ -138,6 +179,11 @@ module packet_arbiter #(
             if (eop_transfer) begin
                 mask <= (~(grant | (grant - 1'b1)) == '0) ? {PORTS{1'b1}} : ~(grant | (grant - 1'b1));
             end            
+
+            // --- ตัวนับ timeout: ล้างทุกครั้งที่ช่องที่ล็อกไว้ยังมีข้อมูลอยู่
+            if (state != LOCKED)                stall_cnt <= '0;
+            else if (|(locked_grant & valid))   stall_cnt <= '0;
+            else if (stall_cnt != STALL_MAX)    stall_cnt <= stall_cnt + 1'b1;
         end
     end
 
@@ -145,6 +191,8 @@ module packet_arbiter #(
     // FORMAL VERIFICATION: พิสูจน์ว่าช่องสัญญาณไม่มีทางถูกแย่งกลางคัน!
     // =================================================================
     `ifdef FORMAL
+    `ifndef FORMAL_TOP_INTEGRATION
+
         reg f_past_valid = 1'b0;
         always @(posedge clk) f_past_valid <= 1'b1;
 
@@ -161,11 +209,26 @@ module packet_arbiter #(
         // 2. 🟢 ย้ายการตรวจสอบอดีต ($past) มาไว้ในบล็อกที่มีคล็อก 🟢
         always @(posedge clk) begin
             if (f_past_valid && $past(rst_n) && rst_n) begin
-                if ($past(state) == LOCKED && !$past(eop_transfer)) begin
+                // คุณสมบัติจริงที่ต้องการคือ "ห้ามแย่งช่องตราบใดที่ต้นทางยังส่งของอยู่"
+                // เดิมเขียนแค่ !eop_transfer ซึ่ง *เป็นเท็จมาตลอด* และไม่มีใครรู้
+                // เพราะไม่เคยมี .sby ชี้มาที่โมดูลนี้เลย (arbiter_formal.sby ชี้ผิดโมดูล)
+                // ปลดล็อคฉุกเฉินเดิมก็เปลี่ยน grant กลางคัน LOCKED เหมือนกัน
+                // ทางออกทั้งหมด (eop / ฉุกเฉิน / timeout) ต้องการให้ต้นทางเงียบก่อน
+                // จึงตีกรอบด้วย "ต้นทางยังมีข้อมูลอยู่" ตรงๆ
+                if ($past(state) == LOCKED && !$past(eop_transfer)
+                                           && $past(|(locked_grant & valid))) begin
                     assert_channel_lock: assert(grant == $past(grant));
+                end
+
+                // timeout ต้องไม่ยิงเพราะ backpressure:
+                // ถ้าช่องที่ล็อกไว้ยังมีข้อมูล ตัวนับต้องถูกล้างไปแล้ว
+                if (force_release) begin
+                    assert_abort_only_when_source_gone:
+                        assert(!(|(locked_grant & valid)));
                 end
             end
         end
+    `endif
     `endif
 
 endmodule

@@ -113,32 +113,38 @@ module loopback_node_agent #(
         else if (|rd_en) sel <= ~vc_pick;        // สลับหลังปล่อย flit สำเร็จ
     end
 
-    `ifdef DEBUG_BUILD
-    (* mark_debug = "true" *) logic [3:0] rx_tdest_dbg;
-        always_ff @(posedge clk) begin
-            if (rx_tvalid) rx_tdest_dbg <= rx_tdest;
-        end
-    
-        //-------------------------------------------------------------- ILA taps
-        (* mark_debug = "true" *) logic       tx_tvalid_dbg;
-        (* mark_debug = "true" *) logic [1:0] tx_tready_dbg;
-        (* mark_debug = "true" *) logic       tx_tlast_dbg;
-        (* mark_debug = "true" *) logic [7:0] tx_tdata_dbg;
-        (* mark_debug = "true" *) logic [1:0] tx_tid_dbg;
-        (* mark_debug = "true" *) logic [1:0] rx_tid_dbg;
-        (* mark_debug = "true" *) logic       rx_tvalid_dbg;
-        (* mark_debug = "true" *) logic [7:0] cnt0_dbg;
-        (* mark_debug = "true" *) logic [7:0] cnt1_dbg;
-    
-        assign tx_tvalid_dbg = tx_tvalid;
-        assign tx_tready_dbg = tx_tready;
-        assign tx_tlast_dbg  = tx_tlast;
-        assign tx_tdata_dbg  = tx_tdata;
-        assign tx_tid_dbg    = tx_tid;
-        assign rx_tid_dbg    = rx_tid;
-        assign rx_tvalid_dbg = rx_tvalid;
-        assign cnt0_dbg      = cnt[0][7:0];
-        assign cnt1_dbg      = cnt[1][7:0];
-    `endif
+    //-------------------------------------------------------------- ILA taps
+    // 🔴 เดิมบล็อกนี้ครอบด้วย `ifdef DEBUG_BUILD ซึ่งไม่มีใครนิยามไว้ที่ไหนเลย
+    //    ผล: UART build ไม่มี instrumentation แม้แต่เส้นเดียว (HANDOFF gotcha 5)
+    //    define ที่ต้อง "จำไว้ตั้ง" หลุดไปแล้วหนึ่งครั้ง จึงเอาออกทั้งอัน
+    //    ให้ probe ติดมาเสมอ แบบเดียวกับ traffic_node_agent ที่พิสูจน์แล้วว่าใช้ได้
+    //
+    //    และต้องมี dont_touch คู่กับ mark_debug ด้วย (gotcha 1):
+    //    เส้นพวกนี้ไม่มี fanout จริง synthesis จะกวาดทิ้งก่อน Set Up Debug จะเห็น
+    //    ใส่ mark_debug เฉยๆ ไม่พอ — นี่คือเหตุผลที่ 668 vs 924 เคยเกิดขึ้น
+(* mark_debug = "true", dont_touch = "true" *) logic [3:0] rx_tdest_dbg;
+    always_ff @(posedge clk) begin
+        if (rx_tvalid) rx_tdest_dbg <= rx_tdest;
+    end
+
+    (* mark_debug = "true", dont_touch = "true" *) logic       tx_tvalid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0] tx_tready_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic       tx_tlast_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0] tx_tdata_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0] tx_tid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [1:0] rx_tid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic       rx_tvalid_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0] cnt0_dbg;
+    (* mark_debug = "true", dont_touch = "true" *) logic [7:0] cnt1_dbg;
+
+    assign tx_tvalid_dbg = tx_tvalid;
+    assign tx_tready_dbg = tx_tready;
+    assign tx_tlast_dbg  = tx_tlast;
+    assign tx_tdata_dbg  = tx_tdata;
+    assign tx_tid_dbg    = tx_tid;
+    assign rx_tid_dbg    = rx_tid;
+    assign rx_tvalid_dbg = rx_tvalid;
+    assign cnt0_dbg      = cnt[0][7:0];
+    assign cnt1_dbg      = cnt[1][7:0];
 
 endmodule
