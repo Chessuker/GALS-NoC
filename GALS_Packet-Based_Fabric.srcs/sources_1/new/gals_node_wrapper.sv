@@ -62,7 +62,10 @@ module gals_node_wrapper #(
     // เดิมพอร์ตพวกนี้ถูกปล่อยลอย ( .ecc_double_err() ) แปลว่า double-bit error
     // ถูกตรวจเจอแล้วโยนทิ้ง ข้อมูลเสียไหลต่อไปเงียบๆ
     output logic              ecc_single_err,   // ซ่อมได้ (เตือน)
-    output logic              ecc_double_err    // ซ่อมไม่ได้ = ข้อมูลเสียแน่นอน
+    output logic              ecc_double_err,   // ซ่อมไม่ได้ = ข้อมูลเสียแน่นอน
+
+    // ---- host ยิง tid ที่ไม่ใช่ one-hot (sticky, ข้ามมาโดเมน clk_noc แล้ว)
+    output logic              host_tid_err
 );
 
     localparam PACK_W = 1 + 4 + DATA_W; 
@@ -75,6 +78,27 @@ module gals_node_wrapper #(
     logic tx_empty [NUM_VCS], tx_full [NUM_VCS];
     assign tx_wdata = {s_host_tlast, s_host_tdest, s_host_tdata};
 
+    // =========================================================
+    // ตรวจ tid จาก host ก่อนเขียนลงคิว
+    //
+    // tid เป็น one-hot: 01 = VC0, 10 = VC1 แต่ไม่มีอะไรบังคับไว้เลย
+    // w_en ของแต่ละ VC คือ s_host_valid && s_host_tid[v] && !tx_full[v]
+    // ผลที่ตามมาถ้า host ยิงค่าอื่นมา:
+    //   tid = 00 -> ไม่มี VC ไหนถูกเขียน flit หายเงียบ ผู้ส่งรอ ready ที่ไม่มีวันมา
+    //               (พิสูจน์ในซิม: node ค้าง gap 8,388,609 ไซเคิล)
+    //   tid = 11 -> ถูกเขียนลง *ทั้งสอง* VC flit เดียวกลายเป็นสองใบ
+    //               (พิสูจน์ในซิม: sequence error 24 ครั้ง)
+    //
+    // นี่คือจุดที่ flit หายจริง ไม่ใช่ที่ขอบเมช — ตัวกรองที่ขอบเมชมองไม่เห็นเคสนี้
+    // เพราะ noc_tx_tid ถูกสร้างโดย MUX ข้างล่างซึ่ง one-hot อยู่แล้วโดยโครงสร้าง
+    // และนี่คือทางเดียวกับที่ noc_host.py ทำ VC0 หายทุกแพกเกจ (vc_id=0 -> tid=00)
+    //
+    // ทำแบบเดียวกับ dest_err: ทิ้ง flit แต่ยังรับเข้ามาตามปกติ แล้วยกธง sticky
+    // ผู้ส่งไม่ค้างเพราะ ready ยังตอบตาม full ตามเดิม
+    // =========================================================
+    logic host_tid_ok;
+    assign host_tid_ok = (s_host_tid != '0) && ((s_host_tid & (s_host_tid - 1'b1)) == '0);
+
     // ธง ECC ต่อ VC — TX อ่านด้วย clk_noc, RX อ่านด้วย clk_host (คนละโดเมน)
     logic tx_sbe [NUM_VCS], tx_dbe [NUM_VCS];
     logic rx_sbe [NUM_VCS], rx_dbe [NUM_VCS];
@@ -84,7 +108,7 @@ module gals_node_wrapper #(
         for (v = 0; v < NUM_VCS; v++) begin : TX_VC
             async_fifo_fwft #(.DATA_WIDTH(PACK_W), .ADDR_WIDTH(ADDR_W)) tx_fifo (
                 .wclk(clk_host), .wrst_n(rst_n),
-                .w_en(s_host_valid && s_host_tid[v] && !tx_full[v]),
+                .w_en(s_host_valid && s_host_tid[v] && !tx_full[v] && host_tid_ok),
                 .wdata(tx_wdata), .wfull(tx_full[v]),
                 
                 .rclk(clk_noc),  .rrst_n(rst_n), 
@@ -168,6 +192,12 @@ module gals_node_wrapper #(
         end
     end
 
+    logic tid_err_host_q;
+    always_ff @(posedge clk_host or negedge rst_n) begin
+        if (!rst_n)                                 tid_err_host_q <= 1'b0;
+        else if (s_host_valid && !host_tid_ok)      tid_err_host_q <= 1'b1;
+    end
+
     logic sbe_host_q, dbe_host_q;
     always_ff @(posedge clk_host or negedge rst_n) begin
         if (!rst_n) begin
@@ -183,15 +213,16 @@ module gals_node_wrapper #(
 
     // ตั้งแล้วไม่มีวันกลับ = level นิ่งยาว ข้ามโดเมนด้วย 2FF ได้ปลอดภัย
     // (เหตุผลเดียวกับที่ noc_stress_tester ใช้ sync_2stage กับธง done/err)
-    logic [1:0] host_flags_sync;
-    sync_2stage #(.WIDTH(2)) u_ecc_cdc (
+    logic [2:0] host_flags_sync;
+    sync_2stage #(.WIDTH(3)) u_ecc_cdc (
         .clk(clk_noc), .rst(~rst_n),
-        .d({dbe_host_q, sbe_host_q}),
+        .d({tid_err_host_q, dbe_host_q, sbe_host_q}),
         .q(host_flags_sync)
     );
 
     assign ecc_single_err = sbe_noc_q | host_flags_sync[0];
     assign ecc_double_err = dbe_noc_q | host_flags_sync[1];
+    assign host_tid_err   = host_flags_sync[2];
 
 
     // =================================================================
@@ -239,6 +270,12 @@ module gals_node_wrapper #(
         // ---------------------------------------------------------
         always @(*) begin
             if (s_host_valid) begin
+                // ยัง assume one-hot ไว้: ตัวกรอง host_tid_ok อยู่ใน RTL แล้วก็จริง
+                // แต่การ assert ว่า w_en=0 ตอน tid เสีย เป็นการท่องนิพจน์เดิมซ้ำ
+                // และต้องอ้าง hierarchy เข้าไปในตัว FIFO ซึ่งเปราะ
+                // ตัวกรองพิสูจน์ด้วย simulation แทน ซึ่งวัด *ผลเสียจริง*
+                // (tid=00 -> node ค้าง 8.4M ไซเคิล, tid=11 -> sequence error 24 ครั้ง)
+                // ดู BAD_TID ใน tb_noc_stress_tester
                 assume($onehot(s_host_tid));
                 assume((s_host_tid & ~s_host_ready) == '0);
             end
@@ -272,6 +309,7 @@ module gals_node_wrapper #(
                 end
 
                 if (m_noc_valid) assert_tx_tid_onehot: assert($onehot(m_noc_tid));
+
             end
         end
 

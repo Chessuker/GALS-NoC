@@ -80,6 +80,7 @@ module arty_gals_noc_wrapper (
     (* mark_debug = "true", dont_touch = "true" *) logic ecc_sbe_noc;
     (* mark_debug = "true", dont_touch = "true" *) logic ecc_dbe_noc;
     (* mark_debug = "true", dont_touch = "true" *) logic dest_err_noc;
+    (* mark_debug = "true", dont_touch = "true" *) logic tid_err_noc;
 
     gals_noc_top uut_noc_top (
         .clk_noc(clk_noc), .rst_n(global_rst_n),
@@ -98,7 +99,7 @@ module arty_gals_noc_wrapper (
         .h11_rx_tdata(t11_rx_data), .h11_rx_tdest(t11_rx_dest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_valid), .h11_rx_tready(t11_rx_ready),
 
         .ecc_single_err(ecc_sbe_noc), .ecc_double_err(ecc_dbe_noc),
-        .dest_err(dest_err_noc)
+        .dest_err(dest_err_noc), .tid_err(tid_err_noc)
     );
 
     // =========================================================

@@ -95,6 +95,7 @@ module arty_stress_top #(
     // ของเดิม ecc_sbe_noc/ecc_dbe_noc ก็ติดปัญหานี้อยู่แล้ว ย้ายขึ้นมาพร้อมกัน
     logic ecc_sbe_noc, ecc_dbe_noc;   // sticky, โดเมน clk_noc
     logic dest_err_noc;               // sticky, โดเมน clk_noc — ปลายทางนอกกระดาน
+    logic tid_err_noc;                // sticky, โดเมน clk_noc — tid ไม่ใช่ one-hot
 
     gals_noc_top uut_noc_top (
         .clk_noc(clk_noc), .rst_n(global_rst_n),
@@ -113,7 +114,7 @@ module arty_stress_top #(
         .h11_rx_tdata(t11_rx_tdata), .h11_rx_tdest(t11_rx_tdest), .h11_rx_tid(t11_rx_tid), .h11_rx_tlast(t11_rx_tlast), .h11_rx_tvalid(t11_rx_tvalid), .h11_rx_tready(t11_rx_tready),
 
         .ecc_single_err(ecc_sbe_noc), .ecc_double_err(ecc_dbe_noc),
-        .dest_err(dest_err_noc)
+        .dest_err(dest_err_noc), .tid_err(tid_err_noc)
     );
 
     // =========================================================
@@ -153,16 +154,17 @@ module arty_stress_top #(
     // ECC : ธง sticky จาก NoC (โดเมน clk_noc) ข้ามมาที่ clk_h00 ก่อนใช้กับ LED
     // ตั้งแล้วไม่กลับ จึงใช้ 2FF ได้ (เหตุผลเดียวกับธง done/err)
     // =========================================================
-    logic [2:0] ecc_flags_sync;
-    sync_2stage #(.WIDTH(3)) u_ecc_led_sync (
+    logic [3:0] ecc_flags_sync;
+    sync_2stage #(.WIDTH(4)) u_ecc_led_sync (
         .clk(clk_h00), .rst(~global_rst_n),
-        .d({dest_err_noc, ecc_dbe_noc, ecc_sbe_noc}),
+        .d({tid_err_noc, dest_err_noc, ecc_dbe_noc, ecc_sbe_noc}),
         .q(ecc_flags_sync)
     );
-    logic ecc_sbe_s, ecc_dbe_s, dest_err_s;
+    logic ecc_sbe_s, ecc_dbe_s, dest_err_s, tid_err_s;
     assign ecc_sbe_s  = ecc_flags_sync[0];
     assign ecc_dbe_s  = ecc_flags_sync[1];
     assign dest_err_s = ecc_flags_sync[2];
+    assign tid_err_s  = ecc_flags_sync[3];
 
     // PATTERN 0 : led1 = คู่ 00<->11 ผ่าน, led2 = คู่ 01<->10 ผ่าน
     // PATTERN 1 : led1 = ทุก agent จบ window, led2 = จบครบและ node 00 ไม่เจอ error
@@ -174,8 +176,8 @@ module arty_stress_top #(
     // ปลายทางนอกกระดานก็นับเป็นสอบตกด้วยเหตุผลเดียวกัน: flit ถูกทิ้งไปแล้ว
     // แพกเกจนั้นไม่มีทางไปถึงใคร ไฟผ่านที่ยังติดอยู่ก็คือไฟเขียวที่โกหกอีกแบบ
     assign led[0] = heartbeat_cnt[26];   // ยังมีชีวิต
-    assign led[1] = pass_g1  & ~ecc_dbe_s & ~dest_err_s;
-    assign led[2] = pass_g2  & ~ecc_dbe_s & ~dest_err_s;
-    assign led[3] = any_fail | ecc_dbe_s | dest_err_s; // seq error / ECC ซ่อมไม่ได้ / ปลายทางผิด
+    assign led[1] = pass_g1  & ~ecc_dbe_s & ~dest_err_s & ~tid_err_s;
+    assign led[2] = pass_g2  & ~ecc_dbe_s & ~dest_err_s & ~tid_err_s;
+    assign led[3] = any_fail | ecc_dbe_s | dest_err_s | tid_err_s;
 
 endmodule
