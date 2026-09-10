@@ -294,7 +294,6 @@
       </File>
       <File Path="$PSRCDIR/constrs_1/new/debug_auto.xdc">
         <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
         </FileInfo>
       </File>

@@ -75,9 +75,22 @@ and agent_11.
 
   Single-bit raises `single_err` alone and double-bit raises `double_err` alone, through
   encoder, RAM, decoder, sticky latch, CDC and counter. A disconnected flag cannot produce
-  that. What remains is running it on the board:
-  `set_property verilog_define ECC_INJECT_SBE [current_fileset]`, build, program, read the
-  counters. Not done — no board available at the time.
+  that.
+
+  **Confirmed on silicon (2026-09-10).** Two bitstreams built back to back at
+  `PATTERN=1 VC_MODE=2`, programmed to the Arty A7-100T:
+
+  | build | `ecc_sbe_cnt` | `node_sbe` | `ecc_dbe_cnt` | traffic |
+  |---|---|---|---|---|
+  | normal | 0 | `0000` | 0 | 0 sequence errors, liveness PASS |
+  | `ECC_INJECT_SBE` | **3** | **`1111`** | 0 | 0 sequence errors, liveness PASS |
+
+  All four nodes flag, the double-bit counter stays 0, and traffic remains correct because
+  SECDED repairs every word — which is exactly the behaviour a working single-bit path
+  should show. The gap is closed: the counters reading 0 on a normal build now means the
+  path is silent, not disconnected. Logs:
+  `hw_logs/ila_stress_vc2_pattern1_20260910_clean.log` and `..._eccinject_sbe.log`.
+  Remember to clear the define afterwards — `set_property verilog_define {} [current_fileset]`.
 - **`dest_err_node[3:0]` is absent from the stress build's ILA** (its clock did not resolve),
   so per-node attribution is unavailable there. `dest_err_cnt` survives and answers whether
   it happened. `analyze_ila.py` says so rather than staying silent.
@@ -98,6 +111,9 @@ and agent_11.
   |---|---|---|
   | `00` | `tid_err_cnt` 0, node stalls 8,388,609 cycles, silent | `tid_err_cnt` 1, `node=1000`, stall attributed |
   | `11` | `tid_err_cnt` 0, **24 sequence errors** from the flit landing in both VCs | `tid_err_cnt` 1, `node=1000`, sequence errors **24 -> 1** |
+
+  On hardware the clean build reports `tid_err` 0 with `node=0000` and its node probe
+  present, so the guard costs nothing and reads correctly on silicon (2026-09-10 log above).
 
   The remaining error under `tid=11` is the packet in flight when the force was applied,
   which no ingress guard can help. Under `tid=00` the sender still stalls, correctly — it is
@@ -831,6 +847,15 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
     unconnected channels" at implementation. The script now deletes every pre-existing
     debug core first. This is gotcha 6 wearing a new hat: splitting the file stopped the
     *text* mixing, not the *state* carrying over.
+  - **`debug_auto.xdc` must be `USED_IN = implementation` only.** It was created with the
+    default `synthesis implementation`, so *synthesis* read it and baked the previous
+    build's ILA cores straight into the netlist. The symptom is subtle: `setup_debug.tcl`
+    reports clocks named `u_ila_0_clk_out1_clk_wiz_0` instead of `clk_out1_clk_wiz_0`.
+  - **Deleting a debug core does not delete the clocks it created.** `delete_debug_core`
+    removes the core, but the generated clock objects survive in that session, so
+    `get_clocks` keeps returning the `u_ila_N_` names and probes get mis-grouped or dropped.
+    `setup_debug.tcl` now maps such a name back to the real clock (`f_real_clock`). Running
+    `setup_debug` in its own session, after synthesis, is the reliable pattern.
   - **Implementation must run in a fresh Vivado session.** Calling `launch_runs impl_1` in
     the same session that just wrote `debug_auto.xdc` produces a bitstream with no error and
     no debug cores at all — no `.ltx`, no ILA on the board. Vivado uses its cached
