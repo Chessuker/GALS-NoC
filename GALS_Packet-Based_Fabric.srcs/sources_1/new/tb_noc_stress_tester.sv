@@ -47,6 +47,10 @@ module tb_noc_stress_tester;
     //     agent อื่นที่ใช้พอร์ตเดียวกันต้องอดตายตามไปด้วย
     //     เกณฑ์: fabric ต้องฟื้นได้ = ช่องว่างของ agent อื่นต้องไม่ระเบิด
     parameter int KILL_MIDPKT = 0;
+    // 0 = ปกติ  1 = บังคับ tid=00 (ไม่ตรงเลนไหน)  2 = บังคับ tid=11 (ลงสองเลน)
+    // ใช้พิสูจน์ตัวกรอง tid ที่ขอบเมช ซึ่ง formal พิสูจน์ให้ไม่ได้
+    // (ถอด assume one-hot ออกแล้ว assert_eject_dest พังด้วยเหตุที่ยังหาไม่เจอ)
+    parameter int BAD_TID = 0;
 
     logic clk_noc = 0, clk_h00 = 0, clk_h01 = 0, clk_h10 = 0, clk_h11 = 0;
     logic rst_n;
@@ -220,6 +224,21 @@ module tb_noc_stress_tester;
             force t11_tx_tvalid = 1'b0;
         end
 
+        // ---- ยัด tid ที่ไม่ใช่ one-hot เข้าไปที่ขา NoC ของ node 11
+        // คาดหวัง: ตัวกรองที่ขอบเมชทิ้ง flit นั้น ยก tid_err แล้วเมชเดินต่อได้
+        // ไม่ค้าง ไม่มี sequence error จาก node อื่น
+        if (BAD_TID != 0) begin
+            repeat (5000) @(posedge clk_noc);
+            $display("  [bad_tid] บังคับ tid ของ node 11 เป็น %s",
+                     BAD_TID == 1 ? "00 (ไม่ตรงเลนไหน)" : "11 (ลงสองเลน)");
+            // force ที่สายระดับ TB ของ node 11 ทั้งเส้น — bit-select ของตัวแปร
+            // force ไม่ได้ (VRFC 10-3149) และสายนี้เป็นของ node เดียวอยู่แล้ว
+            force t11_tx_tid = (BAD_TID == 1) ? 2'b00 : 2'b11;
+            repeat (2000) @(posedge clk_noc);
+            release t11_tx_tid;
+            $display("  [bad_tid] เลิกบังคับ");
+        end
+
         // ---- เปิดหน้าต่างฉีดบิตเน่า (ตัวฉีดจริงอยู่ใน always ข้างล่าง)
         if (INJECT_ECC != 0) begin
             repeat (5000) @(posedge clk_noc);
@@ -391,6 +410,28 @@ module tb_noc_stress_tester;
                 fails++;
             end else
                 $display("  [PASS] ไม่มี flit จ่าหน้านอกกระดานเลย");
+
+            // ---- tid ไม่ใช่ one-hot : agent ทุกตัวยิง tid ถูกอยู่แล้ว ธงจึงต้องเงียบ
+            // ถ้าดังขึ้นแปลว่าตัวสร้าง tid เพี้ยน หรือตัวกรองไวเกินจนทิ้งของดี
+            // ทั้งสองแบบทำให้แพกเกจหายเงียบเหมือนกัน หาไม่เจอจากตัวเลข throughput
+            $display("    TID : err_cnt=%0d  node=%04b",
+                     uut_noc_top.tid_err_cnt, uut_noc_top.tid_err_node);
+            if (BAD_TID == 0) begin
+                if (uut_noc_top.tid_err_cnt != 0) begin
+                    $display("  [FAIL] มี flit ที่ tid ไม่ใช่ one-hot ถูกทิ้ง (node=%04b)",
+                             uut_noc_top.tid_err_node);
+                    fails++;
+                end else
+                    $display("  [PASS] tid เป็น one-hot ทุก flit");
+            end else begin
+                // รอบนี้ยัด tid เสียเข้าไปเอง ธงจึง *ต้อง* ดัง ถ้าเงียบแปลว่าตัวกรองไม่ทำงาน
+                if (uut_noc_top.tid_err_cnt == 0) begin
+                    $display("  [FAIL] ยัด tid เสียเข้าไปแล้วแต่ธงไม่ขึ้น = ตัวกรองไม่ทำงาน");
+                    fails++;
+                end else
+                    $display("  [PASS] ตัวกรองจับ tid เสียได้ (cnt=%0d node=%04b)",
+                             uut_noc_top.tid_err_cnt, uut_noc_top.tid_err_node);
+            end
 
             $display("");
             if (fails == 0) $display("  >>> tb_noc_stress_tester PASS");

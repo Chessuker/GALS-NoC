@@ -45,7 +45,10 @@ module noc_mesh_2x2_vc #(
     input  logic [3:0][NUM_VCS-1:0] m_ready,
 
     // ---- ปลายทางนอกกระดาน: sticky ต่อโหนดที่ยิงเข้ามา (โดเมน clk เดียวกับเมช)
-    output logic [3:0]              dest_err
+    output logic [3:0]              dest_err,
+
+    // ---- tid ไม่ใช่ one-hot: sticky ต่อโหนดที่ยิงเข้ามา
+    output logic [3:0]              tid_err
 );
 
     localparam LOCAL = 0, NORTH = 1, SOUTH = 2, EAST = 3, WEST = 4;
@@ -115,14 +118,39 @@ module noc_mesh_2x2_vc #(
         end
     end
 
+    // -----------------------------------------------------------------
+    // 0b. ตรวจ tid ก่อนปล่อยเข้าเมช
+    //
+    // tid เป็น one-hot: 01 = VC0, 10 = VC1 ทุกจุดที่ใช้มัน and กับ valid ไว้แล้ว
+    // (fifo_we = s_valid && s_tid[v] ใน vc_input_buffer,
+    //  w_en = s_noc_valid && s_noc_tid[v] ใน gals_node_wrapper)
+    // ผลคือ tid = 00 ไม่ตรงกับเลนไหนเลย flit ถูกทิ้งเงียบๆ ไม่มีใครรู้
+    // ส่วน tid = 11 ยิ่งแย่กว่า: flit เดียวถูกเขียนลงทั้งสอง VC = ถูกโคลน
+    //
+    // ไม่มีอะไรใน RTL บังคับข้อนี้เลย มันอยู่แค่ใน assume ของ formal
+    // และนี่คือรูปแบบความผิดพลาดเดิมที่กัดมาแล้วสามรอบ:
+    //   พอร์ต ECC ปล่อยลอย -> ปลายทางนอกกระดาน -> tid = 00 ใน noc_host.py
+    // ทุกครั้งอาการเหมือนกันหมดคือของหายเงียบๆ แล้วไล่หาต้นตอไม่เจอ
+    // คราวนี้เลยปิดทั้งคลาส ด้วยท่าเดียวกับ dest_err: ทิ้ง flit แล้วยกธง
+    // -----------------------------------------------------------------
+    logic [3:0] tid_ok;
+    always_comb begin
+        for (int i = 0; i < 4; i++) begin
+            // one-hot เป๊ะ: มีบิตเดียว ไม่ใช่ศูนย์ ไม่ใช่สองบิต
+            tid_ok[i] = (s_tid[i] != '0) && ((s_tid[i] & (s_tid[i] - 1'b1)) == '0);
+        end
+    end
+
     // ยกธงตั้งแต่ตอน *เสนอ* flit ที่ผิด ไม่ต้องรอให้ถูกรับ — ความผิดอยู่ที่การยิง
     // ปลายทางนอกกระดาน ไม่ใช่ที่จังหวะ handshake
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             dest_err <= '0;
+            tid_err  <= '0;
         end else begin
             for (int i = 0; i < 4; i++) begin
                 if (s_valid[i] && !dest_ok[i]) dest_err[i] <= 1'b1;
+                if (s_valid[i] && !tid_ok[i])  tid_err[i]  <= 1'b1;
             end
         end
     end
@@ -134,11 +162,21 @@ module noc_mesh_2x2_vc #(
         for (genvar i = 0; i < 4; i++) begin : LOCAL_PORTS
             // 2.1 เชื่อมพอร์ต LOCAL (0) ลงไปหา Host (ผ่าน Wrapper)
             // flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมชเลย (เหตุผลอยู่หัวข้อ 0)
-            assign r_valid[i][LOCAL] = s_valid[i] && dest_ok[i];
-            assign r_last[i][LOCAL]  = s_tlast[i];
-            assign r_dst[i][LOCAL]   = s_tdest[i];
-            assign r_dat[i][LOCAL]   = s_tdata[i];
-            assign r_tid[i][LOCAL]   = s_tid[i];
+            // flit ที่ถูกปฏิเสธต้องไม่เหลืออะไรไว้บนสายเลย ไม่ใช่แค่ดึง valid ลง
+            // เหตุผล: tid ที่ไม่ใช่ one-hot ถ้าปล่อยให้ไหลต่อไปถึง router
+            // มันจะไปทำให้ grant ของ crossbar ไม่เป็น one-hot ได้ แล้ว AND-OR mux
+            // จะ OR ข้อมูลของสอง flit เข้าด้วยกัน กลายเป็น flit ที่ tdest เพี้ยน
+            // (เจอจริงจาก counterexample: node 0 เด้ง flit ที่ tdest=0100 ออก LOCAL
+            //  ซึ่งเป็นค่า OR ของ 0000 กับ 0100 ไม่ใช่ flit ที่มีอยู่จริงสักตัว)
+            // router รับประกัน grant one-hot ไว้ก็จริง แต่พิสูจน์ไว้ *ภายใต้*
+            // ข้อสมมติว่า tid เป็น one-hot จึงต้องกันตั้งแต่ต้นทางให้สนิท
+            wire flit_ok = dest_ok[i] && tid_ok[i];
+
+            assign r_valid[i][LOCAL] = s_valid[i] && flit_ok;
+            assign r_last[i][LOCAL]  = s_tlast[i] && flit_ok;
+            assign r_dst[i][LOCAL]   = flit_ok ? s_tdest[i] : '0;
+            assign r_dat[i][LOCAL]   = flit_ok ? s_tdata[i] : '0;
+            assign r_tid[i][LOCAL]   = flit_ok ? s_tid[i]   : '0;
             assign s_ready[i]        = r_rdy[i][LOCAL];
 
             assign m_valid[i] = m_valid_wire[i][LOCAL];
@@ -294,6 +332,15 @@ module noc_mesh_2x2_vc #(
             for (genvar i = 0; i < 4; i++) begin : f_host
                 always @(*) begin
                     if (rst_n && s_valid[i]) begin
+                        // ยัง assume ว่า s_tid เป็น one-hot อยู่ ต่างจากกรณี tdest
+                        // ที่ถอด assume ทิ้งได้หลังใส่ตัวกรอง — ตรงนี้ถอดไม่ได้
+                        //
+                        // ลองถอดแล้ว: assert_eject_dest พังที่ step 4 (node 0 เด้ง
+                        // flit ที่ tdest=0100 ออก LOCAL) และยังพังอยู่แม้จะ zero
+                        // payload ของ flit ที่ถูกปฏิเสธจนหมดแล้ว แปลว่าสาเหตุไม่ได้
+                        // มาจาก tid ที่ไหลเข้า router ยังหาที่มาไม่เจอ
+                        // จึงคง assume ไว้ก่อน ไม่เคลมเกินกว่าที่พิสูจน์ได้จริง
+                        // ตัวกรอง tid พิสูจน์ด้วย simulation แทน (ดู tb_noc_stress_tester)
                         assume(f_onehot(s_tid[i]));
                         assume((s_tid[i] & ~s_ready[i]) == '0);
                         // ไม่มี assume เรื่องช่วงของ s_tdest แล้วโดยตั้งใจ:
@@ -366,8 +413,8 @@ module noc_mesh_2x2_vc #(
                             assert_bad_dest_blocked: assert(!r_valid[i][LOCAL]);
                         end
                         // ตัวกรองห้ามแตะของที่ถูกต้อง ไม่ใช่แค่กันของผิด
-                        if (s_valid[i] && dest_ok[i]) begin
-                            assert_good_dest_passes: assert(r_valid[i][LOCAL]);
+                        if (s_valid[i] && dest_ok[i] && tid_ok[i]) begin
+                            assert_good_flit_passes: assert(r_valid[i][LOCAL]);
                         end
 
                         // ป้าย VC ห้ามติดสองเลนพร้อมกัน ไม่ว่าจะมี valid หรือไม่

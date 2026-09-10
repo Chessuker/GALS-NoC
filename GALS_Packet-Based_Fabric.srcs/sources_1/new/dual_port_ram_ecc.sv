@@ -55,13 +55,46 @@ module dual_port_ram_ecc #(
     );
 
     // --------------------------------------------------------
+    // 1b. ตัวฉีด error สำหรับพิสูจน์เส้นทางแจ้งเตือนบนบอร์ด (ปิดอยู่โดยปริยาย)
+    //
+    // ปัญหาที่แก้: บนบอร์ด ecc_sbe_cnt/ecc_dbe_cnt อ่านได้ 0 มาตลอด ซึ่งดูดี
+    // แต่ธงที่สายขาดก็อ่านได้ 0 เหมือนกันเป๊ะ ที่ผ่านมาจึงยังไม่มีอะไรพิสูจน์ว่า
+    // encoder -> RAM -> decoder -> ธง -> แลตช์ sticky -> CDC -> ตัวนับ -> ILA/LED
+    // ต่อกันครบจริงบนซิลิคอน tb_ecc_secded พิสูจน์เฉพาะตรรกะ ไม่ได้พิสูจน์สายบนบอร์ด
+    //
+    // วิธี: พลิกบิตในคำที่กำลังจะเขียนลง RAM = จำลองบิตเน่าในหน่วยความจำ
+    // ซึ่งเป็นเหตุผลเดียวที่ ECC มีอยู่ ทำทุกครั้งที่เขียนเพื่อให้ผลชัดเจน
+    // ไม่ต้องอาศัยจังหวะ (ธง sticky ยกครั้งเดียวก็พอ แต่ยกทุกครั้งยิ่งไม่มีข้อสงสัย)
+    //
+    // คุมด้วย `define ไม่ใช่ parameter จงใจ: ถ้าใช้ parameter ต้องลากผ่าน
+    // async_fifo -> async_fifo_fwft -> gals_node_wrapper -> gals_noc_top -> top
+    // ห้าชั้น แตะโมดูลที่พิสูจน์ formal ไว้แล้วโดยไม่จำเป็น
+    // ตั้งค่าตอน build: set_property verilog_define ECC_INJECT_SBE [current_fileset]
+    //
+    // ไม่ได้นิยามอะไรไว้ = ram_wdata คือ encoded_wdata ตรงๆ ไม่มีลอจิกเพิ่ม
+    // บิตสตรีมของ build ปกติจึงไม่เปลี่ยนเลย
+    // --------------------------------------------------------
+    logic [TOTAL_WIDTH-1:0] ram_wdata;
+
+`ifdef ECC_INJECT_DBE
+    // สองบิต = SECDED ซ่อมไม่ได้ ต้องยก double_err
+    assign ram_wdata = encoded_wdata ^ (TOTAL_WIDTH'(1) << 0)
+                                     ^ (TOTAL_WIDTH'(1) << 5);
+`elsif ECC_INJECT_SBE
+    // บิตเดียว = ต้องซ่อมได้ ข้อมูลออกมาถูก แต่ต้องยก single_err
+    assign ram_wdata = encoded_wdata ^ (TOTAL_WIDTH'(1) << 0);
+`else
+    assign ram_wdata = encoded_wdata;
+`endif
+
+    // --------------------------------------------------------
     // 2. The Core RAM (ต้องขยายขนาดกว้างขึ้นเพื่อเก็บ Parity)
     // --------------------------------------------------------
     dual_port_ram #(
         .DATA_WIDTH(TOTAL_WIDTH), 
         .ADDR_WIDTH(ADDR_WIDTH)
     ) core_ram (
-        .wclk(wclk), .w_en(w_en), .waddr(waddr), .wdata(encoded_wdata),
+        .wclk(wclk), .w_en(w_en), .waddr(waddr), .wdata(ram_wdata),
         .rclk(rclk), .r_en(r_en), .raddr(raddr), .rdata(raw_rdata)
     );
 
@@ -90,7 +123,7 @@ module dual_port_ram_ecc #(
         always_ff @(posedge wclk) begin
             if (w_en && (waddr == f_track_addr)) begin
                 f_gold_data    <= wdata;         
-                f_encoded_gold <= encoded_wdata; 
+                f_encoded_gold <= ram_wdata;     // ของที่ลง RAM จริง (= encoded_wdata เมื่อไม่ได้ฉีด)
                 f_data_written <= 1'b1;
             end
         end

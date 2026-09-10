@@ -105,11 +105,16 @@ module gals_noc_top (
     output logic       ecc_double_err,
 
     // ---- มีคนยิงปลายทางนอกกระดาน 2x2 (sticky, โดเมน clk_noc)
-    output logic       dest_err
+    output logic       dest_err,
+
+    // ---- มีคนยิง tid ที่ไม่ใช่ one-hot (sticky, โดเมน clk_noc)
+    output logic       tid_err
 );
 
     logic [3:0] ecc_sbe, ecc_dbe;   // ธง ECC ต่อโหนด (0=00 1=01 2=10 3=11)
     logic [3:0] noc_dest_err;       // ธงปลายทางนอกกระดาน ต่อโหนดที่ยิงเข้ามา
+    logic [3:0] noc_tid_err;        // ธง tid ไม่ใช่ one-hot ที่ขอบเมช (ต่อโหนด)
+    logic [3:0] host_tid_err;       // ธง tid ไม่ใช่ one-hot ที่ขา host ของ wrapper
 
     // ========================================================
     // 🧶 Internal Wires (สายไฟเชื่อม Wrapper <-> NoC Router)
@@ -148,7 +153,8 @@ module gals_noc_top (
         .m_tlast    (noc_rx_tlast),
         .m_valid    (noc_rx_tvalid),
         .m_ready    (noc_rx_tready),
-        .dest_err   (noc_dest_err)
+        .dest_err   (noc_dest_err),
+        .tid_err    (noc_tid_err)
     );
 
     // --- 2. GALS Wrappers (สะพานเชื่อมโดเมนนาฬิกา) ---
@@ -164,7 +170,7 @@ module gals_noc_top (
         .m_noc_tlast(noc_tx_tlast[0]), .m_noc_valid(noc_tx_tvalid[0]), .m_noc_ready(noc_tx_tready[0]),
         .s_noc_tdata(noc_rx_tdata[0]), .s_noc_tdest(noc_rx_tdest[0]), .s_noc_tid(noc_rx_tid[0]), 
         .s_noc_tlast(noc_rx_tlast[0]), .s_noc_valid(noc_rx_tvalid[0]), .s_noc_ready(noc_rx_tready[0]),
-        .ecc_single_err(ecc_sbe[0]), .ecc_double_err(ecc_dbe[0])
+        .ecc_single_err(ecc_sbe[0]), .ecc_double_err(ecc_dbe[0]), .host_tid_err(host_tid_err[0])
     );
 
     // [Index 1] Node 01
@@ -178,7 +184,7 @@ module gals_noc_top (
         .m_noc_tlast(noc_tx_tlast[1]), .m_noc_valid(noc_tx_tvalid[1]), .m_noc_ready(noc_tx_tready[1]),
         .s_noc_tdata(noc_rx_tdata[1]), .s_noc_tdest(noc_rx_tdest[1]), .s_noc_tid(noc_rx_tid[1]), 
         .s_noc_tlast(noc_rx_tlast[1]), .s_noc_valid(noc_rx_tvalid[1]), .s_noc_ready(noc_rx_tready[1]),
-        .ecc_single_err(ecc_sbe[1]), .ecc_double_err(ecc_dbe[1])
+        .ecc_single_err(ecc_sbe[1]), .ecc_double_err(ecc_dbe[1]), .host_tid_err(host_tid_err[1])
     );
 
     // [Index 2] Node 10
@@ -192,7 +198,7 @@ module gals_noc_top (
         .m_noc_tlast(noc_tx_tlast[2]), .m_noc_valid(noc_tx_tvalid[2]), .m_noc_ready(noc_tx_tready[2]),
         .s_noc_tdata(noc_rx_tdata[2]), .s_noc_tdest(noc_rx_tdest[2]), .s_noc_tid(noc_rx_tid[2]), 
         .s_noc_tlast(noc_rx_tlast[2]), .s_noc_valid(noc_rx_tvalid[2]), .s_noc_ready(noc_rx_tready[2]),
-        .ecc_single_err(ecc_sbe[2]), .ecc_double_err(ecc_dbe[2])
+        .ecc_single_err(ecc_sbe[2]), .ecc_double_err(ecc_dbe[2]), .host_tid_err(host_tid_err[2])
     );
 
     // [Index 3] Node 11
@@ -206,7 +212,7 @@ module gals_noc_top (
         .m_noc_tlast(noc_tx_tlast[3]), .m_noc_valid(noc_tx_tvalid[3]), .m_noc_ready(noc_tx_tready[3]),
         .s_noc_tdata(noc_rx_tdata[3]), .s_noc_tdest(noc_rx_tdest[3]), .s_noc_tid(noc_rx_tid[3]), 
         .s_noc_tlast(noc_rx_tlast[3]), .s_noc_valid(noc_rx_tvalid[3]), .s_noc_ready(noc_rx_tready[3]),
-        .ecc_single_err(ecc_sbe[3]), .ecc_double_err(ecc_dbe[3])
+        .ecc_single_err(ecc_sbe[3]), .ecc_double_err(ecc_dbe[3]), .host_tid_err(host_tid_err[3])
     );
 
     // ==========================================
@@ -332,5 +338,34 @@ module gals_noc_top (
     end
 
     assign dest_err = |noc_dest_err;
+
+    // =========================================================
+    // Non-one-hot tid aggregation
+    // รูปแบบเดียวกับ ECC และ dest_err ทุกประการ: ธง sticky ต่อโหนด + ตัวนับขอบขาขึ้น
+    // ต้อง mark_debug + dont_touch ไม่งั้นโดนกวาดทิ้งตอน synth (gotcha 1)
+    // =========================================================
+    (* mark_debug = "true", dont_touch = "true" *) logic [3:0]  tid_err_node;
+    (* mark_debug = "true", dont_touch = "true" *) logic [15:0] tid_err_cnt;
+
+    // ธงเดียวครอบทั้งสองจุดที่ tid เสียถูกจับได้:
+    //   host_tid_err = ที่ขา host ของ wrapper (จุดที่ flit หายจริง)
+    //   noc_tid_err  = ที่ขอบเมช (สัญญาของเมชเอง ปกติไม่มีทางดังเพราะ MUX ของ
+    //                  wrapper สร้าง tid ให้ one-hot อยู่แล้ว)
+    assign tid_err_node = noc_tid_err | host_tid_err;
+
+    logic [3:0] tid_err_q;
+    always_ff @(posedge clk_noc or negedge rst_n) begin
+        if (!rst_n) begin
+            tid_err_q   <= '0;
+            tid_err_cnt <= '0;
+        end else begin
+            tid_err_q <= tid_err_node;
+            for (int i = 0; i < 4; i++) begin
+                if (tid_err_node[i] && !tid_err_q[i]) tid_err_cnt <= tid_err_cnt + 1'b1;
+            end
+        end
+    end
+
+    assign tid_err = |tid_err_node;
 
 endmodule

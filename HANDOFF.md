@@ -1,6 +1,6 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-04. Branch `feature/1-testbenchs`, last commit `1736d1b`.
+Last updated: 2026-09-10. Merged to `main` as PR #2 (`9f20a94`).
 
 Read this first if you're picking the project up cold.
 
@@ -59,16 +59,60 @@ and agent_11.
 
 ### Known gaps, stated plainly
 
-- **The ECC alarm path has never been proved on silicon.** `tb_ecc_secded` proves the SECDED
-  logic exhaustively and the board counters read 0, but 0 is also what a disconnected flag
-  reads. An error-injection register would settle it; deliberately not built yet.
+- **The ECC alarm path is now proved in simulation, not yet on silicon.**
+  `dual_port_ram_ecc.sv` gained a build-time fault injector: define `ECC_INJECT_SBE` to flip
+  one bit of every codeword on its way into the RAM, or `ECC_INJECT_DBE` to flip two. With
+  neither defined the write path is `encoded_wdata` unchanged, so the normal bitstream does
+  not change at all. It is a `` `define ``, not a parameter, on purpose — a parameter would
+  have to be threaded through `async_fifo` -> `async_fifo_fwft` -> `gals_node_wrapper` ->
+  `gals_noc_top` -> top, touching four already-proved modules for no gain.
+
+  | build | `ecc_sbe_cnt` | `ecc_dbe_cnt` |
+  |---|---|---|
+  | normal | 0 | 0 |
+  | `ECC_INJECT_SBE` | **3** | 0 |
+  | `ECC_INJECT_DBE` | 0 | **3** |
+
+  Single-bit raises `single_err` alone and double-bit raises `double_err` alone, through
+  encoder, RAM, decoder, sticky latch, CDC and counter. A disconnected flag cannot produce
+  that. What remains is running it on the board:
+  `set_property verilog_define ECC_INJECT_SBE [current_fileset]`, build, program, read the
+  counters. Not done — no board available at the time.
 - **`dest_err_node[3:0]` is absent from the stress build's ILA** (its clock did not resolve),
   so per-node attribution is unavailable there. `dest_err_cnt` survives and answers whether
   it happened. `analyze_ila.py` says so rather than staying silent.
 - **Bug #5 has no silicon failure to regress against** — the fix removes the trigger.
-- **`noc_mesh_2x2_vc` and the two arbiters carry the one-hot `tid` contract in `assume`s
-  only.** Nothing in RTL enforces one-hot `tid`; a multi-hot or zero `tid` is dropped
-  silently. That is exactly how `noc_host.py` lost every VC0 packet until it was fixed.
+- **~~One-hot `tid` lives only in `assume`s~~ — now guarded, in the right place.**
+  `gals_node_wrapper` checks `host_tid_ok` on its host ingress and ands it into the TX write
+  enable, so a malformed `tid` never reaches a queue. A sticky flag crosses to `clk_noc`
+  beside the ECC flags as `host_tid_err`; `gals_noc_top` ORs it with the mesh's own flag into
+  `tid_err_node` / `tid_err_cnt` (both `mark_debug` + `dont_touch`).
+
+  **The first attempt put this at the mesh boundary and that was the wrong layer.** The guard
+  never fired, because `gals_node_wrapper` computes
+  `w_en = s_host_valid && s_host_tid[v] && !tx_full[v]` and swallows the bad flit itself; the
+  mesh only ever sees `noc_tx_tid`, which the wrapper's MUX builds one-hot by construction.
+  Measured with a directed test (`BAD_TID` in `tb_noc_stress_tester`, forcing node 11's tid):
+
+  | forced `tid` | before the guard | after |
+  |---|---|---|
+  | `00` | `tid_err_cnt` 0, node stalls 8,388,609 cycles, silent | `tid_err_cnt` 1, `node=1000`, stall attributed |
+  | `11` | `tid_err_cnt` 0, **24 sequence errors** from the flit landing in both VCs | `tid_err_cnt` 1, `node=1000`, sequence errors **24 -> 1** |
+
+  The remaining error under `tid=11` is the packet in flight when the force was applied,
+  which no ingress guard can help. Under `tid=00` the sender still stalls, correctly — it is
+  sending garbage. What changed is that the stall is flagged and attributed instead of
+  silent. The mesh-boundary guard is kept as a second line because it enforces the mesh's own
+  contract, but it is not the one that catches this.
+
+  **Formal covers neither guard, deliberately.** Dropping the one-hot `assume` in
+  `noc_mesh_2x2_vc` makes `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`), and
+  it still fails after a rejected flit's whole payload is zeroed — so the cause is not `tid`
+  reaching a router. It is unexplained, and may be a real robustness issue worth its own
+  investigation. In `gals_node_wrapper` the equivalent assertion would have to reach into the
+  FIFO hierarchy for `w_en` and would only restate the gating expression. Both `assume`s stay,
+  and the guards are proved by the directed simulation above, which measures real harm rather
+  than restating RTL.
 
 ---
 

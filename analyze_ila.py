@@ -267,6 +267,25 @@ def main(folder):
             print('           (หมายเหตุ: dest_err_node หลุดจาก ILA รอบนี้ ตัวนับยังอ่านได้')
             print('            จึงยังตอบได้ว่า "เกิดขึ้นไหม" แค่ไม่รู้ว่าโหนดไหน)')
 
+    # ---- tid ไม่ใช่ one-hot : ธงจากตัวกรองที่ขอบเมช
+    # tid = 00 ไม่ตรงเลนไหน flit หายเงียบ / tid = 11 ลงสองเลน flit ถูกโคลน
+    # ทุกจุดที่ใช้ tid and กับ valid ไว้ ความผิดจึงไม่เคยมีใครแจ้ง จนกระทั่งมีธงนี้
+    print('')
+    if 'top_tid_err_cnt' not in TOP:
+        print('tid_err  : ไม่มีคอลัมน์ tid_err_cnt ใน CSV ชุดนี้')
+        print('           = build ก่อนมีตัวกรอง tid หรือ probe ยังไม่เข้า ILA')
+    else:
+        tcnt = TOP.get('top_tid_err_cnt', 0)
+        tnod = TOP.get('top_tid_err_node', None)
+        tnod_s = f'{tnod:04b}' if tnod is not None else 'ไม่มี probe'
+        print(f'tid_err  : โหนดที่เคยยิง tid ไม่ใช่ one-hot={tcnt}   node={tnod_s}')
+        if tcnt:
+            print('           ->  FAIL : มี flit ถูกทิ้งเพราะ tid ไม่ใช่ one-hot')
+            print('                 00 = ไม่ตรงเลนไหน / 11 = ลงทั้งสองเลน')
+            print('                 ไล่ที่ตัวสร้าง tid ของ agent ที่บิต node ชี้')
+        else:
+            print('           ->  PASS : tid เป็น one-hot ทุก flit')
+
     if any(res[a]['mode']=='delta' for a in res):
         print('\nหมายเหตุ: บาง agent จับกลางรัน (mode=delta) ค่าที่ได้คืออัตรา ณ ช่วงนั้น')
         print('          ห้ามเอายอดสะสมของคนละ agent มาเทียบกันตรงๆ เพราะ trigger คนละจังหวะ')
