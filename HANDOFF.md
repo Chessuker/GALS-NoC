@@ -1,6 +1,8 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-10. Merged to `main` as PR #2 (`9f20a94`).
+Last updated: 2026-09-11. Merged to `main` as PR #2 (`9f20a94`); branch
+`feature/2-ecc-injection-and-tid-guard` carries the ECC injection register, the `tid` guard,
+and bug #7's root-cause investigation on top, not yet merged.
 
 Read this first if you're picking the project up cold.
 
@@ -8,8 +10,10 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Six real RTL bugs found. **All six fixed.** Five confirmed on the board; bug #5's trigger
-can no longer occur, so it is proved and simulated rather than observed failing.
+Seven real RTL bugs found. **Six fixed, one open** (#7, see section 3c — root-caused,
+fix not yet implemented, needs a design call before touching RTL). Five confirmed on the
+board; bug #5's trigger can no longer occur, so it is proved and simulated rather than
+observed failing.
 
 | # | bug | found by | status |
 |---|-----|----------|--------|
@@ -19,6 +23,7 @@ can no longer occur, so it is proved and simulated rather than observed failing.
 | 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | liveness watchdog, first board run | **fixed**, board-confirmed |
 | 5 | `packet_arbiter` force-release could fire mid-packet when a source returned on the saturation cycle | formal | **fixed**, proved + simulated |
 | 6 | out-of-range `tdest` routes off the mesh edge and stalls there forever, head-of-line-blocking the fabric | formal (mesh) | **fixed**, board-confirmed clean |
+| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node | formal (mesh, counterexample under investigation) | **root-caused, not fixed** |
 
 Bugs 1-3 predate this work and would have shipped. None was caught by the five original
 simulation tests or by the permutation hardware stress run.
@@ -124,11 +129,12 @@ and agent_11.
   **Formal covers neither guard, deliberately.** Dropping the one-hot `assume` in
   `noc_mesh_2x2_vc` makes `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`), and
   it still fails after a rejected flit's whole payload is zeroed — so the cause is not `tid`
-  reaching a router. It is unexplained, and may be a real robustness issue worth its own
-  investigation. In `gals_node_wrapper` the equivalent assertion would have to reach into the
-  FIFO hierarchy for `w_en` and would only restate the gating expression. Both `assume`s stay,
-  and the guards are proved by the directed simulation above, which measures real harm rather
-  than restating RTL.
+  reaching a router. That counterexample is now explained: it is bug #7 (section 3c), a
+  dropped flit eating its packet's `tlast`. The `assume` stays until the fix lands. In
+  `gals_node_wrapper` the equivalent assertion would have to reach into the FIFO hierarchy
+  for `w_en` and would only restate the gating expression. Both `assume`s stay, and the
+  guards are proved by the directed simulation above, which measures real harm rather than
+  restating RTL.
 
 ---
 
@@ -402,6 +408,103 @@ workload) sat right in the middle of the real distribution. There is now a `max_
 register per agent, `mark_debug`, reporting the longest silent stretch actually observed.
 Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16, which is
 ~480x the measured worst gap of 136.
+
+## 3c. Bug #7 — a rejected flit drops silently instead of closing its packet
+
+Found while investigating an unexplained counterexample noted in the bug #6 formal writeup
+(`noc_mesh_2x2_vc.sby`, the one-hot `assume` on `s_tid` that could not be removed). Removing
+that `assume` made `assert_eject_dest` fail at step 4: node 0 ejects a flit with
+`tdest=0100`, which is not the destination of anything the host actually sent that looked
+malformed. The original write-up guessed this was an AND-OR mux artefact from a non-one-hot
+grant reaching the crossbar. **That guess was wrong.** The flit is real; it was just
+delivered on the wrong packet.
+
+### Root cause
+
+Both ingress filters added for bug #6 — `dest_ok` (out-of-range `tdest`) and `tid_ok`
+(non-one-hot `tid`), `noc_mesh_2x2_vc.sv` section 0/0b, mirrored at the host ingress in
+`gals_node_wrapper.sv:111` — reject a bad flit by simply not asserting `r_valid`/`w_en` for
+it. The flit vanishes. But `packet_arbiter` tracks packet boundaries purely by watching
+`tlast` flow through; it has no idea a flit existed if the ingress filter never presented
+it. If the rejected flit was meant to be the last flit of a packet, the filter has now
+eaten the only `tlast` for that packet, and the arbiter/FIFO consider it still open.
+
+Confirmed by decoding the BMC counterexample stimulus at node 0 (`s_tid`/`s_tdest` per
+step):
+
+| step | tid | tdest | tlast | filter | effect |
+|---|---|---|---|---|---|
+| 1 | `10` (VC1) | `0000` | 0 | pass | opens a VC1 packet addressed to node 0 |
+| 2 | `11` (bad) | `0000` | **1** | **dropped** | the only `tlast` for that packet is lost; VC1 stays "open" downstream |
+| 3 | `10` (VC1) | `0100` | 0 | pass | rides the still-open grant; ejected at node 0 anyway |
+
+Step 4's `tdest=0100` is exactly step 3's flit — a real, correctly filtered flit that got
+misdelivered because the packet it landed in was never supposed to still be open.
+
+**Isolation:** re-adding an `assume` that forbids a rejected flit from carrying `tlast`
+(`assume(!(s_tlast[i] && !tid_ok[i]))`) makes BMC pass clean through 12 steps with the
+one-hot `assume` still removed (2h14m runtime, `abc bmc3`, no counterexample — see
+`formal/noc_mesh_2x2_vc.sby`'s task list for how to reproduce; this experiment itself was
+not checked in as a task). That isolates the mechanism precisely: the bug is not tid
+reaching the router non-one-hot, it is **a dropped flit silently eating a `tlast`.**
+
+### Why the exposure is worse than the formal model captures
+
+The `.sby` header argues the ingress filters are safe because `tdest` is assumed constant
+across a packet — true only if the host frames packets correctly, which is exactly the
+property a corrupted `tid` or `tdest` calls into question. A host garbling `tid` is not a
+host that can be trusted to still be sending a clean `tlast` stream. And the same shape
+exists twice:
+
+- `noc_mesh_2x2_vc.sv` — `dest_ok`/`tid_ok` filter, mesh-level ingress from all 4 nodes
+- `gals_node_wrapper.sv:111` — `host_tid_ok` filter, per-node host ingress (`w_en =
+  s_host_valid && s_host_tid[v] && !tx_full[v] && host_tid_ok`)
+
+Both raise their sticky error flag (`dest_err`/`tid_err`) correctly — this is not an
+unflagged failure. But the flag says "a bad flit arrived," not "a packet got merged with
+the next one and delivered to the wrong node," which is the actual consequence once a VC
+is left open.
+
+### Fix — not yet implemented, needs a call
+
+Two candidate designs, in increasing order of complexity:
+
+**A. Force-close on reject (coarse).** When a flit is rejected at a node, and any VC at
+that node has an open packet (tracked the same way the formal env already tracks it —
+`f_in_pkt`/`f_in_dest` per node per VC), synthesize a `tlast=1` write into that VC's FIFO
+instead of the rejected flit's real (untrustworthy) payload, closing it. If both VCs are
+open simultaneously, this needs 2 cycles to close both, since the router's LOCAL port
+takes one flit per cycle — the second synthetic close has to be queued and presented the
+cycle after. Simple to reason about, truncates any packet that happens to be mid-flight
+on either VC when *any* malformed flit shows up at that node, even if the malformed flit
+had nothing to do with that VC. Given a bad flit already means the host is misbehaving,
+this is a defensible conservative response, not a correctness gap.
+
+**B. Best-effort attribution (fine).** Same tracking, but only force-close the VC that the
+rejected flit's tid *appears* to target, when unambiguous — e.g. `tid=00` can't target any
+VC (both stay open, or neither), `tid=11` is ambiguous between both VCs, only a `dest_ok`
+rejection with a one-hot `tid` cleanly identifies a single victim VC. This reduces
+unnecessary truncation on the `tid=11`/`tid=00` cases but is materially more logic and more
+corner cases, for a benefit that only matters when a host is already sending malformed
+traffic (i.e. a case where "some correct packets get truncated too" is not disproportionate
+harm).
+
+Recommend **A** — the added complexity of B buys robustness in a scenario (malformed
+traffic from an already-misbehaving host) where the exact packet-level outcome matters much
+less than "nothing gets silently misdelivered." Not implemented pending a decision on which
+approach to take; this is a change to two already-proved modules' core datapath and needs
+the same regression discipline as bug #1/#5 (full sim regression + rerun the affected
+`.sby` files) before it ships.
+
+### What is and is not proved right now
+
+- `assert_bad_dest_blocked` / `assert_good_flit_passes` (the filter itself does what it
+  says) — **still proved**, unaffected by this.
+- `assert_eject_dest` (ejected flit addressed to the right node) — **only proved under the
+  one-hot `tid` `assume`.** Without it, the counterexample above stands; this is bug #7,
+  not a disproof of the filter.
+- The `tlast`-preservation experiment above is evidence for the diagnosis, not a checked-in
+  proof of a fix — no fix exists yet to prove.
 
 ## 4. Gotchas that cost real time
 
