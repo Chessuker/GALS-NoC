@@ -12,6 +12,10 @@
 #   assert_tx_data_vc1 / _vc0 (+ rx)                    - payload ตรงกับ VC ที่เลือก
 #   assert_tx_idle_tid / _rx_idle_tid                   - ไม่มีของก็ไม่ติดป้าย VC
 #   assert_tx_tid_onehot / _rx_tid_onehot               - ป้าย VC เป็น one-hot
+#   assert_close_pend_only_open / assert_no_host_write_while_closing
+#       - ตัวปิดแพกเกจค้าง (bug #7, HANDOFF 3c): ปิดเฉพาะ VC ที่เปิดจริง กัน host ระหว่างปิด
+#         assume one-hot ฝั่ง host ถอดออกแล้วเพื่อให้เส้นทางนี้ถูกเดินจริง
+#         (cover_tx_force_close สเต็ป 7, cover_tx_force_close_both สเต็ป 9)
 #   assert_tx_no_pop_empty / assert_rx_no_pop_empty     - ห้ามป๊อป FIFO ว่าง
 #   assert_host_ready_map / assert_noc_ready_map        - ready สะท้อน full จริง
 #   assert_ecc_sbe_out / assert_ecc_dbe_out             - ธงออกครอบทั้งสองโดเมน

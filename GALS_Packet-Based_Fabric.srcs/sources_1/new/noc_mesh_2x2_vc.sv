@@ -71,6 +71,12 @@ module noc_mesh_2x2_vc #(
     logic [4:0][NUM_VCS-1:0] m_tid_wire   [4];
     logic [4:0][NUM_VCS-1:0] m_rdy_wire   [4];
 
+    // สถานะตัวปิดแพกเกจค้างต่อโหนด (หัวข้อ 2.2) ยกออกมาระดับโมดูลให้บล็อก FORMAL อ้างได้
+    logic [3:0]              ing_closing;
+    logic [3:0][NUM_VCS-1:0] ing_pkt_open;
+    logic [3:0][NUM_VCS-1:0] ing_close_pend;
+    logic [3:0][NUM_VCS-1:0] ing_close_acc;
+
     // =================================================================
     // 1. วาง Router 4 ตัว ลงบนกระดาน (Instantiation)
     // =================================================================
@@ -161,23 +167,102 @@ module noc_mesh_2x2_vc #(
     generate
         for (genvar i = 0; i < 4; i++) begin : LOCAL_PORTS
             // 2.1 เชื่อมพอร์ต LOCAL (0) ลงไปหา Host (ผ่าน Wrapper)
-            // flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมชเลย (เหตุผลอยู่หัวข้อ 0)
-            // flit ที่ถูกปฏิเสธต้องไม่เหลืออะไรไว้บนสายเลย ไม่ใช่แค่ดึง valid ลง
-            // เหตุผล: tid ที่ไม่ใช่ one-hot ถ้าปล่อยให้ไหลต่อไปถึง router
-            // มันจะไปทำให้ grant ของ crossbar ไม่เป็น one-hot ได้ แล้ว AND-OR mux
-            // จะ OR ข้อมูลของสอง flit เข้าด้วยกัน กลายเป็น flit ที่ tdest เพี้ยน
-            // (เจอจริงจาก counterexample: node 0 เด้ง flit ที่ tdest=0100 ออก LOCAL
-            //  ซึ่งเป็นค่า OR ของ 0000 กับ 0100 ไม่ใช่ flit ที่มีอยู่จริงสักตัว)
-            // router รับประกัน grant one-hot ไว้ก็จริง แต่พิสูจน์ไว้ *ภายใต้*
-            // ข้อสมมติว่า tid เป็น one-hot จึงต้องกันตั้งแต่ต้นทางให้สนิท
+            // flit ที่จ่าหน้านอกกระดาน / tid ไม่ one-hot ไม่ถูกปล่อยเข้าเมชเลย
+            // (เหตุผลอยู่หัวข้อ 0 และ 0b)
             wire flit_ok = dest_ok[i] && tid_ok[i];
+            wire reject  = s_valid[i] && !flit_ok;
 
-            assign r_valid[i][LOCAL] = s_valid[i] && flit_ok;
-            assign r_last[i][LOCAL]  = s_tlast[i] && flit_ok;
-            assign r_dst[i][LOCAL]   = flit_ok ? s_tdest[i] : '0;
-            assign r_dat[i][LOCAL]   = flit_ok ? s_tdata[i] : '0;
-            assign r_tid[i][LOCAL]   = flit_ok ? s_tid[i]   : '0;
-            assign s_ready[i]        = r_rdy[i][LOCAL];
+            // ---------------------------------------------------------
+            // 2.2 ปิดแพกเกจที่ค้างเปิดอยู่เมื่อมี flit ถูกปฏิเสธ (bug #7)
+            //
+            // ตัวกรองข้างบนทิ้ง flit ทั้งใบ ถ้าใบนั้นมี tlast ติดมาด้วย tlast ก็หาย
+            // ไปพร้อมกัน แต่ packet_arbiter ข้างล่างรู้ขอบแพกเกจจาก tlast เท่านั้น
+            // มันไม่มีทางรู้ว่าเคยมี flit ใบหนึ่งถูกกินไป แพกเกจบน VC นั้นจึงค้าง
+            // เปิด แล้ว flit ถัดไปที่ผ่านตัวกรองมาปกติ (หัวแพกเกจใหม่ จ่าหน้าคนละ
+            // โหนด) ถูกนับเป็นตัวแพกเกจเดิม วิ่งตาม grant เดิม ไปโผล่ผิดโหนด
+            // ยืนยันจาก counterexample ของ assert_eject_dest (HANDOFF 3c)
+            //
+            // ทางแก้: จำไว้ต่อ VC ว่ามีแพกเกจเปิดค้างอยู่ไหม (หัวเข้าแล้ว tlast ยัง)
+            // พอมี flit ถูกปฏิเสธ ให้ยิง tlast สังเคราะห์ปิดทุก VC ที่ยังเปิด
+            // ใช้ tdest ของหัวแพกเกจนั้นๆ (ผ่าน dest_ok มาแล้ว) data เป็น 0
+            // แพกเกจถูกส่งถึงปลายทางที่ถูกต้องแบบขาดท้าย และธง dest_err/tid_err
+            // ยกอยู่แล้ว ดีกว่าปล่อยให้แพกเกจถัดไปถูกส่งผิดโหนดเงียบๆ
+            //
+            // ปิดทุก VC ที่เปิดอยู่ ไม่พยายามเดาว่า flit ที่ผิดตั้งใจจะไป VC ไหน
+            // (tid=00 ชี้ไม่ได้, tid=11 ชี้สองทาง) — host ที่ยิง tid/tdest เพี้ยน
+            // ไว้ใจเรื่อง framing ไม่ได้อยู่แล้ว การตัดแพกเกจข้างเคียงสั้นลง
+            // เป็นราคาที่รับได้ เทียบกับการส่งของผิดโหนด
+            //
+            // การยิงปิดใช้พอร์ต LOCAL ของ router ซึ่งรับได้ทีละ flit จึงต้องคิว
+            // (close_pend) แล้วปิดทีละ VC พร้อมดึง s_ready ลงกัน host ยิงซ้อน
+            // ระหว่างนั้น host ยังยก valid ค้างได้ตามปกติ แค่ไม่ถูกรับจนกว่าจะปิดครบ
+            // ---------------------------------------------------------
+            logic [NUM_VCS-1:0]      pkt_open;
+            logic [NUM_VCS-1:0][3:0] pkt_dest;
+            logic [NUM_VCS-1:0]      close_pend;
+            logic [NUM_VCS-1:0]      close_sel;   // one-hot: VC ที่กำลังยิงปิด
+            logic                    closing;
+
+            always_comb begin
+                close_sel = '0;
+                for (int v = NUM_VCS-1; v >= 0; v--) begin
+                    if (close_pend[v]) close_sel = NUM_VCS'(1) << v;
+                end
+                closing = |close_pend;
+            end
+
+            // flit จริงที่ถูกรับเข้า router (ต่อ VC) — ใช้ตาม pkt_open
+            wire [NUM_VCS-1:0] host_acc = {NUM_VCS{s_valid[i] && flit_ok && !closing}}
+                                          & s_tid[i] & r_rdy[i][LOCAL];
+            // การยิงปิดถูกรับ
+            wire [NUM_VCS-1:0] close_acc = close_sel & r_rdy[i][LOCAL];
+
+            always_ff @(posedge clk or negedge rst_n) begin
+                if (!rst_n) begin
+                    pkt_open   <= '0;
+                    close_pend <= '0;
+                    pkt_dest   <= '0;
+                end else begin
+                    for (int v = 0; v < NUM_VCS; v++) begin
+                        if (close_acc[v]) begin
+                            pkt_open[v]   <= 1'b0;
+                            close_pend[v] <= 1'b0;
+                        end else if (host_acc[v]) begin
+                            if (!pkt_open[v]) pkt_dest[v] <= s_tdest[i];
+                            pkt_open[v] <= !s_tlast[i];
+                        end else if (reject && pkt_open[v]) begin
+                            close_pend[v] <= 1'b1;
+                        end
+                    end
+                end
+            end
+
+            // ---- เลือกว่าเสนออะไรให้ router: flit สังเคราะห์ปิด หรือ flit ของ host
+            always_comb begin
+                if (closing) begin
+                    r_valid[i][LOCAL] = 1'b1;
+                    r_last[i][LOCAL]  = 1'b1;
+                    r_tid[i][LOCAL]   = close_sel;
+                    r_dat[i][LOCAL]   = '0;
+                    r_dst[i][LOCAL]   = '0;
+                    for (int v = 0; v < NUM_VCS; v++)
+                        if (close_sel[v]) r_dst[i][LOCAL] = pkt_dest[v];
+                    s_ready[i]        = '0;
+                end else begin
+                    // flit ที่ถูกปฏิเสธต้องไม่เหลืออะไรไว้บนสายเลย ไม่ใช่แค่ดึง valid ลง
+                    r_valid[i][LOCAL] = s_valid[i] && flit_ok;
+                    r_last[i][LOCAL]  = s_tlast[i] && flit_ok;
+                    r_dst[i][LOCAL]   = flit_ok ? s_tdest[i] : '0;
+                    r_dat[i][LOCAL]   = flit_ok ? s_tdata[i] : '0;
+                    r_tid[i][LOCAL]   = flit_ok ? s_tid[i]   : '0;
+                    s_ready[i]        = r_rdy[i][LOCAL];
+                end
+            end
+
+            assign ing_closing[i]    = closing;
+            assign ing_pkt_open[i]   = pkt_open;
+            assign ing_close_pend[i] = close_pend;
+            assign ing_close_acc[i]  = close_acc;
 
             assign m_valid[i] = m_valid_wire[i][LOCAL];
             assign m_tlast[i] = m_last_wire[i][LOCAL];
@@ -332,23 +417,16 @@ module noc_mesh_2x2_vc #(
             for (genvar i = 0; i < 4; i++) begin : f_host
                 always @(*) begin
                     if (rst_n && s_valid[i]) begin
-                        // ยัง assume ว่า s_tid เป็น one-hot อยู่ ต่างจากกรณี tdest
-                        // ที่ถอด assume ทิ้งได้หลังใส่ตัวกรอง — ตรงนี้ถอดไม่ได้
-                        //
-                        // ลองถอดแล้ว: assert_eject_dest พังที่ step 4 (node 0 เด้ง
-                        // flit ที่ tdest=0100 ออก LOCAL) — ตอนนี้หาสาเหตุเจอแล้ว
-                        // (ดู HANDOFF.md section 3c, bug #7): flit ที่ถูกปฏิเสธถ้ามี
-                        // tlast ติดมาด้วย ตัวกรองจะกินทิ้งทั้ง flit ทั้ง tlast เงียบๆ
-                        // แพกเกจที่ยังเปิดค้างอยู่บน VC นั้นจึงไม่มีวันปิด แล้วไปกลืน
-                        // flit ถัดไปเป็นส่วนหนึ่งของตัวเอง ไม่ใช่ tid ที่ไหลเข้า router
-                        // แบบ non-one-hot ตามที่เดาไว้รอบแรก — ยืนยันด้วย isolation:
-                        // ใส่ assume(!(s_tlast[i] && !tid_ok[i])) แล้ว BMC ผ่านสะอาด
-                        // ถึงสเต็ป 12 ทั้งที่ยังถอด assume ตัวนี้อยู่
-                        // ยังไม่แก้ที่ RTL (ต้องเลือกดีไซน์ก่อน — ดู HANDOFF) จึงคง
-                        // assume ไว้ ไม่เคลมเกินกว่าที่พิสูจน์ได้จริงตอนนี้
-                        // ตัวกรอง tid พิสูจน์ด้วย simulation แทน (ดู tb_noc_stress_tester)
-                        assume(f_onehot(s_tid[i]));
-                        assume((s_tid[i] & ~s_ready[i]) == '0);
+                        // ไม่ assume ว่า s_tid เป็น one-hot แล้ว — เหมือนกรณี tdest
+                        // ที่ถอด assume ทิ้งได้หลังใส่ตัวกรอง รอบก่อนถอดไม่ได้เพราะ
+                        // assert_eject_dest พังที่ step 4 (node 0 เด้ง flit tdest=0100)
+                        // ซึ่งคือ bug #7: flit ที่ถูกปฏิเสธพา tlast หายไปด้วย แพกเกจ
+                        // บน VC นั้นค้างเปิด แล้วกลืน flit ถัดไปไปส่งผิดโหนด
+                        // (HANDOFF 3c) หัวข้อ 2.2 ปิดแพกเกจค้างให้แล้ว solver จึงยิง
+                        // tid ได้ทุกค่า 00..11 และ assert_eject_dest ต้องยืนได้เอง
+                        // ข้อ backpressure ยกเว้นตอนกำลังปิดแพกเกจ: s_ready ถูกดึงลง
+                        // ทั้งคู่โดยตั้งใจ host ที่ valid ค้างอยู่ตอนนั้นคือเคสที่ต้องตรวจ
+                        if (!ing_closing[i]) assume((s_tid[i] & ~s_ready[i]) == '0);
                         // ไม่มี assume เรื่องช่วงของ s_tdest แล้วโดยตั้งใจ:
                         // เดิมต้อง assume ว่าปลายทางอยู่ในกระดาน ไม่งั้น assert_edge_*
                         // พังจริง ตอนนี้หัวข้อ 0 กรอง flit นอกกระดานออกก่อนเข้าเมช
@@ -415,12 +493,30 @@ module noc_mesh_2x2_vc #(
 
                         // ---- flit ที่จ่าหน้านอกกระดานต้องไม่ถูกปล่อยเข้าเมช
                         // ถ้าหลุดเข้าไปได้ มันจะวิ่งไปตันที่ขอบและบล็อกหัวคิวถาวร
+                        // สิ่งเดียวที่เข้าได้ตอน flit ผิดคือ tlast สังเคราะห์ (2.2)
                         if (s_valid[i] && !dest_ok[i]) begin
-                            assert_bad_dest_blocked: assert(!r_valid[i][LOCAL]);
+                            assert_bad_dest_blocked:
+                                assert(!r_valid[i][LOCAL] || ing_closing[i]);
+                        end
+                        // ทุกอย่างที่เข้า router ผ่าน LOCAL ต้องจ่าหน้าในกระดานเสมอ
+                        // รวม flit สังเคราะห์ด้วย (ใช้ tdest ของหัวแพกเกจที่ผ่านกรองแล้ว)
+                        if (r_valid[i][LOCAL]) begin
+                            assert_local_in_range:
+                                assert((r_dst[i][LOCAL][3:2] <= MAX_X) &&
+                                       (r_dst[i][LOCAL][1:0] <= MAX_Y));
+                            assert_local_tid_onehot: assert(f_onehot(r_tid[i][LOCAL]));
                         end
                         // ตัวกรองห้ามแตะของที่ถูกต้อง ไม่ใช่แค่กันของผิด
-                        if (s_valid[i] && dest_ok[i] && tid_ok[i]) begin
+                        if (s_valid[i] && dest_ok[i] && tid_ok[i] && !ing_closing[i]) begin
                             assert_good_flit_passes: assert(r_valid[i][LOCAL]);
+                        end
+                        // ตัวปิดแพกเกจค้าง: ปิดได้เฉพาะ VC ที่เปิดอยู่จริง
+                        // ไม่งั้นจะยิง tlast ลอยๆ ใส่ VC ว่าง = แพกเกจผีหนึ่ง flit
+                        assert_close_pend_only_open:
+                            assert((ing_close_pend[i] & ~ing_pkt_open[i]) == '0);
+                        // และระหว่างปิด host ต้องถูกกันไว้จริง
+                        if (ing_closing[i]) begin
+                            assert_host_held_while_closing: assert(s_ready[i] == '0);
                         end
 
                         // ป้าย VC ห้ามติดสองเลนพร้อมกัน ไม่ว่าจะมี valid หรือไม่
@@ -438,6 +534,9 @@ module noc_mesh_2x2_vc #(
         // ข้อจำกัด: cover พวกนี้บอกได้แค่ว่า "มีของถึงโหนดนั้น" ไม่ได้แยกว่า
         // มาจากเพื่อนบ้านหนึ่งฮ็อปหรือมาจากมุมตรงข้ามสองฮ็อป
         // -------------------------------------------------------------
+        reg f_closed_seen = 1'b0;
+        always @(posedge clk) if (rst_n && (|ing_close_acc[0])) f_closed_seen <= 1'b1;
+
         always @(posedge clk) begin
             if (f_past_valid && $past(rst_n) && rst_n) begin
                 cover_deliver_n0: cover(m_valid[0] && (|m_ready[0]));
@@ -456,6 +555,14 @@ module noc_mesh_2x2_vc #(
                 // ตัวกรองปลายทางถูกกระตุ้นได้จริง ไม่ใช่โค้ดที่ไม่มีทางทำงาน
                 // (ถ้า cover นี้ไม่ถึง แปลว่า assert_bad_dest_blocked ผ่านแบบ vacuous)
                 cover_dest_err_raised: cover(|dest_err);
+                cover_tid_err_raised:  cover(|tid_err);
+
+                // ตัวปิดแพกเกจค้าง (2.2) ไปถึงได้จริง: มีแพกเกจเปิดอยู่แล้ว flit ผิดโผล่มา
+                // แล้ว tlast สังเคราะห์ถูก router รับ — ถ้าไม่ถึง assert ข้างบนคือ vacuous
+                cover_force_close: cover(|ing_close_acc[0]);
+                // ปิดแล้วเมชยังส่ง tlast ออกโหนด 0 ได้ (ท้ายสังเคราะห์เดินถึงปลายทาง
+                // จริง ไม่ได้ปิดแล้วค้าง)
+                cover_deliver_after_close: cover(f_closed_seen && m_valid[0] && m_tlast[0]);
                 cover_mesh_alive_after_bad_dest:
                     cover((|dest_err) && (m_valid[0] || m_valid[1] ||
                                           m_valid[2] || m_valid[3]));

@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-11. Merged to `main` as PR #2 (`9f20a94`); branch
 `feature/2-ecc-injection-and-tid-guard` carries the ECC injection register, the `tid` guard,
-and bug #7's root-cause investigation on top, not yet merged.
+and the bug #7 fix on top, not yet merged.
 
 Read this first if you're picking the project up cold.
 
@@ -10,10 +10,10 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Seven real RTL bugs found. **Six fixed, one open** (#7, see section 3c — root-caused,
-fix not yet implemented, needs a design call before touching RTL). Five confirmed on the
-board; bug #5's trigger can no longer occur, so it is proved and simulated rather than
-observed failing.
+Seven real RTL bugs found. **All seven fixed.** Five confirmed on the board; bug #5's
+trigger can no longer occur, so it is proved and simulated rather than observed failing;
+bug #7's fix is proved and simulated but **not yet built or run on the board** (no board
+on hand when it landed — section 3c says what to check when there is one).
 
 | # | bug | found by | status |
 |---|-----|----------|--------|
@@ -23,7 +23,7 @@ observed failing.
 | 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | liveness watchdog, first board run | **fixed**, board-confirmed |
 | 5 | `packet_arbiter` force-release could fire mid-packet when a source returned on the saturation cycle | formal | **fixed**, proved + simulated |
 | 6 | out-of-range `tdest` routes off the mesh edge and stalls there forever, head-of-line-blocking the fabric | formal (mesh) | **fixed**, board-confirmed clean |
-| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node | formal (mesh, counterexample under investigation) | **root-caused, not fixed** |
+| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node, and holds the destination router's grant meanwhile | formal (mesh) | **fixed**, proved + simulated, not yet on board |
 
 Bugs 1-3 predate this work and would have shipped. None was caught by the five original
 simulation tests or by the permutation hardware stress run.
@@ -126,15 +126,13 @@ and agent_11.
   silent. The mesh-boundary guard is kept as a second line because it enforces the mesh's own
   contract, but it is not the one that catches this.
 
-  **Formal covers neither guard, deliberately.** Dropping the one-hot `assume` in
-  `noc_mesh_2x2_vc` makes `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`), and
-  it still fails after a rejected flit's whole payload is zeroed — so the cause is not `tid`
-  reaching a router. That counterexample is now explained: it is bug #7 (section 3c), a
-  dropped flit eating its packet's `tlast`. The `assume` stays until the fix lands. In
-  `gals_node_wrapper` the equivalent assertion would have to reach into the FIFO hierarchy
-  for `w_en` and would only restate the gating expression. Both `assume`s stay, and the
-  guards are proved by the directed simulation above, which measures real harm rather than
-  restating RTL.
+  **Formal now covers both guards without the one-hot `assume`.** Dropping it used to make
+  `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`); that was bug #7 (section
+  3c), a dropped flit eating its packet's `tlast`. With the fix in, both `assume`s are gone:
+  `noc_mesh_2x2_vc` passes bmc depth 10 with the solver free to send any `tid`, and
+  `gals_node_wrapper` passes prove (basecase + induction) the same way, each with a cover
+  showing the force-close path is actually exercised. The directed simulation above stays,
+  because it measures the harm formal does not: the head-of-line stall other agents see.
 
 ---
 
@@ -465,46 +463,90 @@ unflagged failure. But the flag says "a bad flit arrived," not "a packet got mer
 the next one and delivered to the wrong node," which is the actual consequence once a VC
 is left open.
 
-### Fix — not yet implemented, needs a call
+### Fix — force-close on reject (design A), implemented
 
-Two candidate designs, in increasing order of complexity:
+Two designs were on the table. **A, force-close on reject:** on any rejected flit, close
+every VC at that ingress that has a packet open. **B, best-effort attribution:** close only
+the VC the bad flit appears to target. A was chosen — B is materially more logic and more
+corner cases (`tid=00` targets nothing, `tid=11` targets both) for a benefit that only
+shows up when the host is already sending garbage, where "a neighbouring packet also got
+truncated" is not disproportionate harm and "nothing gets silently misdelivered" is the
+property that matters.
 
-**A. Force-close on reject (coarse).** When a flit is rejected at a node, and any VC at
-that node has an open packet (tracked the same way the formal env already tracks it —
-`f_in_pkt`/`f_in_dest` per node per VC), synthesize a `tlast=1` write into that VC's FIFO
-instead of the rejected flit's real (untrustworthy) payload, closing it. If both VCs are
-open simultaneously, this needs 2 cycles to close both, since the router's LOCAL port
-takes one flit per cycle — the second synthetic close has to be queued and presented the
-cycle after. Simple to reason about, truncates any packet that happens to be mid-flight
-on either VC when *any* malformed flit shows up at that node, even if the malformed flit
-had nothing to do with that VC. Given a bad flit already means the host is misbehaving,
-this is a defensible conservative response, not a correctness gap.
+Same shape at both ingress sites:
 
-**B. Best-effort attribution (fine).** Same tracking, but only force-close the VC that the
-rejected flit's tid *appears* to target, when unambiguous — e.g. `tid=00` can't target any
-VC (both stay open, or neither), `tid=11` is ambiguous between both VCs, only a `dest_ok`
-rejection with a one-hot `tid` cleanly identifies a single victim VC. This reduces
-unnecessary truncation on the `tid=11`/`tid=00` cases but is materially more logic and more
-corner cases, for a benefit that only matters when a host is already sending malformed
-traffic (i.e. a case where "some correct packets get truncated too" is not disproportionate
-harm).
+- `noc_mesh_2x2_vc.sv` section 2.2 — per node, per VC: `pkt_open` (a head has been
+  accepted, no `tlast` yet) and `pkt_dest` (that head's `tdest`, already through
+  `dest_ok`). A rejected flit sets `close_pend` for every open VC. While any close is
+  pending the node presents a synthetic flit to the router's LOCAL port — `tlast=1`,
+  `tid` = that VC, `tdest` = the recorded head dest, data 0 — and holds `s_ready` at 0 so
+  the host cannot interleave. LOCAL takes one flit per cycle, so two open VCs close over
+  two cycles.
+- `gals_node_wrapper.sv` — same tracker on the host side (`tx_pkt_open`/`tx_pkt_dest`/
+  `tx_close_pend`), but each VC has its own FIFO write port, so both close in one cycle.
+  `s_host_ready` is held low while closing.
 
-Recommend **A** — the added complexity of B buys robustness in a scenario (malformed
-traffic from an already-misbehaving host) where the exact packet-level outcome matters much
-less than "nothing gets silently misdelivered." Not implemented pending a decision on which
-approach to take; this is a change to two already-proved modules' core datapath and needs
-the same regression discipline as bug #1/#5 (full sim regression + rerun the affected
-`.sby` files) before it ships.
+The truncated packet arrives short at the **correct** node, with `dest_err`/`tid_err`
+raised as before; the next packet starts as a clean head.
 
-### What is and is not proved right now
+### Evidence
 
-- `assert_bad_dest_blocked` / `assert_good_flit_passes` (the filter itself does what it
-  says) — **still proved**, unaffected by this.
-- `assert_eject_dest` (ejected flit addressed to the right node) — **only proved under the
-  one-hot `tid` `assume`.** Without it, the counterexample above stands; this is bug #7,
-  not a disproof of the filter.
-- The `tlast`-preservation experiment above is evidence for the diagnosis, not a checked-in
-  proof of a fix — no fix exists yet to prove.
+Formal, both with the one-hot `assume` **removed** so the solver sends any `tid`:
+
+| script | mode | result | new covers |
+|---|---|---|---|
+| `noc_mesh_2x2_vc.sby` | bmc depth 10 (`abc bmc3`) | **PASS**, 7m42s — `assert_eject_dest` holds by itself now | `cover_force_close` step 4, `cover_deliver_after_close` step 5, `cover_tid_err_raised` |
+| `noc_mesh_2x2_vc.sby` | cover depth 12 | PASS, all 13 reached | |
+| `gals_node_wrapper.sby` | prove (basecase + induction) | **PASS** | |
+| `gals_node_wrapper.sby` | cover | PASS | `cover_tx_force_close` step 7, `cover_tx_force_close_both` step 9 |
+
+New assertions: `assert_local_in_range` / `assert_local_tid_onehot` (everything entering a
+router via LOCAL, synthetic flits included, is in-range and one-hot),
+`assert_close_pend_only_open` (never synthesise a `tlast` into a VC with nothing open — that
+would be a one-flit phantom packet), `assert_host_held_while_closing` /
+`assert_no_host_write_while_closing`. `assert_bad_dest_blocked` and
+`assert_good_flit_passes` were widened to allow the synthetic flit through.
+`assert_close_pend_only_open` in the wrapper is deliberately not gated on `f_past_valid`:
+gated, induction starts from an unreachable bad state while the assert is off, the state
+sits there because `clk_noc` need not tick, and it "fails" the moment the gate opens.
+
+Simulation, `tb_noc_mesh_2x2_gals` 6/6 in both `TB default` and `HW_CLOCKS+HS_VC_ALT`,
+totals identical to the checked-in `_FIXED` baselines (34 / 136 and 34 / 140 matched,
+0 mismatched, 0 pending). `tb_noc_stress_tester` clean run identical to before
+(142112 / 61104 / 81072 flits, 0 errors).
+
+`tb_noc_stress_tester` with `BAD_TID` shows the harm the formal model does not measure.
+`tid` of node 11 is forced bad for 2000 NoC cycles; the columns are `max_gap` of the
+*other* three agents (normal 65 / 41 / 136):
+
+| forced `tid` | before fix: gap 00 / 01 / 10 | after fix | why |
+|---|---|---|---|
+| `11` | **1209 / 886 / 1104** | 65 / 41 / 150 | the truncated packet held node 00's LOCAL grant for the whole 2000 cycles; agents 01 and 10 lost throughput (141632 -> 142128, 61040 -> 61488) |
+| `00` | **1209 / 886 / 1104** | 65 / 41 / 136 | same; node 11 itself still stalls (8.4M-cycle gap), correctly — it is sending garbage |
+
+So before the fix a single bad flit from one host was a ~1100-cycle stall for every other
+node in the fabric, on top of the misdelivery. Sequence errors under `tid=11` went 1 -> 2;
+the checker is per-flit and 6-bit-modulo (`traffic_node_agent` compares
+`rx_seq` to `exp_seq[src][vc]`), so the count is "how many VC lanes saw a jump that was not
+a multiple of 64," which shifts with a one-cycle timing change and is not a regression
+signal. The `BAD_TID` runs report `FAIL` on that line by design — they are measurement
+modes, not pass/fail regressions.
+
+Hot-spot and permutation patterns cannot show the misdelivery itself in simulation:
+every agent has a fixed `DEST_ID`, so a merged packet still goes where the next one would
+have. That property rests on the formal proof.
+
+### Not yet done
+
+- **Not built or run on the board.** When one is available: `PATTERN=1 VC_MODE=2` stress
+  build, confirm the clean run still reads `tid_err` 0 / `dest_err` 0 with all four
+  `node` probes present and 0 sequence errors; the added state is two `pkt_open` bits, two
+  4-bit `pkt_dest` and two `close_pend` bits per ingress, so timing should be unaffected
+  but check the `clk_host` domain paths in `gals_node_wrapper`.
+- `formal/run_wsl.sh` is a small helper that puts the OSS CAD Suite on `PATH` and runs
+  `sby` from Git Bash on Windows (`MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 -- bash
+  /mnt/d/.../formal/run_wsl.sh <file>.sby [task]`) — the `bash -c '... $PATH ...'` form
+  breaks because Git Bash expands `$PATH` locally into a string with parentheses.
 
 ## 4. Gotchas that cost real time
 
@@ -585,6 +627,13 @@ the same regression discipline as bug #1/#5 (full sim regression + rerun the aff
 7. **Simulation is blind to fairness by default.** Test 4 sends one packet per node then
    stops — proves delivery, not bandwidth sharing. Test 6 (sustained contention) was added
    for exactly this and is what catches bug #2 class failures.
+8. **`xelab.bat -generic_top "BAD_TID=2"` does not work from a shell on Windows.** The
+   `.bat` wrapper re-tokenises its arguments and `=` is a `cmd` delimiter, so the generic
+   arrives as `BAD_TID 2` (or `BAD_TID` alone) and elaboration fails with "not found in
+   design"; calling `unwrapped/win64.o/xelab.exe` directly fails on `boost_regex.dll`.
+   Vivado's own Tcl console is fine. From a shell, wrap the testbench instead — a
+   one-line `module tb_wrap; tb_noc_stress_tester #(.BAD_TID(2)) u(); endmodule` compiled
+   alongside it and elaborated as the top does the job.
 
 ---
 

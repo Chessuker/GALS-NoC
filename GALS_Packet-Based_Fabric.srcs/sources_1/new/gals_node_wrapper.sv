@@ -99,6 +99,49 @@ module gals_node_wrapper #(
     logic host_tid_ok;
     assign host_tid_ok = (s_host_tid != '0) && ((s_host_tid & (s_host_tid - 1'b1)) == '0);
 
+    // =========================================================
+    // ปิดแพกเกจที่ค้างเปิดอยู่เมื่อ flit ถูกปฏิเสธ (bug #7 — ทรงเดียวกับ
+    // noc_mesh_2x2_vc หัวข้อ 2.2 อ่านเหตุผลเต็มที่นั่น)
+    //
+    // การทิ้ง flit ข้างบนทิ้ง tlast ไปด้วยถ้ามันติดมากับใบนั้น แพกเกจใน tx_fifo
+    // ของ VC นั้นจึงไม่มีวันปิด แพกเกจถัดไปของ host ถูกต่อท้ายเป็นตัวเดียวกัน
+    // แล้ว packet_arbiter ปลายทางพาไปส่งโหนดที่หัวแพกเกจ *เดิม* จ่าหน้าไว้
+    // = ส่งผิดโหนดเงียบๆ แย่กว่าของหายเสียอีก
+    //
+    // ทางแก้: จำต่อ VC ว่ามีแพกเกจเปิดค้าง (หัวเข้าแล้ว tlast ยัง) พอ flit ถูก
+    // ปฏิเสธ ให้เขียน tlast สังเคราะห์ (tdest ของหัวแพกเกจนั้น data 0) ปิดทุก VC
+    // ที่ยังเปิด แต่ละ VC มี FIFO และ write port ของตัวเอง จึงปิดพร้อมกันได้
+    // ระหว่างรอปิด (FIFO เต็ม) กัน host เขียนซ้อนด้วย s_host_ready = 0
+    // =========================================================
+    logic [NUM_VCS-1:0]      tx_pkt_open;
+    logic [NUM_VCS-1:0][3:0] tx_pkt_dest;
+    logic [NUM_VCS-1:0]      tx_close_pend;
+    logic                    tx_closing;
+    logic [NUM_VCS-1:0]      tx_host_acc, tx_close_acc;
+    assign tx_closing = |tx_close_pend;
+
+    wire host_reject = s_host_valid && !host_tid_ok;
+
+    always_ff @(posedge clk_host or negedge rst_n) begin
+        if (!rst_n) begin
+            tx_pkt_open   <= '0;
+            tx_close_pend <= '0;
+            tx_pkt_dest   <= '0;
+        end else begin
+            for (int i = 0; i < NUM_VCS; i++) begin
+                if (tx_close_acc[i]) begin
+                    tx_pkt_open[i]   <= 1'b0;
+                    tx_close_pend[i] <= 1'b0;
+                end else if (tx_host_acc[i]) begin
+                    if (!tx_pkt_open[i]) tx_pkt_dest[i] <= s_host_tdest;
+                    tx_pkt_open[i] <= !s_host_tlast;
+                end else if (host_reject && tx_pkt_open[i]) begin
+                    tx_close_pend[i] <= 1'b1;
+                end
+            end
+        end
+    end
+
     // ธง ECC ต่อ VC — TX อ่านด้วย clk_noc, RX อ่านด้วย clk_host (คนละโดเมน)
     logic tx_sbe [NUM_VCS], tx_dbe [NUM_VCS];
     logic rx_sbe [NUM_VCS], rx_dbe [NUM_VCS];
@@ -106,10 +149,15 @@ module gals_node_wrapper #(
     genvar v;
     generate
         for (v = 0; v < NUM_VCS; v++) begin : TX_VC
+            assign tx_host_acc[v]  = s_host_valid && s_host_tid[v] && !tx_full[v]
+                                     && host_tid_ok && !tx_closing;
+            assign tx_close_acc[v] = tx_close_pend[v] && !tx_full[v];
+
             async_fifo_fwft #(.DATA_WIDTH(PACK_W), .ADDR_WIDTH(ADDR_W)) tx_fifo (
                 .wclk(clk_host), .wrst_n(rst_n),
-                .w_en(s_host_valid && s_host_tid[v] && !tx_full[v] && host_tid_ok),
-                .wdata(tx_wdata), .wfull(tx_full[v]),
+                .w_en(tx_host_acc[v] || tx_close_acc[v]),
+                .wdata(tx_close_pend[v] ? {1'b1, tx_pkt_dest[v], {DATA_W{1'b0}}} : tx_wdata),
+                .wfull(tx_full[v]),
                 
                 .rclk(clk_noc),  .rrst_n(rst_n), 
                 .r_en(m_noc_valid && m_noc_tid[v] && m_noc_ready[v]), 
@@ -118,7 +166,7 @@ module gals_node_wrapper #(
                 .almost_full(), .prog_full_thresh('0),
                 .ecc_single_err(tx_sbe[v]), .ecc_double_err(tx_dbe[v])
             );
-            assign s_host_ready[v] = ~tx_full[v];
+            assign s_host_ready[v] = ~tx_full[v] && !tx_closing;
         end
     endgenerate
 
@@ -270,14 +318,15 @@ module gals_node_wrapper #(
         // ---------------------------------------------------------
         always @(*) begin
             if (s_host_valid) begin
-                // ยัง assume one-hot ไว้: ตัวกรอง host_tid_ok อยู่ใน RTL แล้วก็จริง
-                // แต่การ assert ว่า w_en=0 ตอน tid เสีย เป็นการท่องนิพจน์เดิมซ้ำ
-                // และต้องอ้าง hierarchy เข้าไปในตัว FIFO ซึ่งเปราะ
-                // ตัวกรองพิสูจน์ด้วย simulation แทน ซึ่งวัด *ผลเสียจริง*
+                // ไม่ assume one-hot ฝั่ง host แล้ว: ให้ solver ยิง tid เสียได้ทุกค่า
+                // เพื่อให้เส้นทางปิดแพกเกจ (tx_close_pend, bug #7) ถูกเดินจริงใน
+                // formal ไม่ใช่โค้ดที่พิสูจน์ผ่านแบบ vacuous — ดู cover_tx_force_close
+                // ตัวกรองเองยังพิสูจน์ด้วย simulation ที่วัด *ผลเสียจริง*
                 // (tid=00 -> node ค้าง 8.4M ไซเคิล, tid=11 -> sequence error 24 ครั้ง)
                 // ดู BAD_TID ใน tb_noc_stress_tester
-                assume($onehot(s_host_tid));
-                assume((s_host_tid & ~s_host_ready) == '0);
+                // ข้อ backpressure ยกเว้นตอนกำลังปิดแพกเกจ: ready ถูกดึงลงทั้งคู่
+                // โดยตั้งใจ host ที่ยัง valid ค้างอยู่ตอนนั้นคือเคสปกติที่ต้องตรวจ
+                if (!tx_closing) assume((s_host_tid & ~s_host_ready) == '0);
             end
             if (s_noc_valid) begin
                 assume($onehot(s_noc_tid));
@@ -355,8 +404,12 @@ module gals_node_wrapper #(
                     assert_rx_no_pop_empty_vc1: assert(!rx_empty[1]);
 
                 // ready ที่ตีกลับต้องสะท้อนสถานะ full จริงของเลนนั้น
-                assert_host_ready_map_vc0: assert(s_host_ready[0] == ~tx_full[0]);
-                assert_host_ready_map_vc1: assert(s_host_ready[1] == ~tx_full[1]);
+                // (ยกเว้นตอนกำลังปิดแพกเกจค้าง ซึ่งดึงลงทั้งคู่โดยตั้งใจ)
+                assert_host_ready_map_vc0: assert(s_host_ready[0] == (~tx_full[0] && !tx_closing));
+                assert_host_ready_map_vc1: assert(s_host_ready[1] == (~tx_full[1] && !tx_closing));
+
+                // ห้าม host เขียนลงคิวระหว่างที่กำลังยิงปิด
+                if (tx_closing) assert_no_host_write_while_closing: assert(tx_host_acc == '0);
                 assert_noc_ready_map_vc0:  assert(s_noc_ready[0]  == ~rx_full[0]);
                 assert_noc_ready_map_vc1:  assert(s_noc_ready[1]  == ~rx_full[1]);
             end
@@ -382,6 +435,15 @@ module gals_node_wrapper #(
             end
         end
 
+        // คิวปิดค้างได้เฉพาะ VC ที่มีแพกเกจเปิดอยู่จริง ไม่งั้นจะยิง tlast ลอยๆ
+        // ใส่คิวว่าง = แพกเกจผีหนึ่ง flit — เป็น invariant ของ state ล้วน จึงไม่ผูก
+        // f_past_valid: ถ้าผูก induction จะเริ่มจากสถานะเสียตอน f_past_valid=0
+        // (assert ปิดอยู่) แล้วค้างอยู่อย่างนั้นเพราะ clk_noc ไม่ tick ให้ FIFO ระบาย
+        // พอ f_past_valid ขึ้นค่อยพัง — artefact ของ induction ไม่ใช่สถานะที่ไปถึงได้
+        always @(*) begin
+            if (rst_n) assert_close_pend_only_open: assert((tx_close_pend & ~tx_pkt_open) == '0);
+        end
+
         // -------------------------------------------------------------
         // COVER
         // -------------------------------------------------------------
@@ -400,6 +462,15 @@ module gals_node_wrapper #(
                 // cover นี้ยืนยันว่าสถานะนั้นไปถึงได้จริง ไม่ใช่แค่กังวลบนกระดาษ
                 cover_vc0_waits_behind_vc1:
                     cover(!tx_empty[0] && !tx_empty[1] && m_noc_tid == 2'b10);
+            end
+        end
+
+        // เส้นทางปิดแพกเกจค้าง (bug #7) ไปถึงได้จริง: tid เสียตอนแพกเกจเปิด
+        // แล้ว tlast สังเคราะห์ถูกเขียนลงคิว — อยู่โดเมน clk_host จึงแยกบล็อก
+        always @(posedge clk_host) begin
+            if (rst_n && NUM_VCS == 2) begin
+                cover_tx_force_close: cover(|tx_close_acc);
+                cover_tx_force_close_both: cover(tx_close_acc == 2'b11);
             end
         end
     `endif

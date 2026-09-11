@@ -11,7 +11,19 @@
 #   assert_eject_tid        - ป้าย VC ที่ส่งให้ host เป็น one-hot ตอนมี valid
 #   assert_eject_tid_onehot0 - ป้าย VC ไม่ multi-hot ไม่ว่ากรณีใด
 #   assert_bad_dest_blocked - flit ที่จ่าหน้านอกกระดานไม่ถูกปล่อยเข้าเมช
-#   assert_good_dest_passes - ตัวกรองไม่แตะของที่ถูกต้อง
+#   assert_local_in_range   - ทุกอย่างที่เข้า router ทาง LOCAL จ่าหน้าในกระดาน (รวม tlast สังเคราะห์)
+#   assert_local_tid_onehot - และป้าย VC one-hot เสมอ
+#   assert_good_flit_passes - ตัวกรองไม่แตะของที่ถูกต้อง
+#   assert_close_pend_only_open / assert_host_held_while_closing
+#                           - ตัวปิดแพกเกจค้าง (bug #7) ปิดเฉพาะ VC ที่เปิดจริง และกัน host ระหว่างปิด
+#
+# bug #7 (HANDOFF 3c): เดิมต้อง assume ว่า s_tid เป็น one-hot ถอดแล้ว assert_eject_dest
+# พังที่สเต็ป 4 — flit ที่ถูกตัวกรองปฏิเสธพา tlast หายไปด้วย แพกเกจบน VC นั้นค้างเปิด
+# แล้วกลืน flit ถัดไปไปส่งผิดโหนด ตอนนี้หัวข้อ 2.2 ของโมดูลยิง tlast สังเคราะห์ปิด
+# แพกเกจค้างเมื่อมี flit ถูกปฏิเสธ assume one-hot จึงถอดออกแล้ว solver ยิง tid ได้
+# ทุกค่า 00..11 และ assert_eject_dest ผ่าน bmc depth 10 ด้วยตัวเอง (7m42s, abc bmc3)
+# cover_force_close (สเต็ป 4) กับ cover_deliver_after_close (สเต็ป 5) ยืนยันว่า
+# เส้นทางปิดถูกเดินจริงและท้ายสังเคราะห์เดินถึงปลายทาง
 #
 # รอบก่อนต้อง assume ว่า s_tdest อยู่ในกระดาน ไม่งั้น assert_edge_* พังจริง
 # ตอนนี้หัวข้อ 0 ของตัวโมดูลกรอง flit นอกกระดานออกก่อนเข้าเมชแล้ว จึงถอด assume
