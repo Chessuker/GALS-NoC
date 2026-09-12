@@ -788,7 +788,10 @@ The same day closed two other silicon gaps:
   Wrapper formal assumes `rst_host_n == rst_noc_n` (the properties were written for a common
   reset; `reset_sync` releases the two within a few idle cycles). Prove + cover PASS.
   `tb_traffic_node_agent` 10/10, 6/6 regression and stress sim identical to baselines, board
-  clean at WNS +0.977 ns. The UART bitstream has **not** been rebuilt with this change yet.
+  clean at WNS +0.977 ns. The UART build was rebuilt the same day and re-run on the board
+  (`hw_logs/uart_roundtrip_20260912_reset_sync.log`): CDC Critical 0 there too, 6/6 round-trips,
+  `tid=00` flagged at node 00, counters identical to the pre-change run. Its `dest_err_node[3:1]`
+  are now reported constant, correctly: the three loopback nodes always echo to node 00.
 
 - **`report_cdc` now runs in the build flow, and it found five real criticals.**
   `timing.xdc` declares the five clocks asynchronous, so STA never analyses a path between

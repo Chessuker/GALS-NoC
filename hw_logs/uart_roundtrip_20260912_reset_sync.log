@@ -1,0 +1,38 @@
+# hardware run: UART build (arty_gals_noc_wrapper), Arty A7-100T, 2026-09-12 (second run of the day)
+# RTL: feature/4-silicon-fault-campaign — per-domain reset_sync in the top and through gals_noc_top /
+#      gals_node_wrapper; MMCM reset no longer tied to the button
+# synth: 484 MARK_DEBUG nets -> 5 ILA / 59 probes / 481 bits (dest_err_node[3:1] constant: the three
+#        loopback nodes always echo to node 00, so their destination filters fold; [0], the PC-driven
+#        node, is live). WNS +0.326 ns on the usual router-0 -> wrapper RX RAM path (80% routing).
+# report_cdc: Critical 0 (CDC-3 132, CDC-6 40, CDC-9 2, CDC-15 384)
+# flow: hw_scripts/batch_uart_session.tcl (one hw_server session, file handshake) +
+#       hw_scripts/uart_roundtrip.py, read with hw_scripts/read_ila_flags.py
+#
+# (a) fresh after programming: all counters 0
+# (b) after positive round-trip (port open -> reset -> 244 flits):
+    dest=0101 vc=1 len=149 -> got 149 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0100 vc=0 len=  5 -> got   5 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0101 vc=0 len= 32 -> got  32 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0100 vc=1 len= 32 -> got  32 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0001 vc=0 len= 13 -> got  13 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0001 vc=1 len= 13 -> got  13 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    UART ROUNDTRIP PASS
+    ILA (b):
+       dest_err_cnt[15:0]                               0
+       ecc_dbe_cnt[15:0]                                0
+       ecc_sbe_cnt[15:0]                                0
+       tid_err_cnt[15:0]                                0
+       tid_err_node[3:0]                                0
+       mon_flit_cnt[31:0]                               244
+       mon_pkt_cnt[31:0]                                6
+       mon_rx_flit_cnt[31:0]                            244
+       mon_stall_cnt[31:0]                              0
+# (c) after the negative case (tid=00 packet): nothing echoes, host_tid_err at node 00, uart_noc_host
+#     wedged in P_PUSH_NOC (stall climbs 1/cycle) until the next reset — as designed, as before
+    ILA (c):
+       dest_err_cnt[15:0]                               0
+       tid_err_cnt[15:0]                                1
+       tid_err_node[3:0]                                1
+       mon_flit_cnt[31:0]                               0
+       mon_stall_cnt[31:0]                              202101530
+# verdict: identical to hw_logs/uart_roundtrip_20260912_tidguard_bug7.log — the reset change is transparent on silicon.
