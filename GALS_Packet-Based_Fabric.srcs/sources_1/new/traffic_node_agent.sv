@@ -264,8 +264,19 @@ module traffic_node_agent #(
     // ดังนั้นไฟเขียวจะไม่ติดบน fabric ที่ตายอีกต่อไป
     // ILA ยังอ่าน test_done / state_dbg ดิบได้ตามเดิม ไว้แยกว่า
     // "ยังไม่จบ" กับ "จบแต่ตาย" ออกจากกัน ส่วน stuck_seen บอกว่า node ไหนตาย
-    assign done = test_done && !stuck_seen;
-    assign err  = (rx_err_cnt != 32'd0);
+    // ทั้งสองตัวข้ามไป clk_h00 ผ่าน sync_2stage ใน noc_stress_tester จึงต้องออกจาก
+    // รีจิสเตอร์ตรงๆ ไม่ใช่จาก AND / ตัวเปรียบเทียบ 32 บิต — report_cdc (2026-09-12)
+    // จับ done ของสาม sender เป็น CDC-10 Critical (combinational logic before a
+    // synchronizer) ช้าลงหนึ่งไซเคิลบนสัญญาณที่ตั้งแล้วค้าง ไม่มีผลอะไร
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            done <= 1'b0;
+            err  <= 1'b0;
+        end else begin
+            done <= test_done && !stuck_seen;
+            err  <= (rx_err_cnt != 32'd0);
+        end
+    end
 
     //========================================================== ILA taps
     (* mark_debug = "true", dont_touch = "true" *) logic [1:0] state_dbg;

@@ -1121,9 +1121,15 @@ boundaries is not something the timing report can confirm. It comes from constru
 - `sync_2stage`'s output register carries `ASYNC_REG = "TRUE"`, which tells Vivado to
   place the two flops in the same slice and not to optimise them apart.
 
-Anything that crosses domains by another route is a bug that no tool here will flag.
-`README.md` suggests `report_cdc -details` as the check; it has not been made part of
-the scripted flow.
+Anything that crosses domains by another route is a bug the timing report will not flag.
+`report_cdc` is the tool that does, and since 2026-09-12 `batch_impl.tcl` runs it on every
+routed design. Its first run found five criticals, all one pattern: a sticky flag
+OR-reduced or gated in a LUT and fed straight into a two-flop synchroniser (`|ecc_dbe`,
+`|tid_err_node`, `test_done && !stuck_seen`). A LUT can glitch while its inputs change
+and the synchroniser captures the glitch as a real 1, so a sticky error flag could
+false-alarm. Fixed by registering the result in the source domain first. The remaining
+report entries are the gray pointers (CDC-6), the FIFO RAM read ports (CDC-15) and the
+reset synchronisers (CDC-9), all expected.
 
 Simulation has no metastability. Every crossing in xsim resolves cleanly whatever the
 phase. The board is the only place the synchroniser design is actually exercised, and
@@ -1241,9 +1247,12 @@ Things that only show up here:
   bitstream with `ECC_INJECT_SBE` read `ecc_sbe_cnt = 3`, `node_sbe = 1111`,
   `ecc_dbe_cnt = 0` with traffic still error-free. Now a 0 means silent. The double-bit
   injector has only been run in simulation.
-- `dest_err_node[3:0]` is missing from the stress build's ILA: its clock did not resolve
-  through the script's driver walk. `dest_err_cnt` is present, so the question "did it
-  happen" is answerable and "which node" is not. `tid_err_node` did resolve.
+- `dest_err_node[3:0]` is missing from the stress build's ILA because it is **constant**:
+  every agent's `tx_tdest` is the parameter `DEST_ID`, synthesis proves the destination
+  filters can never reject anything, deletes the `dest_err` register, and `dont_touch`
+  leaves a buffer of ground with no clock. `dest_err_cnt` reads 0 for the same reason. A
+  probe that is constant by construction is not evidence; `setup_debug.tcl` now lists such
+  nets separately. `tid_err_node` is live because `tid` alternates per packet.
 - The `MARK_DEBUG` net count is the fingerprint of what was instrumented: 924 (original),
   928 (+watchdog), 1024 (+`max_gap`), 1064 (+ECC), 1084 (+`dest_err`), 1104
   (+`tid_err`). Any other number means Set Up Debug was not re-run after an RTL change,
@@ -1317,8 +1326,10 @@ Everything is on the board now: bug #7 (stress build, clean), `ECC_INJECT_DBE`
 (`ecc_dbe_cnt` 3, `node_dbe` `1111`, and 0 sequence errors because two deterministic
 flips of the same bit across the TX and RX FIFOs cancel, which is explained in the log),
 and the UART build with the `tid` guard (6/6 round-trips, `tid=00` dropped and flagged).
-The constant-`tdest` guard (branch `feature/3-dest-constant-guard`) also ran clean on the
-board the same day (0 errors, `dest_err` 0 on legal traffic, 96.8%, WNS +0.489 ns).
+The constant-`tdest` guard (PR #5) also ran clean on the board the same day (0 errors,
+96.8%, WNS +0.489 ns); note that `dest_err` in the stress build is constant-folded to 0 by
+synthesis because the agents' `tdest` is a parameter, so that reading says nothing about
+the filter (§10.8). The UART build is where the destination filters are live on silicon.
 Only bug #5's failure mode has no silicon observation, because the fix removes the
 trigger. Every build, program and capture on 2026-09-12 was done by the batch scripts in
 `hw_scripts/`, no GUI.
@@ -1378,8 +1389,6 @@ originals before touching the build flow.
 
 ## 13. What is still open
 
-- **`dest_err_node[3:0]` is absent from the stress build's ILA** (clock did not resolve);
-  `dest_err_cnt` survives.
 - **ECC covers the payload only**, and SECDED misreports three or more flipped bits.
 - **The branch is not merged.** `feature/2-ecc-injection-and-tid-guard` carries the ECC
   injector, the `tid` guard and bug #7 on top of `main`.

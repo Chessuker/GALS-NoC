@@ -89,6 +89,15 @@ proc f_net_clock {n {depth 0}} {
     set cell [get_cells -quiet -of_objects $dp]
     if {$cell eq ""} { return "" }
 
+    # เน็ตที่ถูก synthesis พิสูจน์ว่าเป็นค่าคงที่ (ตัวขับคือ GND/VCC หรือ LUT1 ที่บัฟเฟอร์
+    # มัน เพราะ dont_touch กันชื่อไว้แต่กันตรรกะไม่ได้) — ไม่มีคล็อกให้หาเพราะไม่มีตรรกะ
+    # เหลือ รายงานแยกจาก "หาคล็อกไม่เจอ" เพราะความหมายต่างกันคนละเรื่อง: probe นี้
+    # จะอ่านได้ค่าเดียวตลอดกาลบนบอร์ด ต่อให้ต่อเข้า ILA ได้ก็ไม่บอกอะไร
+    # เจอจริง: dest_err_node ของ build stress — tx_tdest ของ agent เป็นค่าคงที่ตอน
+    # สังเคราะห์ dest_ok/frame_ok จึงเป็น 1 เสมอ รีจิสเตอร์ dest_err ถูกตัดทิ้งทั้งตัว
+    set ref [get_property REF_NAME $cell]
+    if {$ref eq "GND" || $ref eq "VCC"} { return "CONST" }
+
     set ck [get_clocks -quiet -of_objects [get_pins -quiet -of_objects $cell -filter {IS_CLOCK}]]
     if {[llength $ck] == 1} { return [f_real_clock [get_property NAME [lindex $ck 0]]] }
 
@@ -103,6 +112,8 @@ proc f_net_clock {n {depth 0}} {
     }
     return ""
 }
+# ค่าคงที่ให้ถือว่า "ไม่มีคล็อก" ตอนจัดกลุ่ม แต่จำไว้แยกเพื่อรายงาน
+array unset isconst
 
 # แยกชื่อบัสกับดัชนี:  foo[12] -> base "foo", index 12
 proc f_split_bus {nm} {
@@ -132,7 +143,7 @@ foreach n $dbg_nets {
 # ซึ่งเป็นความผิดพลาดแบบที่โปรเจกต์นี้โดนมาหลายรอบ — ILA ดูเหมือนทำงาน แต่ข้อมูลหาย
 array unset bus_clks
 foreach nm [array names clk_of] {
-    if {$clk_of($nm) ne ""} {
+    if {$clk_of($nm) ne "" && $clk_of($nm) ne "CONST"} {
         set b $base_of($nm)
         if {![info exists bus_clks($b)] ||
             [lsearch -exact $bus_clks($b) $clk_of($nm)] < 0} {
@@ -158,6 +169,10 @@ if {$inherited > 0} {
 array unset grp
 array unset noclk
 foreach nm [array names clk_of] {
+    if {$clk_of($nm) eq "CONST"} {
+        set isconst($nm) 0
+        continue
+    }
     if {$clk_of($nm) eq ""} {
         set noclk($nm) 0
         continue
@@ -255,6 +270,12 @@ foreach core [lsort [array names clk_of_core]] {
     puts [format "   %-10s clk=%-34s probe=%d" $core $clk $p]
 }
 puts "   dbg_hub    clk=$hub_clk_net"
+if {[array size isconst] > 0} {
+    puts "---------------------------------------------------"
+    puts "setup_debug: [array size isconst] เน็ตเป็นค่าคงที่หลังสังเคราะห์ (ไม่เข้า ILA — อ่านได้ค่าเดียวตลอดกาล):"
+    foreach nm [lsort [array names isconst]] { puts "   $nm" }
+    puts "   ถ้าเป็นธง error แปลว่าใน build นี้ความผิดนั้นเกิดไม่ได้โดยโครงสร้าง ค่า 0 บนบอร์ดจึงไม่ใช่หลักฐาน"
+}
 if {[array size noclk] > 0} {
     puts "---------------------------------------------------"
     puts "setup_debug: ข้าม [array size noclk] เน็ตที่หาคล็อกไม่ได้ (ไม่ได้เข้า ILA):"
