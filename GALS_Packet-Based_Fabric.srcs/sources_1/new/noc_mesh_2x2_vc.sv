@@ -73,7 +73,9 @@ module noc_mesh_2x2_vc #(
 
     // สถานะตัวปิดแพกเกจค้างต่อโหนด (หัวข้อ 2.2) ยกออกมาระดับโมดูลให้บล็อก FORMAL อ้างได้
     logic [3:0]              ing_closing;
+    logic [3:0]              ing_frame_ok;   // flit ตรงกับหัวแพกเกจที่เปิดค้างอยู่ (หัวข้อ 2.3)
     logic [3:0][NUM_VCS-1:0] ing_pkt_open;
+    logic [3:0][NUM_VCS-1:0][3:0] ing_pkt_dest;
     logic [3:0][NUM_VCS-1:0] ing_close_pend;
     logic [3:0][NUM_VCS-1:0] ing_close_acc;
 
@@ -149,14 +151,19 @@ module noc_mesh_2x2_vc #(
 
     // ยกธงตั้งแต่ตอน *เสนอ* flit ที่ผิด ไม่ต้องรอให้ถูกรับ — ความผิดอยู่ที่การยิง
     // ปลายทางนอกกระดาน ไม่ใช่ที่จังหวะ handshake
+    //
+    // dest_err ครอบสองความผิดเรื่องปลายทาง: จ่าหน้านอกกระดาน (dest_ok) และจ่าหน้า
+    // ไม่ตรงกับหัวแพกเกจที่ยังเปิดค้างอยู่บน VC เดียวกัน (ing_frame_ok หัวข้อ 2.3)
+    // ใช้ธงเดียวกันเพราะความหมายเดียวกัน — ปลายทางของ flit นี้รับไม่ได้ — และเส้นทาง
+    // รายงาน/ILA/LED ที่มีอยู่ไม่ต้องแตะ
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             dest_err <= '0;
             tid_err  <= '0;
         end else begin
             for (int i = 0; i < 4; i++) begin
-                if (s_valid[i] && !dest_ok[i]) dest_err[i] <= 1'b1;
-                if (s_valid[i] && !tid_ok[i])  tid_err[i]  <= 1'b1;
+                if (s_valid[i] && !(dest_ok[i] && ing_frame_ok[i])) dest_err[i] <= 1'b1;
+                if (s_valid[i] && !tid_ok[i])                        tid_err[i]  <= 1'b1;
             end
         end
     end
@@ -167,10 +174,9 @@ module noc_mesh_2x2_vc #(
     generate
         for (genvar i = 0; i < 4; i++) begin : LOCAL_PORTS
             // 2.1 เชื่อมพอร์ต LOCAL (0) ลงไปหา Host (ผ่าน Wrapper)
-            // flit ที่จ่าหน้านอกกระดาน / tid ไม่ one-hot ไม่ถูกปล่อยเข้าเมชเลย
-            // (เหตุผลอยู่หัวข้อ 0 และ 0b)
-            wire flit_ok = dest_ok[i] && tid_ok[i];
-            wire reject  = s_valid[i] && !flit_ok;
+            // flit ที่จ่าหน้านอกกระดาน / tid ไม่ one-hot / จ่าหน้าไม่ตรงหัวแพกเกจ
+            // ไม่ถูกปล่อยเข้าเมชเลย (เหตุผลอยู่หัวข้อ 0, 0b และ 2.3)
+            // flit_ok/reject นิยามอยู่ถัดจากตัวติดตามแพกเกจข้างล่าง เพราะต้องใช้มัน
 
             // ---------------------------------------------------------
             // 2.2 ปิดแพกเกจที่ค้างเปิดอยู่เมื่อมี flit ถูกปฏิเสธ (bug #7)
@@ -202,6 +208,37 @@ module noc_mesh_2x2_vc #(
             logic [NUM_VCS-1:0]      close_pend;
             logic [NUM_VCS-1:0]      close_sel;   // one-hot: VC ที่กำลังยิงปิด
             logic                    closing;
+
+            // ---------------------------------------------------------
+            // 2.3 ปลายทางต้องคงที่ตลอดแพกเกจ — บังคับ ไม่ใช่สมมติ
+            //
+            // router ตัดสินเส้นทางจากหัวแพกเกจแล้วล็อกพอร์ตออกไว้จนถึง tlast
+            // (packet_arbiter) ถ้า flit ตัวถัดไปจ่าหน้าคนละที่ router ก็ยังส่งมันออก
+            // พอร์ตที่ล็อกไว้เหมือนเดิม = ส่งผิดโหนดเงียบๆ ไม่มีธง จนถึงตอนนี้ข้อนี้
+            // เป็นแค่ assume ในบล็อก f_wf ของ router และใน formal ของเมช ซึ่งเป็น
+            // สัญญาที่ host ต้องรักษาเอง แต่ host ที่ยิง tid/tdest เพี้ยนได้ คือ host
+            // ที่ไว้ใจเรื่องนี้ไม่ได้อยู่แล้ว (บทเรียนเดียวกับ bug #7)
+            //
+            // ตัวติดตาม pkt_open/pkt_dest ของ 2.2 รู้อยู่แล้วว่าแต่ละ VC มีแพกเกจเปิด
+            // อยู่ไหมและจ่าหน้าไปไหน จึงเทียบได้ตรงๆ: flit ที่ชี้ VC ที่เปิดอยู่แต่
+            // tdest ไม่ตรงหัว = ปฏิเสธเหมือน flit ผิดตัวอื่น (ทิ้ง + dest_err + ปิด
+            // แพกเกจค้างด้วยท้ายสังเคราะห์) แพกเกจเดิมถึงปลายทางที่ถูกแบบขาดท้าย
+            // ส่วนที่เหลือของมันกลายเป็นแพกเกจใหม่ไปยังปลายทางที่ flit เหล่านั้นจ่าหน้า
+            // ซึ่งอย่างน้อยก็เป็นที่ที่ flit นั้นบอกว่าจะไป ไม่ใช่ที่ที่หัวเก่าเคยบอก
+            //
+            // เทียบเฉพาะ VC ที่ tid ชี้ (tid เสียถูก tid_ok จับไปแล้ว) และเฉพาะตอน
+            // แพกเกจเปิดอยู่ — หัวแพกเกจใหม่จ่าหน้าไปไหนก็ได้
+            // ---------------------------------------------------------
+            logic frame_ok;
+            always_comb begin
+                frame_ok = 1'b1;
+                for (int v = 0; v < NUM_VCS; v++)
+                    if (s_tid[i][v] && pkt_open[v] && (pkt_dest[v] != s_tdest[i]))
+                        frame_ok = 1'b0;
+            end
+
+            wire flit_ok = dest_ok[i] && tid_ok[i] && frame_ok;
+            wire reject  = s_valid[i] && !flit_ok;
 
             always_comb begin
                 close_sel = '0;
@@ -260,7 +297,9 @@ module noc_mesh_2x2_vc #(
             end
 
             assign ing_closing[i]    = closing;
+            assign ing_frame_ok[i]   = frame_ok;
             assign ing_pkt_open[i]   = pkt_open;
+            assign ing_pkt_dest[i]   = pkt_dest;
             assign ing_close_pend[i] = close_pend;
             assign ing_close_acc[i]  = close_acc;
 
@@ -435,8 +474,11 @@ module noc_mesh_2x2_vc #(
                     end
                 end
 
-                // ทุก flit ในแพกเกจเดียวกันต้องจ่าหน้าที่เดียวกัน
-                // (เหตุผลเต็มอยู่ใน router_5port_mesh_vc.sv บล็อก f_wf)
+                // ทุก flit ในแพกเกจเดียวกันต้องจ่าหน้าที่เดียวกัน — เดิมเป็น assume ที่นี่
+                // (เหตุผลเต็มอยู่ใน router_5port_mesh_vc.sv บล็อก f_wf) ตอนนี้หัวข้อ 2.3
+                // บังคับที่ขาเข้าแล้ว จึงปล่อยให้ solver เปลี่ยน tdest กลางแพกเกจได้
+                // และพิสูจน์แทนว่าสิ่งที่ router เห็นทาง LOCAL ยังคงที่ต่อแพกเกจเสมอ
+                // (assert_local_dest_stable ข้างล่าง) ตัวติดตามนี้เก็บไว้ใช้กับ cover
                 for (genvar vc = 0; vc < NUM_VCS; vc++) begin : f_host_vc
                     logic       f_in_pkt;
                     logic [3:0] f_in_dest;
@@ -455,9 +497,17 @@ module noc_mesh_2x2_vc #(
                         end
                     end
 
+                end
+
+                // สิ่งที่ router พึ่ง: บนพอร์ต LOCAL ทุก flit ของแพกเกจเดียวกันจ่าหน้า
+                // ที่เดียวกับหัว ตรวจด้วยตัวติดตามของ RTL เอง (ing_pkt_open/pkt_dest)
+                // เพราะนั่นคือสิ่งที่ตัวกรอง 2.3 ใช้ตัดสิน — ถ้ามันหลุด assert นี้พัง
+                // (generate/genvar ไม่ใช่ for ธรรมดา: label ซ้ำใน loop ทำ yosys+slang พัง)
+                for (genvar v = 0; v < NUM_VCS; v++) begin : f_dest_stable
                     always @(*) begin
-                        if (rst_n && f_in_pkt && s_valid[i] && s_tid[i][vc])
-                            assume(s_tdest[i] == f_in_dest);
+                        if (rst_n && r_valid[i][LOCAL] && r_tid[i][LOCAL][v] && ing_pkt_open[i][v])
+                            assert_local_dest_stable:
+                                assert(r_dst[i][LOCAL] == ing_pkt_dest[i][v]);
                     end
                 end
             end
@@ -507,8 +557,15 @@ module noc_mesh_2x2_vc #(
                             assert_local_tid_onehot: assert(f_onehot(r_tid[i][LOCAL]));
                         end
                         // ตัวกรองห้ามแตะของที่ถูกต้อง ไม่ใช่แค่กันของผิด
-                        if (s_valid[i] && dest_ok[i] && tid_ok[i] && !ing_closing[i]) begin
+                        // (ถูกต้อง = ในกระดาน + tid one-hot + จ่าหน้าตรงหัวแพกเกจที่เปิดอยู่)
+                        if (s_valid[i] && dest_ok[i] && tid_ok[i] && ing_frame_ok[i]
+                                       && !ing_closing[i]) begin
                             assert_good_flit_passes: assert(r_valid[i][LOCAL]);
+                        end
+                        // และของที่จ่าหน้าไม่ตรงหัวต้องไม่หลุดเข้า router (นอกจากท้ายสังเคราะห์)
+                        if (s_valid[i] && !ing_frame_ok[i]) begin
+                            assert_frame_err_blocked:
+                                assert(!r_valid[i][LOCAL] || ing_closing[i]);
                         end
                         // ตัวปิดแพกเกจค้าง: ปิดได้เฉพาะ VC ที่เปิดอยู่จริง
                         // ไม่งั้นจะยิง tlast ลอยๆ ใส่ VC ว่าง = แพกเกจผีหนึ่ง flit
@@ -556,6 +613,9 @@ module noc_mesh_2x2_vc #(
                 // (ถ้า cover นี้ไม่ถึง แปลว่า assert_bad_dest_blocked ผ่านแบบ vacuous)
                 cover_dest_err_raised: cover(|dest_err);
                 cover_tid_err_raised:  cover(|tid_err);
+                // ตัวกรอง 2.3 ทำงานได้จริง: flit ในกระดาน tid ถูก แต่จ่าหน้าไม่ตรงหัว
+                cover_frame_err_raised:
+                    cover(s_valid[0] && dest_ok[0] && tid_ok[0] && !ing_frame_ok[0]);
 
                 // ตัวปิดแพกเกจค้าง (2.2) ไปถึงได้จริง: มีแพกเกจเปิดอยู่แล้ว flit ผิดโผล่มา
                 // แล้ว tlast สังเคราะห์ถูก router รับ — ถ้าไม่ถึง assert ข้างบนคือ vacuous

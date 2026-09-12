@@ -16,6 +16,11 @@
 #   assert_good_flit_passes - ตัวกรองไม่แตะของที่ถูกต้อง
 #   assert_close_pend_only_open / assert_host_held_while_closing
 #                           - ตัวปิดแพกเกจค้าง (bug #7) ปิดเฉพาะ VC ที่เปิดจริง และกัน host ระหว่างปิด
+#   assert_frame_err_blocked - flit ที่จ่าหน้าไม่ตรงหัวแพกเกจที่เปิดอยู่ไม่หลุดเข้า router (หัวข้อ 2.3)
+#   assert_local_dest_stable - สิ่งที่ router เห็นทาง LOCAL: ทุก flit ของแพกเกจจ่าหน้าเท่าหัวเสมอ
+#                           - เดิมเป็น assume (ทั้งที่นี่และ f_wf ของ router) ตอนนี้ solver เปลี่ยน
+#                             tdest กลางแพกเกจได้ตามใจ และข้อนี้กลายเป็นข้อพิสูจน์ (2026-09-12)
+#                             cover_frame_err_raised ยืนยันว่าตัวกรองถูกเดินจริง
 #
 # bug #7 (HANDOFF 3c): เดิมต้อง assume ว่า s_tid เป็น one-hot ถอดแล้ว assert_eject_dest
 # พังที่สเต็ป 4 — flit ที่ถูกตัวกรองปฏิเสธพา tlast หายไปด้วย แพกเกจบน VC นั้นค้างเปิด
