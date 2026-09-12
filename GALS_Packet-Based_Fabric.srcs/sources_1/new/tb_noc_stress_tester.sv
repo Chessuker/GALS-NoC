@@ -60,6 +60,12 @@ module tb_noc_stress_tester;
     // เห็น gap พุ่ง ส่วนที่เหลือของแพกเกจที่ถูกตัดจะไปโผล่ที่ idx2 เป็นแพกเกจใหม่
     // (agent_10 จะนับเป็น sequence error — เป็นการวัด ไม่ใช่ pass/fail)
     parameter int BAD_DEST = 0;
+    // ฉีดผ่าน fault_injector ตัวจริงใน noc_stress_tester (เส้นทางเดียวกับบนบอร์ดที่ VIO
+    // ขับ) แทนการ force สายใน TB — พิสูจน์ RTL ของตัวฉีดเอง ก่อนเชื่อผลจากซิลิคอน
+    //   1 = ตัด tvalid ถาวรกลางแพกเกจ (= KILL_MIDPKT)   2 = tid 00   3 = tid 11
+    //   4 = tdest 0001 ในกระดานผิดโหนด (= BAD_DEST)     5 = tdest 1000 นอกกระดาน (bug #6)
+    // ยิงที่ 2**12 ไซเคิลของ clk_h11 หลังรีเซ็ต (บอร์ดใช้ 2**20)
+    parameter int FAULT_MODE = 0;
 
     logic clk_noc = 0, clk_h00 = 0, clk_h01 = 0, clk_h10 = 0, clk_h11 = 0;
     logic rst_n;
@@ -88,7 +94,8 @@ module tb_noc_stress_tester;
     logic [1:0] t00_rx_tready,t01_rx_tready,t10_rx_tready,t11_rx_tready;
 
     gals_noc_top uut_noc_top (
-        .clk_noc(clk_noc), .rst_n(rst_n),
+        .clk_noc(clk_noc),
+        .rst_n_noc(rst_n), .rst_n_h00(rst_n), .rst_n_h01(rst_n), .rst_n_h10(rst_n), .rst_n_h11(rst_n),
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
         .h00_tx_tdata(t00_tx_tdata), .h00_tx_tdest(t00_tx_tdest), .h00_tx_tid(t00_tx_tid), .h00_tx_tlast(t00_tx_tlast), .h00_tx_tvalid(t00_tx_tvalid), .h00_tx_tready(t00_tx_tready),
         .h00_rx_tdata(t00_rx_tdata), .h00_rx_tdest(t00_rx_tdest), .h00_rx_tid(t00_rx_tid), .h00_rx_tlast(t00_rx_tlast), .h00_rx_tvalid(t00_rx_tvalid), .h00_rx_tready(t00_rx_tready),
@@ -102,13 +109,16 @@ module tb_noc_stress_tester;
 
     logic pass_g1, pass_g2, any_fail;
 
+    logic fault_active, fault_fired;
     noc_stress_tester #(
         .PATTERN(PATTERN), .VC_MODE(VC_MODE),
         .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
-        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)
+        .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W), .FAULT_FIRE_LOG(12)
     ) u_stress (
+        .fault_mode(FAULT_MODE[3:0]), .fault_arm(FAULT_MODE != 0),
+        .fault_active(fault_active), .fault_fired(fault_fired),
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
-        .rst_n(rst_n),
+        .rst_n_h00(rst_n), .rst_n_h01(rst_n), .rst_n_h10(rst_n), .rst_n_h11(rst_n),
         .t00_tx_tdata(t00_tx_tdata), .t00_tx_tdest(t00_tx_tdest), .t00_tx_tid(t00_tx_tid), .t00_tx_tlast(t00_tx_tlast), .t00_tx_tvalid(t00_tx_tvalid), .t00_tx_tready(t00_tx_tready),
         .t00_rx_tdata(t00_rx_tdata), .t00_rx_tdest(t00_rx_tdest), .t00_rx_tid(t00_rx_tid), .t00_rx_tlast(t00_rx_tlast), .t00_rx_tvalid(t00_rx_tvalid), .t00_rx_tready(t00_rx_tready),
         .t01_tx_tdata(t01_tx_tdata), .t01_tx_tdest(t01_tx_tdest), .t01_tx_tid(t01_tx_tid), .t01_tx_tlast(t01_tx_tlast), .t01_tx_tvalid(t01_tx_tvalid), .t01_tx_tready(t01_tx_tready),
@@ -432,7 +442,7 @@ module tb_noc_stress_tester;
             // จากตัวเลข throughput เพราะแพกเกจแค่ "หาย" ไม่ได้ผิดค่า
             $display("    DEST: err_cnt=%0d  node=%04b",
                      uut_noc_top.dest_err_cnt, uut_noc_top.dest_err_node);
-            if (BAD_DEST == 0) begin
+            if (BAD_DEST == 0 && !(FAULT_MODE == 4 || FAULT_MODE == 5)) begin
                 if (uut_noc_top.dest_err_cnt != 0) begin
                     $display("  [FAIL] มี flit จ่าหน้านอกกระดาน/ไม่ตรงหัวแพกเกจ ถูกทิ้ง (node=%04b)",
                              uut_noc_top.dest_err_node);
@@ -454,7 +464,7 @@ module tb_noc_stress_tester;
             // ทั้งสองแบบทำให้แพกเกจหายเงียบเหมือนกัน หาไม่เจอจากตัวเลข throughput
             $display("    TID : err_cnt=%0d  node=%04b",
                      uut_noc_top.tid_err_cnt, uut_noc_top.tid_err_node);
-            if (BAD_TID == 0) begin
+            if (BAD_TID == 0 && !(FAULT_MODE == 2 || FAULT_MODE == 3)) begin
                 if (uut_noc_top.tid_err_cnt != 0) begin
                     $display("  [FAIL] มี flit ที่ tid ไม่ใช่ one-hot ถูกทิ้ง (node=%04b)",
                              uut_noc_top.tid_err_node);
@@ -469,6 +479,40 @@ module tb_noc_stress_tester;
                 end else
                     $display("  [PASS] ตัวกรองจับ tid เสียได้ (cnt=%0d node=%04b)",
                              uut_noc_top.tid_err_cnt, uut_noc_top.tid_err_node);
+            end
+
+            // ---- fault_injector : ต้องได้ยิงจริง และผลต้องตรงกับที่ force ในซิมเคยให้
+            if (FAULT_MODE != 0) begin
+                $display("");
+                $display("    FAULT_MODE=%0d  fired=%0d  active_at_end=%0d", FAULT_MODE, fault_fired, fault_active);
+                if (!fault_fired) begin
+                    $display("  [FAIL] fault_injector ไม่ได้ยิงเลย (ถึงเวลาแล้วไม่เจอกลางแพกเกจ?)");
+                    fails++;
+                end
+                case (FAULT_MODE)
+                    1: begin  // ตัด tvalid: agent อื่นต้องรอด (bug #5 timeout) agent_11 เองยังนับ tx_fire ได้
+                        automatic int unsigned g01 = u_stress.agent_01.max_gap;
+                        automatic int unsigned g10 = u_stress.agent_10.max_gap;
+                        if (g01 > 4096 || g10 > 4096) begin
+                            $display("  [FAIL] ตัด agent_11 แล้วโหนดอื่น gap พุ่ง (%0d / %0d) = พอร์ตค้าง", g01, g10);
+                            fails++;
+                        end else
+                            $display("  [PASS] fabric ฟื้นจากแพกเกจกำพร้าเอง: gap ของผู้รอด %0d / %0d", g01, g10);
+                    end
+                    2, 3: begin
+                        if (uut_noc_top.tid_err_cnt == 0) begin
+                            $display("  [FAIL] ฉีด tid เสียแล้วธงไม่ขึ้น"); fails++;
+                        end else
+                            $display("  [PASS] tid guard จับได้ (cnt=%0d node=%04b)", uut_noc_top.tid_err_cnt, uut_noc_top.tid_err_node);
+                    end
+                    4, 5: begin
+                        if (uut_noc_top.dest_err_cnt == 0) begin
+                            $display("  [FAIL] ฉีด tdest ผิดแล้วธงไม่ขึ้น"); fails++;
+                        end else
+                            $display("  [PASS] dest guard จับได้ (cnt=%0d node=%04b)", uut_noc_top.dest_err_cnt, uut_noc_top.dest_err_node);
+                    end
+                    default: ;
+                endcase
             end
 
             $display("");

@@ -23,6 +23,15 @@ if {[lsearch -exact [get_files -quiet *arty_stress_top.sv] $new_top] < 0} {
     puts "INFO: arty_stress_top.sv already in project"
 }
 set_property file_type SystemVerilog [get_files $new_top]
+# ---- 1b. ตัวฉีดความผิดพลาด (2026-09-12) ต้องอยู่ใน project ด้วย
+foreach fn {fault_injector.sv reset_sync.sv} {
+    set fi "$src_dir/$fn"
+    if {[lsearch -exact [get_files -quiet *$fn] $fi] < 0} {
+        add_files -norecurse -fileset sources_1 $fi
+        puts "INFO: added $fn"
+    }
+    set_property file_type SystemVerilog [get_files $fi]
+}
 
 # ---- 2. บังคับให้ไฟล์ที่แก้ไปแล้วถูกอ่านเป็น SystemVerilog
 foreach f {traffic_node_agent.sv noc_stress_tester.sv} {

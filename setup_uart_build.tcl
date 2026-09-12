@@ -18,7 +18,7 @@ set src_dir  "$proj_dir/GALS_Packet-Based_Fabric.srcs/sources_1/new"
 
 # ---- 1. ไฟล์ที่ build นี้ต้องใช้ (ตัว stress ไม่ได้ใช้สามตัวนี้)
 foreach f {arty_gals_noc_wrapper.sv uart_noc_host.sv uart_transceiver.sv
-           loopback_node_agent.sv} {
+           loopback_node_agent.sv reset_sync.sv} {
     set ff [get_files -quiet "$src_dir/$f"]
     if {$ff eq ""} {
         add_files -norecurse -fileset sources_1 "$src_dir/$f"

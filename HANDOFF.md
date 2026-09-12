@@ -1,9 +1,9 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-12. `main` is at PR #5 (`f07ddca`), tagged **`v1.0`**: seven bugs
-fixed, every flit-contract rule enforced in RTL and proved, silicon-validated. Branch
-`chore/housekeeping-cdc` on top: `report_cdc` in the build flow and the five CDC-10
-criticals it found fixed, plus the `dest_err_node` finding below.
+Last updated: 2026-09-12. `main` is at PR #6 (`9838825`); `v1.0` is tagged at `f07ddca`.
+Branch `feature/4-silicon-fault-campaign` on top: a runtime fault injector driven over JTAG,
+per-domain reset synchronisers (the CDC finding it forced), and the first silicon
+fault-injection campaign — every guard exercised on the board from one bitstream.
 
 Read this first if you're picking the project up cold.
 
@@ -183,6 +183,17 @@ Elaborate `work.tb_noc_mesh_2x2_gals` (not `xil_defaultlib.…` — that library
 inside the project), pass the switches as `-d HW_CLOCKS -d HS_VC_ALT -d SIM_DEBUG`, and
 drive xsim with a `run all; quit` tclbatch. Verified to reproduce
 `regress_hwclk_vcalt_dbg_20260819_150653.log` number-for-number before the fix went in.
+
+### Silicon fault campaign (stress build, one bitstream, ~6 min for all six modes)
+
+    vivado -mode batch -source hw_scripts/batch_fault_campaign.tcl -tclargs <out_root> [modes...]
+    python hw_scripts/summarize_campaign.py <out_root>
+
+Programs the current `arty_stress_top` bitstream, then per mode: VIO soft reset → mode + arm
+→ release → 2 s → Trigger Immediately on every ILA → `<out_root>/mode_N/iladata_*.csv`. Modes:
+0 none, 1 cut `tvalid` mid-packet, 2 `tid=00`, 3 `tid=11`, 4 `tdest=0001`, 5 `tdest=1000`.
+`vio_fault` must exist in the project (`hw_scripts/create_vio_fault.tcl`, one-off, already
+run). Expected signatures are printed beside each row.
 
 ### Hardware build (~5 min synth + impl)
 
@@ -721,6 +732,64 @@ The same day closed two other silicon gaps:
   `formal/packet_arbiter.sby` passes `prove`, so the lock/unlock logic bug #1 lives in is
   now under an unbounded proof — still run the full regression plus the stress tester
   before touching it again.
+- **Silicon fault-injection campaign: every guard exercised on the board, from one bitstream.**
+  `fault_injector.sv` sits between agent_11 and the fabric in `noc_stress_tester`; `vio_fault`
+  (a VIO core on `clk_h00`, `hw_scripts/create_vio_fault.tcl`) supplies soft reset, arm and
+  mode over JTAG, so the whole campaign runs in one `hw_server` session with no COM port and
+  no gotcha-9 resets. The injector fires at `2**FAULT_FIRE_LOG` (2^20 ≈ 15 ms into the 235 ms
+  window; the TB uses 2^12) and waits for a non-`tlast` flit to be accepted so the fault lands
+  mid-packet; modes 2–5 hold 2000 cycles, mode 1 holds forever. `tready` passes through, so
+  agent_11 keeps advancing on its own `tid` exactly as the TB `force`s did.
+
+  Simulation first: `tb_noc_stress_tester` `FAULT_MODE=1..5` drives the injector RTL (not a
+  `force`) and reproduces every signature the old `KILL_MIDPKT` / `BAD_TID` / `BAD_DEST` modes
+  gave. Then the board (`hw_logs/fault_campaign_20260912.log`):
+
+  | mode | fault | silicon result |
+  |---|---|---|
+  | 0 | none | gaps 217/38/119/105, no flags |
+  | 1 | `tvalid` cut mid-packet, permanent | survivors' `max_gap` **608 / 611** (the bug #5 release; was a permanent wedge), 0 seq errors, fabric alive |
+  | 2 | `tid=00` | `tid_err` node `1000`, gaps normal, 2 resync errors |
+  | 3 | `tid=11` | same |
+  | 4 | `tdest=0001` (wrong node) | `dest_err` node `1000`, agent_10 receives the 1777 redirected flits (sim: 1787), gaps normal |
+  | 5 | `tdest=1000` (off board) | `dest_err` node `1000`, nothing delivered, gaps normal, fabric alive |
+
+  Modes 4 and 5 are the **first live `dest_err` on a stress bitstream**: routing agent_11's
+  `tdest` through a runtime mux stops synthesis folding the filter away for node 3
+  (`dest_err_node[3]` is now a real probe; `[2:0]` remain constant, and `setup_debug.tcl` says
+  so). `stuck` reads 0000 even in mode 1 because the injector passes `tready` through and
+  agent_11 keeps "firing" into it — the fabric's reaction is the thing under test, not the
+  agent's watchdog.
+
+  One caveat on mode 2: a real host that sends `tid=00` stalls itself (its `tready` never
+  comes); the injector does not reproduce that stall, only the fabric's view (flit dropped,
+  flagged, no head-of-line damage). The host-side stall was shown separately in the UART
+  build (`hw_logs/uart_roundtrip_20260912_*`).
+
+- **Per-domain reset synchronisers, forced by the campaign, fixing a latent GALS gap.**
+  `global_rst_n = button & pll_locked` used to feed the async reset of every flop in all five
+  domains directly, so reset *deassertion* reached each flop with no relation to its clock
+  (recovery/removal unchecked). `report_cdc` never flagged it because the source was an
+  unclocked pin. The moment the VIO soft reset (a `clk_h00` flop) was ANDed into that net,
+  the report went to **CDC-7 Critical ×572**, one per flop in the other domains: the old
+  structure, finally visible. The design had tolerated it because every agent idles in
+  `S_WARMUP` for 1024 cycles before sending anything, which is luck, not a guarantee.
+
+  Now `reset_sync.sv` (async assert, two-flop synchronous deassert, `ASYNC_REG`) sits per
+  domain in both tops, `gals_noc_top` takes `rst_n_noc` + `rst_n_h00..h11`,
+  `gals_node_wrapper` takes `rst_host_n` + `rst_noc_n` (each FIFO side, latch and tracker on
+  its own), and `noc_stress_tester` takes one per host. The VIO soft reset enters `reset_sync`
+  as a separate *synchronous* input it synchronises itself, because ANDing it into the async
+  net drew CDC-10 on the synchronisers' `CLR` pins. The two VIO status bits from `clk_h11` got
+  a `sync_2stage` (CDC-1). After: **CDC Critical 0**, CDC-3 155 / CDC-6 37 / CDC-9 2 /
+  CDC-15 366, all expected. `arty_gals_noc_wrapper` also lost its `.reset(~rst_n_btn)` on the
+  MMCM, the button-kills-the-clocks trap `arty_stress_top` fixed months ago.
+
+  Wrapper formal assumes `rst_host_n == rst_noc_n` (the properties were written for a common
+  reset; `reset_sync` releases the two within a few idle cycles). Prove + cover PASS.
+  `tb_traffic_node_agent` 10/10, 6/6 regression and stress sim identical to baselines, board
+  clean at WNS +0.977 ns. The UART bitstream has **not** been rebuilt with this change yet.
+
 - **`report_cdc` now runs in the build flow, and it found five real criticals.**
   `timing.xdc` declares the five clocks asynchronous, so STA never analyses a path between
   domains; `report_cdc` is the only tool check that every crossing has a synchroniser. The

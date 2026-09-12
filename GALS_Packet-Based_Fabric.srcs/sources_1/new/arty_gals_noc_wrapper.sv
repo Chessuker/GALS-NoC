@@ -37,7 +37,7 @@ module arty_gals_noc_wrapper (
 
     clk_wiz_0 clk_gen (
         .clk_in1(clk_100mhz),
-        .reset(~rst_n_btn),
+        .reset(1'b0),          // ปุ่มต้องไม่ดับ MMCM (ไม่งั้น dbg_hub/ILA ดับตาม — เหมือน arty_stress_top)
         .clk_out1(clk_noc),
         .clk_out2(clk_h00),
         .clk_out3(clk_h01),
@@ -47,6 +47,17 @@ module arty_gals_noc_wrapper (
     );
 
     assign global_rst_n = rst_n_btn & pll_locked;
+
+    // =========================================================
+    // รีเซ็ตต่อโดเมน: ตกพร้อมกันแบบ async ขึ้นตามคล็อกของแต่ละโดเมน (reset_sync.sv)
+    // ก่อนหน้านี้ global_rst_n ตัวเดียวเข้าทุกโดเมน ขอบขาขึ้นไม่สัมพันธ์กับคล็อกไหนเลย
+    // =========================================================
+    logic rst_n_noc, rst_n_h00, rst_n_h01, rst_n_h10, rst_n_h11;
+    reset_sync u_rs_noc (.clk(clk_noc), .arst_n(global_rst_n), .srst(1'b0), .rst_n(rst_n_noc));
+    reset_sync u_rs_h00 (.clk(clk_h00), .arst_n(global_rst_n), .srst(1'b0), .rst_n(rst_n_h00));
+    reset_sync u_rs_h01 (.clk(clk_h01), .arst_n(global_rst_n), .srst(1'b0), .rst_n(rst_n_h01));
+    reset_sync u_rs_h10 (.clk(clk_h10), .arst_n(global_rst_n), .srst(1'b0), .rst_n(rst_n_h10));
+    reset_sync u_rs_h11 (.clk(clk_h11), .arst_n(global_rst_n), .srst(1'b0), .rst_n(rst_n_h11));
 
     // =========================================================
     // สายสัญญาณ NoC (อัปเดตให้รองรับ Multi-flit ครบทุก Node)
@@ -83,7 +94,8 @@ module arty_gals_noc_wrapper (
     (* mark_debug = "true", dont_touch = "true" *) logic tid_err_noc;
 
     gals_noc_top uut_noc_top (
-        .clk_noc(clk_noc), .rst_n(global_rst_n),
+        .clk_noc(clk_noc),
+        .rst_n_noc(rst_n_noc), .rst_n_h00(rst_n_h00), .rst_n_h01(rst_n_h01), .rst_n_h10(rst_n_h10), .rst_n_h11(rst_n_h11),
         .clk_h00(clk_h00), .clk_h01(clk_h01), .clk_h10(clk_h10), .clk_h11(clk_h11),
 
         .h00_tx_tdata(t00_tx_data), .h00_tx_tdest(t00_tx_dest), .h00_tx_tid(t00_tx_tid), .h00_tx_tlast(t00_tx_tlast), .h00_tx_tvalid(t00_tx_valid), .h00_tx_tready(t00_tx_ready),
@@ -109,7 +121,7 @@ module arty_gals_noc_wrapper (
         .CLK_FREQ(100_000_000), 
         .BAUD_RATE(3_000_000) 
     ) host_00 (
-        .clk(clk_h00), .rst_n(global_rst_n),
+        .clk(clk_h00), .rst_n(rst_n_h00),
         .uart_rxd(uart_rxd), .uart_txd(uart_txd),
         .tx_tdata(t00_tx_data), .tx_tdest(t00_tx_dest), .tx_tid(t00_tx_tid), .tx_tlast(t00_tx_tlast), .tx_tvalid(t00_tx_valid), .tx_tready(t00_tx_ready),
         .rx_tdata(t00_rx_data), .rx_tdest(t00_rx_dest), .rx_tid(t00_rx_tid), .rx_tlast(t00_rx_tlast), .rx_tvalid(t00_rx_valid), .rx_tready(t00_rx_ready)
@@ -119,19 +131,19 @@ module arty_gals_noc_wrapper (
     // Node 01, 10, 11: Loopback Agents (Smart Consumers)
     // =========================================================
     loopback_node_agent echo_01 (
-        .clk(clk_h01), .rst_n(global_rst_n),
+        .clk(clk_h01), .rst_n(rst_n_h01),
         .rx_tdata(t01_rx_data), .rx_tdest(t01_rx_dest), .rx_tid(t01_rx_tid), .rx_tlast(t01_rx_tlast), .rx_tvalid(t01_rx_valid), .rx_tready(t01_rx_ready),
         .tx_tdata(t01_tx_data), .tx_tdest(t01_tx_dest), .tx_tid(t01_tx_tid), .tx_tlast(t01_tx_tlast), .tx_tvalid(t01_tx_valid), .tx_tready(t01_tx_ready)
     );
 
     loopback_node_agent echo_10 (
-        .clk(clk_h10), .rst_n(global_rst_n),
+        .clk(clk_h10), .rst_n(rst_n_h10),
         .rx_tdata(t10_rx_data), .rx_tdest(t10_rx_dest), .rx_tid(t10_rx_tid), .rx_tlast(t10_rx_tlast), .rx_tvalid(t10_rx_valid), .rx_tready(t10_rx_ready),
         .tx_tdata(t10_tx_data), .tx_tdest(t10_tx_dest), .tx_tid(t10_tx_tid), .tx_tlast(t10_tx_tlast), .tx_tvalid(t10_tx_valid), .tx_tready(t10_tx_ready)
     );
 
     loopback_node_agent echo_11 (
-        .clk(clk_h11), .rst_n(global_rst_n),
+        .clk(clk_h11), .rst_n(rst_n_h11),
         .rx_tdata(t11_rx_data), .rx_tdest(t11_rx_dest), .rx_tid(t11_rx_tid), .rx_tlast(t11_rx_tlast), .rx_tvalid(t11_rx_valid), .rx_tready(t11_rx_ready),
         .tx_tdata(t11_tx_data), .tx_tdest(t11_tx_dest), .tx_tid(t11_tx_tid), .tx_tlast(t11_tx_tlast), .tx_tvalid(t11_tx_valid), .tx_tready(t11_tx_ready)
     );
@@ -140,8 +152,8 @@ module arty_gals_noc_wrapper (
     // LED Status Mapping
     // =========================================================
     logic [26:0] heartbeat_cnt;
-    always_ff @(posedge clk_h00 or negedge global_rst_n) begin
-        if (!global_rst_n) heartbeat_cnt <= '0;
+    always_ff @(posedge clk_h00 or negedge rst_n_h00) begin
+        if (!rst_n_h00) heartbeat_cnt <= '0;
         else heartbeat_cnt <= heartbeat_cnt + 1'b1;
     end
 

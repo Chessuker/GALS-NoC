@@ -1,0 +1,41 @@
+# silicon fault-injection campaign — stress build PATTERN=1 VC_MODE=2 + fault_injector on agent_11 + vio_fault
+# board: Arty A7-100T (xc7a100t), Digilent 210319C088F2A
+# date: 2026-09-12   RTL: feature/4-silicon-fault-campaign (v1.0 + injector + per-domain reset_sync)
+# build: 1126 MARK_DEBUG nets -> 5 ILA / 61 probes / 1123 bits; WNS +0.977 ns; report_cdc Critical 0
+#        (CDC-3 155, CDC-6 37, CDC-9 2, CDC-15 366 — all expected structures)
+# flow: hw_scripts/batch_fault_campaign.tcl — one bitstream, one hw_server session, per mode:
+#       VIO soft reset -> mode+arm -> release -> 2 s -> Trigger Immediately on all 5 ILAs -> CSV
+#       summarised by hw_scripts/summarize_campaign.py. No COM port involved (gotcha 9).
+# injector fires at 2^20 clk_h11 cycles after reset (~15 ms into the 235 ms window), waits for a
+# non-tlast flit to be accepted so the cut/corruption lands mid-packet; modes 2..5 hold 2000 cycles,
+# mode 1 holds forever.
+#
+# reading the table:
+#   max_gap = longest silence each agent saw during S_RUN (its own clock cycles); clean is 217/38/119/105
+#   stuck   = liveness watchdog per agent (2^16 threshold) — 0000 everywhere, incl. mode 1, because the
+#             injector passes tready through so agent_11 keeps "firing" into it (same as the sim force)
+#   seq     = agent_00 sequence errors: the 2 in modes 2..5 are the two truncation points (per-lane resync)
+#   rx@10   = flits agent_10 received: mode 4's redirected packets (1777 here, 1787 in sim)
+#
+# mode 1: survivors' gaps 608 / 611 = the bug #5 stall timeout releasing node 00's LOCAL port
+#         (1024 clk_noc cycles = 12.8 us = ~610 cycles at 47..48 MHz-equivalent... measured in each
+#         agent's own clock). Before bug #5 this was a permanent wedge. Fabric alive, 0 seq errors.
+# modes 4/5: first ever live dest_err on a stress bitstream — until this build the whole dest_err path
+#         was constant-folded (agents' tdest is a parameter). dest_err_node[3] is the only live bit;
+#         [2:0] are still constant and setup_debug lists them as such.
+
+mode fired seq  max_gap 00/01/10/11      stuck tid cnt/node dest cnt/node dbe rx@10    expected
+   0 0     0    217/38/119/105           0000  0/0000       0/0000        0         0  clean: 0 err, liveness 4/4, no flags
+   1 1     0    217/608/611/105          0000  0/0000       0/0000        0         0  agent_11 tvalid cut mid-packet: others' max_gap ~1k (bug #5 release), agent_11 liveness may FAIL, no seq err
+   2 1     2    217/40/119/106           0000  1/1000       0/0000        0         0  tid=00 for 2000 cyc: tid_err node 1000, others' gap normal, <=2 resync err
+   3 1     2    218/55/166/106           0000  1/1000       0/0000        0         0  tid=11 for 2000 cyc: tid_err node 1000, others' gap normal, <=2 resync err
+   4 1     2    217/61/119/105           0000  0/0000       1/1000        0      1777  tdest=0001 for 2000 cyc: dest_err node 1000, agent_10 rx>0, others' gap normal
+   5 1     2    218/46/119/106           0000  0/0000       1/1000        0         0  tdest=1000 (off-board) for 2000 cyc: dest_err node 1000, fabric alive, others' gap normal
+
+# VIO probe_in per mode (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1):
+MODE 0  vio_in=03  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
+MODE 1  vio_in=c3  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
+MODE 2  vio_in=a5  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
+MODE 3  vio_in=a5  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
+MODE 4  vio_in=95  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
+MODE 5  vio_in=95  (bits: fired active tid_err dest_err ecc_dbe any_fail pass2 pass1)
