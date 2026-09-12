@@ -639,11 +639,16 @@ have. That property rests on the formal proof.
 
 ## 5. Still open, beyond bug #3
 
-- **`packet_arbiter` cannot recover from a truncated packet** (section 3b). A source that
-  dies mid-packet locks that output port until global reset. Not reachable from
-  `traffic_node_agent` any more, but still true of the fabric. Any fix touches the same
-  lock/unlock logic as bug #1 — run the full regression plus `tb_noc_stress_tester`
-  before trusting one.
+- ~~**`packet_arbiter` cannot recover from a truncated packet**~~ — **closed by bug #5**
+  (`e9f8197`, 2026-09-04). A source that dies mid-packet used to lock that output port
+  until global reset (section 3b). The arbiter now abandons a `LOCKED` port after
+  `2**STALL_LOG` = 1024 consecutive cycles of the locked source having `valid` low, and
+  only if it is still silent on the release cycle (the hole formal found). Backpressure
+  keeps `valid` high, so a blocked-but-alive source cannot trip it. `KILL_MIDPKT=1` in
+  `tb_noc_stress_tester` reproduces the old wedge and shows the survivors keep running.
+  `formal/packet_arbiter.sby` passes `prove`, so the lock/unlock logic bug #1 lives in is
+  now under an unbounded proof — still run the full regression plus the stress tester
+  before touching it again.
 - Bug #4's fix and the liveness watchdog are both confirmed on hardware (section 3b).
 - ~~Fairness spread of 50% (48/24/27) might be arbiter unfairness~~ — **closed, it is
   topology.** `tb_noc_stress_tester` now counts transfers per input port at `idx0`'s LOCAL
