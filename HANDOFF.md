@@ -1,8 +1,8 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-11. Merged to `main` as PR #2 (`9f20a94`); branch
+Last updated: 2026-09-12. Merged to `main` as PR #2 (`9f20a94`); branch
 `feature/2-ecc-injection-and-tid-guard` carries the ECC injection register, the `tid` guard,
-and the bug #7 fix on top, not yet merged.
+and the bug #7 fix on top, all board-confirmed, not yet merged.
 
 Read this first if you're picking the project up cold.
 
@@ -10,10 +10,8 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Seven real RTL bugs found. **All seven fixed.** Five confirmed on the board; bug #5's
-trigger can no longer occur, so it is proved and simulated rather than observed failing;
-bug #7's fix is proved and simulated but **not yet built or run on the board** (no board
-on hand when it landed — section 3c says what to check when there is one).
+Seven real RTL bugs found. **All seven fixed.** Six confirmed on the board; bug #5's
+trigger can no longer occur, so it is proved and simulated rather than observed failing.
 
 | # | bug | found by | status |
 |---|-----|----------|--------|
@@ -23,7 +21,7 @@ on hand when it landed — section 3c says what to check when there is one).
 | 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | liveness watchdog, first board run | **fixed**, board-confirmed |
 | 5 | `packet_arbiter` force-release could fire mid-packet when a source returned on the saturation cycle | formal | **fixed**, proved + simulated |
 | 6 | out-of-range `tdest` routes off the mesh edge and stalls there forever, head-of-line-blocking the fabric | formal (mesh) | **fixed**, board-confirmed clean |
-| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node, and holds the destination router's grant meanwhile | formal (mesh) | **fixed**, proved + simulated, not yet on board |
+| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node, and holds the destination router's grant meanwhile | formal (mesh) | **fixed**, proved + simulated, board-confirmed clean |
 
 Bugs 1-3 predate this work and would have shipped. None was caught by the five original
 simulation tests or by the permutation hardware stress run.
@@ -80,7 +78,8 @@ and agent_11.
 
   Single-bit raises `single_err` alone and double-bit raises `double_err` alone, through
   encoder, RAM, decoder, sticky latch, CDC and counter. A disconnected flag cannot produce
-  that.
+  that. Both have now been run on silicon (single-bit 2026-09-10, double-bit 2026-09-12,
+  section 3c).
 
   **Confirmed on silicon (2026-09-10).** Two bitstreams built back to back at
   `PATTERN=1 VC_MODE=2`, programmed to the Arty A7-100T:
@@ -173,6 +172,21 @@ drive xsim with a `run all; quit` tclbatch. Verified to reproduce
 `regress_hwclk_vcalt_dbg_20260819_150653.log` number-for-number before the fix went in.
 
 ### Hardware build (~5 min synth + impl)
+
+**Scripted, no GUI, no Tcl console** (`hw_scripts/`, added 2026-09-12). Three Vivado batch
+sessions, because implementation must not run in the session that wrote `debug_auto.xdc`:
+
+    vivado -mode batch -source hw_scripts/batch_stress_synth_debug.tcl        # synth + Set Up Debug
+    vivado -mode batch -source hw_scripts/batch_impl.tcl -tclargs arty_stress_top
+    vivado -mode batch -source hw_scripts/batch_program_capture.tcl -tclargs <csv-dir> arty_stress_top
+    python analyze_ila.py <csv-dir>
+
+`batch_uart_synth_debug.tcl` is the UART equivalent (top `arty_gals_noc_wrapper`); read its
+ILA with `hw_scripts/read_ila_flags.py <csv-dir>` and drive it with
+`hw_scripts/uart_roundtrip.py [pos|neg]`. Pass `noprog` as a third `-tclargs` to capture
+without reprogramming. A Vivado GUI can stay open on another project; it cannot have this
+one open. The interactive flow below still works.
+
 
     set PATTERN 1 ; set VC_MODE 0 ; source .../setup_stress_build.tcl
 
@@ -536,17 +550,42 @@ Hot-spot and permutation patterns cannot show the misdelivery itself in simulati
 every agent has a fixed `DEST_ID`, so a merged packet still goes where the next one would
 have. That property rests on the formal proof.
 
-### Not yet done
+### Confirmed on hardware — 2026-09-12
 
-- **Not built or run on the board.** When one is available: `PATTERN=1 VC_MODE=2` stress
-  build, confirm the clean run still reads `tid_err` 0 / `dest_err` 0 with all four
-  `node` probes present and 0 sequence errors; the added state is two `pkt_open` bits, two
-  4-bit `pkt_dest` and two `close_pend` bits per ingress, so timing should be unaffected
-  but check the `clk_host` domain paths in `gals_node_wrapper`.
-- `formal/run_wsl.sh` is a small helper that puts the OSS CAD Suite on `PATH` and runs
-  `sby` from Git Bash on Windows (`MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 -- bash
-  /mnt/d/.../formal/run_wsl.sh <file>.sby [task]`) — the `bash -c '... $PATH ...'` form
-  breaks because Git Bash expands `$PATH` locally into a string with parentheses.
+Stress build `PATTERN=1 VC_MODE=2` from `de8cac3`, built, programmed and captured entirely by
+script (`hw_scripts/`, section 2): 1104 `MARK_DEBUG` nets → 5 cores / 55 probes / 1100 bits,
+WNS **+0.820 ns** (was +0.711 before the added ingress state), all constraints met.
+
+| check | result |
+|---|---|
+| sequence errors | 0 |
+| liveness (4 nodes) | PASS |
+| ECC single / double | 0 / 0 |
+| `dest_err_cnt` | 0 (node probe still absent, as before) |
+| `tid_err_cnt` / `tid_err_node` | 0 / `0000`, probe present |
+| node 00 local port | 96.9%, 80.2 MB/s injected, EAST/NORTH 48.3 / 51.7 |
+| VC split at the sink | 50.0 / 50.0 |
+
+Identical to the 2026-09-10 clean run to the last digit that matters, so the force-close
+logic costs nothing on legal traffic. Log: `hw_logs/ila_stress_vc2_pattern1_20260912_bug7_clean.log`.
+
+The same day closed two other silicon gaps:
+
+- **`ECC_INJECT_DBE` on silicon**: `ecc_dbe_cnt` **3**, `node_dbe` **`1111`**, `sbe` 0, the
+  mirror image of the single-bit run. Sequence errors read **0**, which is correct and worth
+  understanding: the injector flips codeword bit 5 = data bit d2 on every FIFO write, a flit
+  crosses exactly two async FIFOs (TX at the source, RX at the sink), and two deterministic
+  flips of the same bit cancel. Both FIFOs flag, the endpoint sees clean data. The alarm
+  path is proved; end-to-end corruption under an uncorrectable error is shown by
+  `INJECT_ECC=1` in `tb_noc_stress_tester` (single-FIFO flip, 247 sequence errors), not by
+  this build. `verilog_define` was cleared afterwards.
+  Log: `hw_logs/ila_stress_vc2_pattern1_20260912_eccinject_dbe.log`.
+- **UART build rebuilt with the `tid` guard and bug #7** (`arty_gals_noc_wrapper`, 484 nets =
+  463 + 21 `tid_err` taps, WNS +1.204 ns). `hw_scripts/uart_roundtrip.py`: 149 / 5 / 32 / 32 /
+  13 / 13-flit packets to all three loopback nodes on both VCs, every one byte-identical with
+  `tlast` in place, `mon_flit_cnt` 244 = 6 packets, ECC 0/0, `dest_err` 0, `tid_err` 0. A
+  `tid=00` packet echoes nothing and reads `tid_err_cnt` 1 / `node` `0001` (h00).
+  Log: `hw_logs/uart_roundtrip_20260912_tidguard_bug7.log`.
 
 ## 4. Gotchas that cost real time
 
@@ -634,6 +673,19 @@ have. That property rests on the formal proof.
    Vivado's own Tcl console is fine. From a shell, wrap the testbench instead — a
    one-line `module tb_wrap; tb_noc_stress_tester #(.BAD_TID(2)) u(); endmodule` compiled
    alongside it and elaborated as the top does the job.
+9. **Opening the COM port resets the FPGA.** `serial.Serial('COM3', ...)` from the PC pulls
+   the FTDI's DTR/RTS and the Arty's reset circuit follows: every sticky flag, every `mon_*`
+   counter and the whole fabric go back to reset the moment a host script starts. Symptoms
+   that were chased for a while: `mon_active_cnt` reading "2 seconds" in a capture taken a
+   minute after programming, and `tid_err` going 1 → 0 between captures with no reset
+   button pressed. Rules: read the ILA *before* the next port open; take all captures of one
+   experiment in one `hw_server` session (`batch_program_capture.tcl` with `noprog`, or a
+   file handshake); and treat "counters look freshly reset" as "a script just opened the
+   port", not as a JTAG side effect (JTAG target open does **not** reset, verified by two
+   captures 5 s apart in one session advancing `mon_active_cnt` by 5.1 s).
+   Also: a `tid=00` flit from the PC wedges `uart_noc_host` in `P_PUSH_NOC` (its `vc_ready`
+   never comes), `mon_stall_cnt` climbs at one per cycle, and only a reset clears it. That
+   is the flagged, attributed stall the guard was built for; it is not a fabric hang.
 
 ---
 

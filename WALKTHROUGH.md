@@ -1,6 +1,6 @@
 # GALS Packet-Based Fabric: a walkthrough from zero
 
-Written 2026-09-12 against commit `de8cac3` on `feature/2-ecc-injection-and-tid-guard`.
+Written 2026-09-12 against `feature/2-ecc-injection-and-tid-guard` (RTL at `de8cac3`).
 
 This is the long-form companion to `HANDOFF.md`. `HANDOFF.md` is the working log for
 someone who already knows the design and needs the current state, the numbers, and the
@@ -56,8 +56,7 @@ The RTL is SystemVerilog. The design work predates the git history (source files
 create dates from April to July 2026); the repository begins on 2026-08-17 and everything
 after that is verification, bug fixing, and hardening. Seven real RTL bugs were found and
 fixed in that period. Five were confirmed on the board; one cannot happen any more so it is
-proved and simulated; the latest one is proved and simulated but has not yet been built
-for the board.
+proved and simulated; the latest one was confirmed on the board the day after it landed.
 
 The word "we" below means whoever was working on the repo at the time. The commits say
 who.
@@ -659,6 +658,7 @@ fails six of ten.
 | `noc_host.py` | PC side of the UART build: send a packet, print echoes |
 | `image_noc_test.py`, `video_noc_stream.py`, `bulk_test.py`, `vc_*_test.py`, `multi_node_stress_test.py`, `fault_recovery_test.py`, `single_probe_test.py` | UART demos and experiments; `recovered_from_fpga.png` is an image round-tripped through the fabric |
 | `formal/*.sby` | one SymbiYosys script per RTL module (eleven), plus `run_wsl.sh` to run them from Git Bash on Windows |
+| `hw_scripts/` | batch Vivado flow: `batch_stress_synth_debug.tcl` / `batch_uart_synth_debug.tcl` (synth + Set Up Debug), `batch_impl.tcl <top>` (fresh session), `batch_program_capture.tcl <dir> <top> [noprog]` (program, Trigger Immediately on every ILA, CSV export); `uart_roundtrip.py [pos\|neg]` and `read_ila_flags.py` for the UART build |
 | `combine_sv.py` | concatenates sources into `combined*.sv` for sharing |
 | `hw_logs/` | every ILA capture that backs a number in `HANDOFF.md` |
 | `sim_logs/` | regression logs; the `_FIXED` ones are the baselines |
@@ -924,7 +924,7 @@ instance that drove them, which Vivado synthesis tolerated and `xvlog` did not.
 ### Bug #7: a rejected flit eats its packet's `tlast`
 
 **Found by** formal on the mesh, root-caused 2026-09-11 (`31d4cba`), fixed the same
-day (`de8cac3`). Not yet on the board.
+day (`de8cac3`), confirmed on the board 2026-09-12.
 
 **Symptom.** After the `tid` guard was added (2026-09-10), the mesh formal environment
 still could not drop its one-hot-`tid` assumption: `assert_eject_dest` failed at step 4,
@@ -983,9 +983,10 @@ The sequence-error count under `tid=11` moved from 1 to 2; the checker is per-fl
 misdelivery itself cannot be shown in this simulation because every agent has a fixed
 destination; that rests on the proof.
 
-**Still to do:** build `PATTERN=1 VC_MODE=2` and confirm on the board that the clean
-run reads `tid_err` 0 / `dest_err` 0 with all four node probes present and zero
-sequence errors.
+**On the board** (2026-09-12, scripted build and capture): `PATTERN=1 VC_MODE=2` clean
+run reads 0 sequence errors, liveness PASS, ECC 0/0, `dest_err` 0, `tid_err` 0 with its
+node probe present, 96.9%, VC 50/50, WNS +0.820 ns. Identical to the pre-fix clean run,
+which is the point: the force-close costs legal traffic nothing.
 
 ### What the seven have in common
 
@@ -1287,14 +1288,30 @@ Host-side: run `python -u`, set `PYTHONIOENCODING=utf-8`, and check `COM_PORT`.
 percent on every throughput figure, and is pessimistic only on the gap. That is what
 justifies treating a passing stress run as evidence before a board is available.
 
-### 10.12 Not yet on the board
+### 10.12 Opening the COM port resets the board
 
-- The bug #7 fix (`de8cac3`). Everything after `0815e10` is proved and simulated only.
-- ECC double-bit injection (`ECC_INJECT_DBE`); only the single-bit path has been run on
-  silicon.
-- The UART build with the `tid` guard and bug #7 logic; its last bitstream is from
-  2026-09-04.
-- Bug #5's failure mode; the fix removes the trigger, so there is nothing to observe.
+Found 2026-09-12 while re-running the UART build. `serial.Serial('COM3')` from the PC
+toggles the FTDI's DTR/RTS and the Arty's reset circuit follows, so every host script
+starts by resetting the fabric: sticky flags clear, `mon_*` counters restart, a wedged
+`uart_noc_host` recovers. Opening the JTAG target does not do this (two captures 5 s
+apart in one session advance `mon_active_cnt` by 5.1 s). So: read the ILA before the
+next port open, and take all captures of one experiment in one `hw_server` session.
+`hw_scripts/batch_program_capture.tcl` with `noprog` does that.
+
+The same session showed what a `tid=00` flit from the PC does: nothing echoes,
+`tid_err_cnt` 1 / `node` `0001`, and `uart_noc_host` sits in `P_PUSH_NOC` with
+`mon_stall_cnt` climbing one per cycle until the next reset. Flagged and attributed, not a
+fabric hang.
+
+### 10.13 Silicon status at `de8cac3`
+
+Everything is on the board now: bug #7 (stress build, clean), `ECC_INJECT_DBE`
+(`ecc_dbe_cnt` 3, `node_dbe` `1111`, and 0 sequence errors because two deterministic
+flips of the same bit across the TX and RX FIFOs cancel, which is explained in the log),
+and the UART build with the `tid` guard (6/6 round-trips, `tid=00` dropped and flagged).
+Only bug #5's failure mode has no silicon observation, because the fix removes the
+trigger. Every build, program and capture on 2026-09-12 was done by the batch scripts in
+`hw_scripts/`, no GUI.
 
 ---
 
@@ -1347,17 +1364,11 @@ originals before touching the build flow.
 
 ## 13. What is still open
 
-- **Bug #7 on the board.** Build `PATTERN=1 VC_MODE=2`, confirm `tid_err` 0 / `dest_err`
-  0 / 0 sequence errors / liveness PASS with the added ingress state. Timing should be
-  unaffected; check the `clk_host` paths in `gals_node_wrapper`.
 - **`tdest` constant per packet is still an assumption.** The router misroutes silently
   if it is broken. Recorded in `f_wf`; not enforced.
 - **`dest_err_node[3:0]` is absent from the stress build's ILA** (clock did not resolve);
   `dest_err_cnt` survives.
 - **ECC covers the payload only**, and SECDED misreports three or more flipped bits.
-- **`HANDOFF.md` section 5, first bullet** ("`packet_arbiter` cannot recover from a
-  truncated packet") is stale since bug #5's timeout. Worth correcting on the next
-  documentation pass.
 - **The branch is not merged.** `feature/2-ecc-injection-and-tid-guard` carries the ECC
   injector, the `tid` guard and bug #7 on top of `main`.
 
@@ -1386,7 +1397,14 @@ Formal, one module:
 or inside WSL, `cd formal && sby -f packet_arbiter.sby`. The mesh bmc takes ~8 minutes,
 the router ~2, everything else under a minute.
 
-Board:
+Board, scripted (three sessions on purpose; see §10.9):
+
+    vivado -mode batch -source hw_scripts/batch_stress_synth_debug.tcl
+    vivado -mode batch -source hw_scripts/batch_impl.tcl -tclargs arty_stress_top
+    vivado -mode batch -source hw_scripts/batch_program_capture.tcl -tclargs <csv-dir> arty_stress_top
+    python analyze_ila.py <csv-dir>
+
+Board, from the Vivado Tcl console:
 
     set PATTERN 1 ; set VC_MODE 2 ; source setup_stress_build.tcl
     # after synth_1 completes, same session:
