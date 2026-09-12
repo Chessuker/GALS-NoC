@@ -68,6 +68,20 @@ if {[llength $dbg_nets] == 0} {
 #   - ถ้าเป็น LUT (เช่น ecc_single_err = |ecc_sbe ซึ่งเป็น combinational)
 #     ต้องถอยกลับไปดูตัวขับของอินพุตอีกชั้น จนเจอ flip-flop
 # จำกัดความลึกไว้กันวนไม่จบในลูป combinational
+# ลบคำนำหน้า u_ila_N_ ออกจากชื่อคล็อก
+#
+# delete_debug_core ลบตัว core ได้ก็จริง แต่ generated clock ที่ core นั้นสร้างไว้
+# ยังค้างอยู่ใน session เดิม get_clocks จึงยังคืนชื่ออย่าง
+# u_ila_0_clk_out1_clk_wiz_0 แทน clk_out1_clk_wiz_0 ที่เป็นตัวจริง
+# ถ้าปล่อยไว้ การจัดกลุ่มจะอิงคล็อกผี ต่อขา clk ของ ILA ใหม่ไม่ได้ และ probe หาย
+# (เจอตอน build ตัว stress รอบที่สอง: 1104 เน็ต แต่เข้า probe แค่ 1100 บิต)
+proc f_real_clock {nm} {
+    if {[regexp {^u_ila_\d+_(.+)$} $nm -> real]} {
+        if {[llength [get_clocks -quiet $real]] == 1} { return $real }
+    }
+    return $nm
+}
+
 proc f_net_clock {n {depth 0}} {
     if {$depth > 8} { return "" }
     set dp [get_pins -quiet -leaf -of_objects $n -filter {DIRECTION == OUT}]
@@ -76,7 +90,7 @@ proc f_net_clock {n {depth 0}} {
     if {$cell eq ""} { return "" }
 
     set ck [get_clocks -quiet -of_objects [get_pins -quiet -of_objects $cell -filter {IS_CLOCK}]]
-    if {[llength $ck] == 1} { return [get_property NAME [lindex $ck 0]] }
+    if {[llength $ck] == 1} { return [f_real_clock [get_property NAME [lindex $ck 0]]] }
 
     # ห้ามใส่ -leaf ตรงนี้: $cell เป็น leaf cell อยู่แล้ว พินของมันก็เป็น leaf pin
     # ใส่ -leaf กับ -of_objects <cell> แล้วได้ลิสต์ว่าง ทำให้การถอยกลับตายเงียบ

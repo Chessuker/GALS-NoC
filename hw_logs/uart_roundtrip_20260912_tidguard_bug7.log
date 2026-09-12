@@ -1,0 +1,49 @@
+# hardware run: UART build (arty_gals_noc_wrapper), Arty A7-100T, 2026-09-12
+# RTL: de8cac3 (tid guard at both layers + bug #7 force-close). Previous UART bitstream was 2026-09-04.
+# synth: 484 MARK_DEBUG nets (463 + 21 tid_err taps) -> 5 ILA cores / 59 probes / 484 bits; WNS +1.204 ns
+# host: hw_scripts/uart_roundtrip.py on COM3 @ 3 Mbaud; ILA read with hw_scripts/read_ila_flags.py
+#
+# All captures below were taken in ONE hw_server session (file handshake), because opening the
+# COM port from the PC RESETS THE FPGA LOGIC (FTDI DTR/RTS -> Arty reset). Every earlier capture
+# that looked "freshly reset" was this. Consequence: sticky flags and mon_* counters only
+# describe traffic since the last port open; read them before re-opening the port.
+#
+# (a) before this session's traffic: state left by an earlier tid=00 test
+#     tid_err_cnt=1 node=0001  mon_flit_cnt=0  mon_stall_cnt=3614321469 (uart_noc_host wedged)
+# (b) after positive round-trip (port open -> reset -> 244 flits):
+--- positive
+    dest=0101 vc=1 len=149 -> got 149 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0100 vc=0 len=  5 -> got   5 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0101 vc=0 len= 32 -> got  32 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0100 vc=1 len= 32 -> got  32 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0001 vc=0 len= 13 -> got  13 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    dest=0001 vc=1 len= 13 -> got  13 bytes_ok=True tid_ok=True tlast_ok=True PASS
+    UART ROUNDTRIP PASS
+
+    ILA (b):
+       dest_err_cnt[15:0]                               0
+       dest_err_node[3:0]                               0
+       ecc_dbe_cnt[15:0]                                0
+       ecc_dbe_node[3:0]                                0
+       ecc_sbe_cnt[15:0]                                0
+       ecc_sbe_node[3:0]                                0
+       tid_err_cnt[15:0]                                0
+       tid_err_node[3:0]                                0
+       mon_flit_cnt[31:0]                               244
+       mon_pkt_cnt[31:0]                                6
+       mon_rx_flit_cnt[31:0]                            244
+       mon_stall_cnt[31:0]                              0
+
+# (c) after the negative case (port open -> reset -> one 3-flit packet with tid=00 to 0100):
+#     nothing echoes; host_tid_err raised at node 00; uart_noc_host sits in P_PUSH_NOC forever
+#     waiting for vc_ready (tid=00 matches no VC) so mon_stall_cnt climbs at 1/cycle until the
+#     next reset. The stall is flagged and attributed; recovery is the reset button or a port re-open.
+    ILA (c):
+       dest_err_cnt[15:0]                               0
+       ecc_dbe_cnt[15:0]                                0
+       tid_err_cnt[15:0]                                1
+       tid_err_node[3:0]                                1
+       mon_flit_cnt[31:0]                               0
+       mon_stall_cnt[31:0]                              198320378
+
+# verdict: 6/6 positive PASS (149/5/32/32/13/13 flits, both VCs, all three loopback nodes), tid=00 dropped+flagged PASS, ECC 0/0, dest_err 0.

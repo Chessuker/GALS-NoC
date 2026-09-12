@@ -1,6 +1,8 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-10. Merged to `main` as PR #2 (`9f20a94`).
+Last updated: 2026-09-12. Merged to `main` as PR #2 (`9f20a94`); branch
+`feature/2-ecc-injection-and-tid-guard` carries the ECC injection register, the `tid` guard,
+and the bug #7 fix on top, all board-confirmed, not yet merged.
 
 Read this first if you're picking the project up cold.
 
@@ -8,8 +10,8 @@ Read this first if you're picking the project up cold.
 
 ## 1. Where things stand
 
-Six real RTL bugs found. **All six fixed.** Five confirmed on the board; bug #5's trigger
-can no longer occur, so it is proved and simulated rather than observed failing.
+Seven real RTL bugs found. **All seven fixed.** Six confirmed on the board; bug #5's
+trigger can no longer occur, so it is proved and simulated rather than observed failing.
 
 | # | bug | found by | status |
 |---|-----|----------|--------|
@@ -19,6 +21,7 @@ can no longer occur, so it is proved and simulated rather than observed failing.
 | 4 | `traffic_node_agent` truncates a packet at window end; the downstream `packet_arbiter` then locks that output port forever | liveness watchdog, first board run | **fixed**, board-confirmed |
 | 5 | `packet_arbiter` force-release could fire mid-packet when a source returned on the saturation cycle | formal | **fixed**, proved + simulated |
 | 6 | out-of-range `tdest` routes off the mesh edge and stalls there forever, head-of-line-blocking the fabric | formal (mesh) | **fixed**, board-confirmed clean |
+| 7 | the bug #6 / non-one-hot-`tid` ingress filters silently drop a rejected flit without closing its packet; a still-open VC packet then absorbs the next accepted flit and delivers it to the wrong node, and holds the destination router's grant meanwhile | formal (mesh) | **fixed**, proved + simulated, board-confirmed clean |
 
 Bugs 1-3 predate this work and would have shipped. None was caught by the five original
 simulation tests or by the permutation hardware stress run.
@@ -75,9 +78,23 @@ and agent_11.
 
   Single-bit raises `single_err` alone and double-bit raises `double_err` alone, through
   encoder, RAM, decoder, sticky latch, CDC and counter. A disconnected flag cannot produce
-  that. What remains is running it on the board:
-  `set_property verilog_define ECC_INJECT_SBE [current_fileset]`, build, program, read the
-  counters. Not done — no board available at the time.
+  that. Both have now been run on silicon (single-bit 2026-09-10, double-bit 2026-09-12,
+  section 3c).
+
+  **Confirmed on silicon (2026-09-10).** Two bitstreams built back to back at
+  `PATTERN=1 VC_MODE=2`, programmed to the Arty A7-100T:
+
+  | build | `ecc_sbe_cnt` | `node_sbe` | `ecc_dbe_cnt` | traffic |
+  |---|---|---|---|---|
+  | normal | 0 | `0000` | 0 | 0 sequence errors, liveness PASS |
+  | `ECC_INJECT_SBE` | **3** | **`1111`** | 0 | 0 sequence errors, liveness PASS |
+
+  All four nodes flag, the double-bit counter stays 0, and traffic remains correct because
+  SECDED repairs every word — which is exactly the behaviour a working single-bit path
+  should show. The gap is closed: the counters reading 0 on a normal build now means the
+  path is silent, not disconnected. Logs:
+  `hw_logs/ila_stress_vc2_pattern1_20260910_clean.log` and `..._eccinject_sbe.log`.
+  Remember to clear the define afterwards — `set_property verilog_define {} [current_fileset]`.
 - **`dest_err_node[3:0]` is absent from the stress build's ILA** (its clock did not resolve),
   so per-node attribution is unavailable there. `dest_err_cnt` survives and answers whether
   it happened. `analyze_ila.py` says so rather than staying silent.
@@ -99,20 +116,22 @@ and agent_11.
   | `00` | `tid_err_cnt` 0, node stalls 8,388,609 cycles, silent | `tid_err_cnt` 1, `node=1000`, stall attributed |
   | `11` | `tid_err_cnt` 0, **24 sequence errors** from the flit landing in both VCs | `tid_err_cnt` 1, `node=1000`, sequence errors **24 -> 1** |
 
+  On hardware the clean build reports `tid_err` 0 with `node=0000` and its node probe
+  present, so the guard costs nothing and reads correctly on silicon (2026-09-10 log above).
+
   The remaining error under `tid=11` is the packet in flight when the force was applied,
   which no ingress guard can help. Under `tid=00` the sender still stalls, correctly — it is
   sending garbage. What changed is that the stall is flagged and attributed instead of
   silent. The mesh-boundary guard is kept as a second line because it enforces the mesh's own
   contract, but it is not the one that catches this.
 
-  **Formal covers neither guard, deliberately.** Dropping the one-hot `assume` in
-  `noc_mesh_2x2_vc` makes `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`), and
-  it still fails after a rejected flit's whole payload is zeroed — so the cause is not `tid`
-  reaching a router. It is unexplained, and may be a real robustness issue worth its own
-  investigation. In `gals_node_wrapper` the equivalent assertion would have to reach into the
-  FIFO hierarchy for `w_en` and would only restate the gating expression. Both `assume`s stay,
-  and the guards are proved by the directed simulation above, which measures real harm rather
-  than restating RTL.
+  **Formal now covers both guards without the one-hot `assume`.** Dropping it used to make
+  `assert_eject_dest` fail at step 4 (node 0 emits `tdest=0100`); that was bug #7 (section
+  3c), a dropped flit eating its packet's `tlast`. With the fix in, both `assume`s are gone:
+  `noc_mesh_2x2_vc` passes bmc depth 10 with the solver free to send any `tid`, and
+  `gals_node_wrapper` passes prove (basecase + induction) the same way, each with a cover
+  showing the force-close path is actually exercised. The directed simulation above stays,
+  because it measures the harm formal does not: the head-of-line stall other agents see.
 
 ---
 
@@ -153,6 +172,21 @@ drive xsim with a `run all; quit` tclbatch. Verified to reproduce
 `regress_hwclk_vcalt_dbg_20260819_150653.log` number-for-number before the fix went in.
 
 ### Hardware build (~5 min synth + impl)
+
+**Scripted, no GUI, no Tcl console** (`hw_scripts/`, added 2026-09-12). Three Vivado batch
+sessions, because implementation must not run in the session that wrote `debug_auto.xdc`:
+
+    vivado -mode batch -source hw_scripts/batch_stress_synth_debug.tcl        # synth + Set Up Debug
+    vivado -mode batch -source hw_scripts/batch_impl.tcl -tclargs arty_stress_top
+    vivado -mode batch -source hw_scripts/batch_program_capture.tcl -tclargs <csv-dir> arty_stress_top
+    python analyze_ila.py <csv-dir>
+
+`batch_uart_synth_debug.tcl` is the UART equivalent (top `arty_gals_noc_wrapper`); read its
+ILA with `hw_scripts/read_ila_flags.py <csv-dir>` and drive it with
+`hw_scripts/uart_roundtrip.py [pos|neg]`. Pass `noprog` as a third `-tclargs` to capture
+without reprogramming. A Vivado GUI can stay open on another project; it cannot have this
+one open. The interactive flow below still works.
+
 
     set PATTERN 1 ; set VC_MODE 0 ; source .../setup_stress_build.tcl
 
@@ -387,6 +421,172 @@ register per agent, `mark_debug`, reporting the longest silent stretch actually 
 Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16, which is
 ~480x the measured worst gap of 136.
 
+## 3c. Bug #7 — a rejected flit drops silently instead of closing its packet
+
+Found while investigating an unexplained counterexample noted in the bug #6 formal writeup
+(`noc_mesh_2x2_vc.sby`, the one-hot `assume` on `s_tid` that could not be removed). Removing
+that `assume` made `assert_eject_dest` fail at step 4: node 0 ejects a flit with
+`tdest=0100`, which is not the destination of anything the host actually sent that looked
+malformed. The original write-up guessed this was an AND-OR mux artefact from a non-one-hot
+grant reaching the crossbar. **That guess was wrong.** The flit is real; it was just
+delivered on the wrong packet.
+
+### Root cause
+
+Both ingress filters added for bug #6 — `dest_ok` (out-of-range `tdest`) and `tid_ok`
+(non-one-hot `tid`), `noc_mesh_2x2_vc.sv` section 0/0b, mirrored at the host ingress in
+`gals_node_wrapper.sv:111` — reject a bad flit by simply not asserting `r_valid`/`w_en` for
+it. The flit vanishes. But `packet_arbiter` tracks packet boundaries purely by watching
+`tlast` flow through; it has no idea a flit existed if the ingress filter never presented
+it. If the rejected flit was meant to be the last flit of a packet, the filter has now
+eaten the only `tlast` for that packet, and the arbiter/FIFO consider it still open.
+
+Confirmed by decoding the BMC counterexample stimulus at node 0 (`s_tid`/`s_tdest` per
+step):
+
+| step | tid | tdest | tlast | filter | effect |
+|---|---|---|---|---|---|
+| 1 | `10` (VC1) | `0000` | 0 | pass | opens a VC1 packet addressed to node 0 |
+| 2 | `11` (bad) | `0000` | **1** | **dropped** | the only `tlast` for that packet is lost; VC1 stays "open" downstream |
+| 3 | `10` (VC1) | `0100` | 0 | pass | rides the still-open grant; ejected at node 0 anyway |
+
+Step 4's `tdest=0100` is exactly step 3's flit — a real, correctly filtered flit that got
+misdelivered because the packet it landed in was never supposed to still be open.
+
+**Isolation:** re-adding an `assume` that forbids a rejected flit from carrying `tlast`
+(`assume(!(s_tlast[i] && !tid_ok[i]))`) makes BMC pass clean through 12 steps with the
+one-hot `assume` still removed (2h14m runtime, `abc bmc3`, no counterexample — see
+`formal/noc_mesh_2x2_vc.sby`'s task list for how to reproduce; this experiment itself was
+not checked in as a task). That isolates the mechanism precisely: the bug is not tid
+reaching the router non-one-hot, it is **a dropped flit silently eating a `tlast`.**
+
+### Why the exposure is worse than the formal model captures
+
+The `.sby` header argues the ingress filters are safe because `tdest` is assumed constant
+across a packet — true only if the host frames packets correctly, which is exactly the
+property a corrupted `tid` or `tdest` calls into question. A host garbling `tid` is not a
+host that can be trusted to still be sending a clean `tlast` stream. And the same shape
+exists twice:
+
+- `noc_mesh_2x2_vc.sv` — `dest_ok`/`tid_ok` filter, mesh-level ingress from all 4 nodes
+- `gals_node_wrapper.sv:111` — `host_tid_ok` filter, per-node host ingress (`w_en =
+  s_host_valid && s_host_tid[v] && !tx_full[v] && host_tid_ok`)
+
+Both raise their sticky error flag (`dest_err`/`tid_err`) correctly — this is not an
+unflagged failure. But the flag says "a bad flit arrived," not "a packet got merged with
+the next one and delivered to the wrong node," which is the actual consequence once a VC
+is left open.
+
+### Fix — force-close on reject (design A), implemented
+
+Two designs were on the table. **A, force-close on reject:** on any rejected flit, close
+every VC at that ingress that has a packet open. **B, best-effort attribution:** close only
+the VC the bad flit appears to target. A was chosen — B is materially more logic and more
+corner cases (`tid=00` targets nothing, `tid=11` targets both) for a benefit that only
+shows up when the host is already sending garbage, where "a neighbouring packet also got
+truncated" is not disproportionate harm and "nothing gets silently misdelivered" is the
+property that matters.
+
+Same shape at both ingress sites:
+
+- `noc_mesh_2x2_vc.sv` section 2.2 — per node, per VC: `pkt_open` (a head has been
+  accepted, no `tlast` yet) and `pkt_dest` (that head's `tdest`, already through
+  `dest_ok`). A rejected flit sets `close_pend` for every open VC. While any close is
+  pending the node presents a synthetic flit to the router's LOCAL port — `tlast=1`,
+  `tid` = that VC, `tdest` = the recorded head dest, data 0 — and holds `s_ready` at 0 so
+  the host cannot interleave. LOCAL takes one flit per cycle, so two open VCs close over
+  two cycles.
+- `gals_node_wrapper.sv` — same tracker on the host side (`tx_pkt_open`/`tx_pkt_dest`/
+  `tx_close_pend`), but each VC has its own FIFO write port, so both close in one cycle.
+  `s_host_ready` is held low while closing.
+
+The truncated packet arrives short at the **correct** node, with `dest_err`/`tid_err`
+raised as before; the next packet starts as a clean head.
+
+### Evidence
+
+Formal, both with the one-hot `assume` **removed** so the solver sends any `tid`:
+
+| script | mode | result | new covers |
+|---|---|---|---|
+| `noc_mesh_2x2_vc.sby` | bmc depth 10 (`abc bmc3`) | **PASS**, 7m42s — `assert_eject_dest` holds by itself now | `cover_force_close` step 4, `cover_deliver_after_close` step 5, `cover_tid_err_raised` |
+| `noc_mesh_2x2_vc.sby` | cover depth 12 | PASS, all 13 reached | |
+| `gals_node_wrapper.sby` | prove (basecase + induction) | **PASS** | |
+| `gals_node_wrapper.sby` | cover | PASS | `cover_tx_force_close` step 7, `cover_tx_force_close_both` step 9 |
+
+New assertions: `assert_local_in_range` / `assert_local_tid_onehot` (everything entering a
+router via LOCAL, synthetic flits included, is in-range and one-hot),
+`assert_close_pend_only_open` (never synthesise a `tlast` into a VC with nothing open — that
+would be a one-flit phantom packet), `assert_host_held_while_closing` /
+`assert_no_host_write_while_closing`. `assert_bad_dest_blocked` and
+`assert_good_flit_passes` were widened to allow the synthetic flit through.
+`assert_close_pend_only_open` in the wrapper is deliberately not gated on `f_past_valid`:
+gated, induction starts from an unreachable bad state while the assert is off, the state
+sits there because `clk_noc` need not tick, and it "fails" the moment the gate opens.
+
+Simulation, `tb_noc_mesh_2x2_gals` 6/6 in both `TB default` and `HW_CLOCKS+HS_VC_ALT`,
+totals identical to the checked-in `_FIXED` baselines (34 / 136 and 34 / 140 matched,
+0 mismatched, 0 pending). `tb_noc_stress_tester` clean run identical to before
+(142112 / 61104 / 81072 flits, 0 errors).
+
+`tb_noc_stress_tester` with `BAD_TID` shows the harm the formal model does not measure.
+`tid` of node 11 is forced bad for 2000 NoC cycles; the columns are `max_gap` of the
+*other* three agents (normal 65 / 41 / 136):
+
+| forced `tid` | before fix: gap 00 / 01 / 10 | after fix | why |
+|---|---|---|---|
+| `11` | **1209 / 886 / 1104** | 65 / 41 / 150 | the truncated packet held node 00's LOCAL grant for the whole 2000 cycles; agents 01 and 10 lost throughput (141632 -> 142128, 61040 -> 61488) |
+| `00` | **1209 / 886 / 1104** | 65 / 41 / 136 | same; node 11 itself still stalls (8.4M-cycle gap), correctly — it is sending garbage |
+
+So before the fix a single bad flit from one host was a ~1100-cycle stall for every other
+node in the fabric, on top of the misdelivery. Sequence errors under `tid=11` went 1 -> 2;
+the checker is per-flit and 6-bit-modulo (`traffic_node_agent` compares
+`rx_seq` to `exp_seq[src][vc]`), so the count is "how many VC lanes saw a jump that was not
+a multiple of 64," which shifts with a one-cycle timing change and is not a regression
+signal. The `BAD_TID` runs report `FAIL` on that line by design — they are measurement
+modes, not pass/fail regressions.
+
+Hot-spot and permutation patterns cannot show the misdelivery itself in simulation:
+every agent has a fixed `DEST_ID`, so a merged packet still goes where the next one would
+have. That property rests on the formal proof.
+
+### Confirmed on hardware — 2026-09-12
+
+Stress build `PATTERN=1 VC_MODE=2` from `de8cac3`, built, programmed and captured entirely by
+script (`hw_scripts/`, section 2): 1104 `MARK_DEBUG` nets → 5 cores / 55 probes / 1100 bits,
+WNS **+0.820 ns** (was +0.711 before the added ingress state), all constraints met.
+
+| check | result |
+|---|---|
+| sequence errors | 0 |
+| liveness (4 nodes) | PASS |
+| ECC single / double | 0 / 0 |
+| `dest_err_cnt` | 0 (node probe still absent, as before) |
+| `tid_err_cnt` / `tid_err_node` | 0 / `0000`, probe present |
+| node 00 local port | 96.9%, 80.2 MB/s injected, EAST/NORTH 48.3 / 51.7 |
+| VC split at the sink | 50.0 / 50.0 |
+
+Identical to the 2026-09-10 clean run to the last digit that matters, so the force-close
+logic costs nothing on legal traffic. Log: `hw_logs/ila_stress_vc2_pattern1_20260912_bug7_clean.log`.
+
+The same day closed two other silicon gaps:
+
+- **`ECC_INJECT_DBE` on silicon**: `ecc_dbe_cnt` **3**, `node_dbe` **`1111`**, `sbe` 0, the
+  mirror image of the single-bit run. Sequence errors read **0**, which is correct and worth
+  understanding: the injector flips codeword bit 5 = data bit d2 on every FIFO write, a flit
+  crosses exactly two async FIFOs (TX at the source, RX at the sink), and two deterministic
+  flips of the same bit cancel. Both FIFOs flag, the endpoint sees clean data. The alarm
+  path is proved; end-to-end corruption under an uncorrectable error is shown by
+  `INJECT_ECC=1` in `tb_noc_stress_tester` (single-FIFO flip, 247 sequence errors), not by
+  this build. `verilog_define` was cleared afterwards.
+  Log: `hw_logs/ila_stress_vc2_pattern1_20260912_eccinject_dbe.log`.
+- **UART build rebuilt with the `tid` guard and bug #7** (`arty_gals_noc_wrapper`, 484 nets =
+  463 + 21 `tid_err` taps, WNS +1.204 ns). `hw_scripts/uart_roundtrip.py`: 149 / 5 / 32 / 32 /
+  13 / 13-flit packets to all three loopback nodes on both VCs, every one byte-identical with
+  `tlast` in place, `mon_flit_cnt` 244 = 6 packets, ECC 0/0, `dest_err` 0, `tid_err` 0. A
+  `tid=00` packet echoes nothing and reads `tid_err_cnt` 1 / `node` `0001` (h00).
+  Log: `hw_logs/uart_roundtrip_20260912_tidguard_bug7.log`.
+
 ## 4. Gotchas that cost real time
 
 1. **`mark_debug` does not prevent sweeping.** A register with no fanout is removed before
@@ -466,16 +666,41 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
 7. **Simulation is blind to fairness by default.** Test 4 sends one packet per node then
    stops — proves delivery, not bandwidth sharing. Test 6 (sustained contention) was added
    for exactly this and is what catches bug #2 class failures.
+8. **`xelab.bat -generic_top "BAD_TID=2"` does not work from a shell on Windows.** The
+   `.bat` wrapper re-tokenises its arguments and `=` is a `cmd` delimiter, so the generic
+   arrives as `BAD_TID 2` (or `BAD_TID` alone) and elaboration fails with "not found in
+   design"; calling `unwrapped/win64.o/xelab.exe` directly fails on `boost_regex.dll`.
+   Vivado's own Tcl console is fine. From a shell, wrap the testbench instead — a
+   one-line `module tb_wrap; tb_noc_stress_tester #(.BAD_TID(2)) u(); endmodule` compiled
+   alongside it and elaborated as the top does the job.
+9. **Opening the COM port resets the FPGA.** `serial.Serial('COM3', ...)` from the PC pulls
+   the FTDI's DTR/RTS and the Arty's reset circuit follows: every sticky flag, every `mon_*`
+   counter and the whole fabric go back to reset the moment a host script starts. Symptoms
+   that were chased for a while: `mon_active_cnt` reading "2 seconds" in a capture taken a
+   minute after programming, and `tid_err` going 1 → 0 between captures with no reset
+   button pressed. Rules: read the ILA *before* the next port open; take all captures of one
+   experiment in one `hw_server` session (`batch_program_capture.tcl` with `noprog`, or a
+   file handshake); and treat "counters look freshly reset" as "a script just opened the
+   port", not as a JTAG side effect (JTAG target open does **not** reset, verified by two
+   captures 5 s apart in one session advancing `mon_active_cnt` by 5.1 s).
+   Also: a `tid=00` flit from the PC wedges `uart_noc_host` in `P_PUSH_NOC` (its `vc_ready`
+   never comes), `mon_stall_cnt` climbs at one per cycle, and only a reset clears it. That
+   is the flagged, attributed stall the guard was built for; it is not a fabric hang.
 
 ---
 
 ## 5. Still open, beyond bug #3
 
-- **`packet_arbiter` cannot recover from a truncated packet** (section 3b). A source that
-  dies mid-packet locks that output port until global reset. Not reachable from
-  `traffic_node_agent` any more, but still true of the fabric. Any fix touches the same
-  lock/unlock logic as bug #1 — run the full regression plus `tb_noc_stress_tester`
-  before trusting one.
+- ~~**`packet_arbiter` cannot recover from a truncated packet**~~ — **closed by bug #5**
+  (`e9f8197`, 2026-09-04). A source that dies mid-packet used to lock that output port
+  until global reset (section 3b). The arbiter now abandons a `LOCKED` port after
+  `2**STALL_LOG` = 1024 consecutive cycles of the locked source having `valid` low, and
+  only if it is still silent on the release cycle (the hole formal found). Backpressure
+  keeps `valid` high, so a blocked-but-alive source cannot trip it. `KILL_MIDPKT=1` in
+  `tb_noc_stress_tester` reproduces the old wedge and shows the survivors keep running.
+  `formal/packet_arbiter.sby` passes `prove`, so the lock/unlock logic bug #1 lives in is
+  now under an unbounded proof — still run the full regression plus the stress tester
+  before touching it again.
 - Bug #4's fix and the liveness watchdog are both confirmed on hardware (section 3b).
 - ~~Fairness spread of 50% (48/24/27) might be arbiter unfairness~~ — **closed, it is
   topology.** `tb_noc_stress_tester` now counts transfers per input port at `idx0`'s LOCAL
@@ -831,6 +1056,15 @@ Set the threshold from that number, never from a guess. `STUCK_LOG` stays at 16,
     unconnected channels" at implementation. The script now deletes every pre-existing
     debug core first. This is gotcha 6 wearing a new hat: splitting the file stopped the
     *text* mixing, not the *state* carrying over.
+  - **`debug_auto.xdc` must be `USED_IN = implementation` only.** It was created with the
+    default `synthesis implementation`, so *synthesis* read it and baked the previous
+    build's ILA cores straight into the netlist. The symptom is subtle: `setup_debug.tcl`
+    reports clocks named `u_ila_0_clk_out1_clk_wiz_0` instead of `clk_out1_clk_wiz_0`.
+  - **Deleting a debug core does not delete the clocks it created.** `delete_debug_core`
+    removes the core, but the generated clock objects survive in that session, so
+    `get_clocks` keeps returning the `u_ila_N_` names and probes get mis-grouped or dropped.
+    `setup_debug.tcl` now maps such a name back to the real clock (`f_real_clock`). Running
+    `setup_debug` in its own session, after synthesis, is the reliable pattern.
   - **Implementation must run in a fresh Vivado session.** Calling `launch_runs impl_1` in
     the same session that just wrote `debug_auto.xdc` produces a bitstream with no error and
     no debug cores at all — no `.ltx`, no ILA on the board. Vivado uses its cached
