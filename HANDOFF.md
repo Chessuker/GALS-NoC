@@ -1,8 +1,9 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-12. `main` is at PR #4 (`0e7525f`: ECC injector, `tid` guard, bug #7,
-all board-confirmed). Branch `feature/3-dest-constant-guard` adds the constant-`tdest`
-guard on top, board-confirmed, not yet merged.
+Last updated: 2026-09-12. `main` is at PR #5 (`f07ddca`), tagged **`v1.0`**: seven bugs
+fixed, every flit-contract rule enforced in RTL and proved, silicon-validated. Branch
+`chore/housekeeping-cdc` on top: `report_cdc` in the build flow and the five CDC-10
+criticals it found fixed, plus the `dest_err_node` finding below.
 
 Read this first if you're picking the project up cold.
 
@@ -95,9 +96,21 @@ and agent_11.
   path is silent, not disconnected. Logs:
   `hw_logs/ila_stress_vc2_pattern1_20260910_clean.log` and `..._eccinject_sbe.log`.
   Remember to clear the define afterwards — `set_property verilog_define {} [current_fileset]`.
-- **`dest_err_node[3:0]` is absent from the stress build's ILA** (its clock did not resolve),
-  so per-node attribution is unavailable there. `dest_err_cnt` survives and answers whether
-  it happened. `analyze_ila.py` says so rather than staying silent.
+- **`dest_err` cannot fire in the stress build, by construction.** `dest_err_node[3:0]`
+  was reported as "clock did not resolve" for months; on 2026-09-12 the driver was traced:
+  a `LUT1` buffering `<const0>`. Every stress agent's `tx_tdest` is the compile-time
+  constant `DEST_ID`, so synthesis proves `dest_ok` and `frame_ok` are always 1, deletes the
+  `dest_err` register in the mesh, and `dont_touch` keeps only a buffer of ground.
+  `dest_err_cnt`'s registers survive but their increment input is the same constant. **Every
+  `dest_err_cnt = 0` read from a stress bitstream was guaranteed by synthesis and is not
+  evidence about the filter.** The claim in section 3c's constant-`tdest` entry that the
+  silicon run showed "no false positives" was vacuous and is withdrawn there. `tid_err` is
+  unaffected (`tid` alternates per packet under `VC_MODE=2`). The destination filters are
+  live on silicon only in the UART build, where `tdest` comes from the PC; its ILA carries
+  `dest_err_node` and read 0 through 244 legal flits (`hw_logs/uart_roundtrip_20260912_*`).
+  `setup_debug.tcl` now reports constant-driven nets as their own category ("จะอ่านได้ค่าเดียว
+  ตลอดกาล") instead of lumping them with unresolved clocks, and `analyze_ila.py` says why the
+  node probe is missing.
 - **Bug #5 has no silicon failure to regress against** — the fix removes the trigger.
 - **~~One-hot `tid` lives only in `assume`s~~ — now guarded, in the right place.**
   `gals_node_wrapper` checks `host_tid_ok` on its host ingress and ands it into the TX write
@@ -708,6 +721,30 @@ The same day closed two other silicon gaps:
   `formal/packet_arbiter.sby` passes `prove`, so the lock/unlock logic bug #1 lives in is
   now under an unbounded proof — still run the full regression plus the stress tester
   before touching it again.
+- **`report_cdc` now runs in the build flow, and it found five real criticals.**
+  `timing.xdc` declares the five clocks asynchronous, so STA never analyses a path between
+  domains; `report_cdc` is the only tool check that every crossing has a synchroniser. The
+  README suggested it, nothing ran it. `hw_scripts/batch_impl.tcl` now runs it on the routed
+  design and prints the severity counts (`CDC_Critical` / `CDC_Warning` / `CDC_Info`) into the
+  session log; the reports land next to the bitstream.
+
+  First run (2026-09-12, `f07ddca`): 129 Info, 36 Warning, 338 CDC-15, **5 CDC-10 Critical
+  "combinational logic detected before a synchronizer"**. All five were the same shape: a
+  sticky flag OR-reduced or gated in a LUT and fed straight into `sync_2stage` —
+  `ecc_double_err = |ecc_dbe` and `tid_err = |tid_err_node` in `gals_noc_top` (into the LED
+  synchroniser) and `done = test_done && !stuck_seen` in the three sender agents (into
+  `noc_stress_tester`'s flag synchroniser). A LUT can glitch while several inputs change in
+  the same cycle, and a two-flop synchroniser will happily capture the glitch as a real 1; on
+  a sticky error flag that is a false alarm that never clears. Fix: one register in the source
+  domain between the logic and the synchroniser, for all four `gals_noc_top` flag outputs and
+  for the agent's `done` / `err`. One cycle of latency on signals that are set once and stay.
+  `tb_traffic_node_agent` 10/10, regression and stress sim identical to baselines.
+
+  What the rest of the report means, so nobody re-investigates it: CDC-6 "multi-bit with
+  ASYNC_REG" x36 are the 5-bit gray pointers of the sixteen async FIFOs, gray-coded on
+  purpose; CDC-15 "clock-enable controlled" are the FIFO RAM read ports (written on one clock,
+  read on the other, safe by the pointer protocol) plus ILA internals; CDC-9 are the two reset
+  synchronisers. Expected, waived by inspection, not by constraint.
 - ~~**`tdest` constant per packet is an assumption, not enforced.**~~ — **enforced at the mesh
   ingress since 2026-09-12** (`noc_mesh_2x2_vc.sv` section 2.3). The router locks an output on
   the head flit's route, so a body flit with a different `tdest` used to go out the locked port:
@@ -737,9 +774,11 @@ The same day closed two other silicon gaps:
   `max_gap` 65 / 55 / 136 (normal), fairness 49/51, agent_10 receives the 1514 redirected
   flits, agent_00 sees two resync errors at the two truncation points. Clean stress run and
   the 6/6 regression identical to baselines. Silicon: clean `PATTERN=1 VC_MODE=2` run reads 0
-  sequence errors, liveness PASS, `dest_err` 0 (no false positives), 96.8%, VC 50/50, WNS
-  +0.489 ns (worst path unchanged in kind: router 0 input buffer → crossbar → wrapper RX RAM,
-  79% routing; placement noise, not the comparator).
+  sequence errors, liveness PASS, 96.8%, VC 50/50, WNS +0.489 ns (worst path unchanged in
+  kind: router 0 input buffer → crossbar → wrapper RX RAM, 79% routing; placement noise, not
+  the comparator). Its `dest_err 0` is **not** evidence about the new check: in this build
+  the whole `dest_err` path is constant-folded away because the agents' `tdest` is a
+  parameter (see "Known gaps"). The check's silicon exposure is the UART build.
   Log: `hw_logs/ila_stress_vc2_pattern1_20260912_destguard_clean.log`.
 
   One testbench trap found on the way, worth knowing before writing the next `force`:

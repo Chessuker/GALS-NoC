@@ -307,8 +307,6 @@ module gals_noc_top (
         end
     end
 
-    assign ecc_single_err = |ecc_sbe;
-    assign ecc_double_err = |ecc_dbe;
 
     // =========================================================
     // Out-of-range tdest aggregation
@@ -337,7 +335,6 @@ module gals_noc_top (
         end
     end
 
-    assign dest_err = |noc_dest_err;
 
     // =========================================================
     // Non-one-hot tid aggregation
@@ -366,6 +363,29 @@ module gals_noc_top (
         end
     end
 
-    assign tid_err = |tid_err_node;
+    // ธงรวมที่ออกไปข้างนอกทั้งสี่ตัว (ecc_single_err / ecc_double_err / dest_err / tid_err)
+    // ต้องผ่านรีจิสเตอร์ใน clk_noc ก่อน ไม่ใช่ OR แล้วส่งตรงเข้า sync_2stage ของ top
+    // report_cdc (2026-09-12) จับเป็น CDC-10 Critical: "combinational logic before a
+    // synchronizer" — LUT ที่ OR ธงหลายตัวอาจ glitch ตอนอินพุตหลายตัวเปลี่ยนพร้อมกัน
+    // และ 2FF จะจับ glitch นั้นเป็นค่าจริง ธงพวกนี้ sticky จึงกลายเป็นสัญญาณเตือนหลอกได้
+    // รีจิสเตอร์หนึ่งตัวปิดช่องนี้ ค่าใช้จ่าย = ช้าลงหนึ่งไซเคิลบนธงที่ตั้งแล้วค้างตลอดกาล
+    logic ecc_single_err_q, ecc_double_err_q, dest_err_q_out, tid_err_q_out;
+    always_ff @(posedge clk_noc or negedge rst_n) begin
+        if (!rst_n) begin
+            ecc_single_err_q <= 1'b0;
+            ecc_double_err_q <= 1'b0;
+            dest_err_q_out   <= 1'b0;
+            tid_err_q_out    <= 1'b0;
+        end else begin
+            ecc_single_err_q <= |ecc_sbe;
+            ecc_double_err_q <= |ecc_dbe;
+            dest_err_q_out   <= |noc_dest_err;
+            tid_err_q_out    <= |tid_err_node;
+        end
+    end
+    assign ecc_single_err = ecc_single_err_q;
+    assign dest_err       = dest_err_q_out;
+    assign ecc_double_err = ecc_double_err_q;
+    assign tid_err = tid_err_q_out;
 
 endmodule
