@@ -54,6 +54,12 @@ module tb_noc_stress_tester;
     // ไซเคิลที่ force — agent อื่นทุกตัวเห็น gap พุ่งเป็น 886..1209 ไซเคิล (ปกติ 41..136)
     // หลังแก้ gap กลับมาเท่าปกติ
     parameter int BAD_TID = 0;
+    // 0 = ปกติ  1 = บังคับ tdest ของ node 11 เป็น 0001 (node idx2, ในกระดาน) กลางแพกเกจ
+    // ใช้วัดตัวกรอง "ปลายทางคงที่ต่อแพกเกจ" (noc_mesh_2x2_vc หัวข้อ 2.3): flit ที่
+    // จ่าหน้าไม่ตรงหัวต้องถูกทิ้ง + dest_err ขึ้น + แพกเกจค้างถูกปิด agent อื่นต้องไม่
+    // เห็น gap พุ่ง ส่วนที่เหลือของแพกเกจที่ถูกตัดจะไปโผล่ที่ idx2 เป็นแพกเกจใหม่
+    // (agent_10 จะนับเป็น sequence error — เป็นการวัด ไม่ใช่ pass/fail)
+    parameter int BAD_DEST = 0;
 
     logic clk_noc = 0, clk_h00 = 0, clk_h01 = 0, clk_h10 = 0, clk_h11 = 0;
     logic rst_n;
@@ -242,6 +248,25 @@ module tb_noc_stress_tester;
             $display("  [bad_tid] เลิกบังคับ");
         end
 
+        // ---- เปลี่ยน tdest ของ node 11 กลางแพกเกจ (ยังอยู่ในกระดาน)
+        // คาดหวัง: ตัวกรอง 2.3 ทิ้ง flit ที่ไม่ตรงหัว ยก dest_err ปิดแพกเกจค้าง
+        // แล้วเมชเดินต่อ agent อื่นไม่โดนหางเลข
+        if (BAD_DEST != 0) begin
+            repeat (5000) @(posedge clk_noc);
+            $display("  [bad_dest] บังคับ tdest ของ node 11 เป็น 0001 (idx2) กลางแพกเกจ");
+            force t11_tx_tdest = 4'b0001;
+            repeat (2000) @(posedge clk_noc);
+            // t11_tx_tdest เป็นตัวแปร (logic) ที่ถูกขับด้วยค่าคงที่ DEST_ID ของ agent
+            // release ตัวแปรจะค้างค่าที่ force ไว้จนกว่าตัวขับจะ assign ใหม่ ซึ่งค่าคงที่
+            // ไม่มีวันทำ — ถ้า release เฉยๆ node 11 จะยิงไป idx2 ต่อทั้งหน้าต่าง
+            // (เจอจริง: agent_10 รับไป 220k flit, fairness ที่ node 00 เพี้ยนเป็น 56/44)
+            // tid ไม่เจอเพราะสลับทุกแพกเกจ จึงถูกขับใหม่เอง
+            force t11_tx_tdest = 4'b0000;   // = DEST_ID ของ node 11 ใน PATTERN=1
+            @(posedge clk_noc);
+            release t11_tx_tdest;
+            $display("  [bad_dest] เลิกบังคับ");
+        end
+
         // ---- เปิดหน้าต่างฉีดบิตเน่า (ตัวฉีดจริงอยู่ใน always ข้างล่าง)
         if (INJECT_ECC != 0) begin
             repeat (5000) @(posedge clk_noc);
@@ -407,12 +432,22 @@ module tb_noc_stress_tester;
             // จากตัวเลข throughput เพราะแพกเกจแค่ "หาย" ไม่ได้ผิดค่า
             $display("    DEST: err_cnt=%0d  node=%04b",
                      uut_noc_top.dest_err_cnt, uut_noc_top.dest_err_node);
-            if (uut_noc_top.dest_err_cnt != 0) begin
-                $display("  [FAIL] มี flit จ่าหน้านอกกระดาน 2x2 ถูกทิ้ง (node=%04b)",
-                         uut_noc_top.dest_err_node);
-                fails++;
-            end else
-                $display("  [PASS] ไม่มี flit จ่าหน้านอกกระดานเลย");
+            if (BAD_DEST == 0) begin
+                if (uut_noc_top.dest_err_cnt != 0) begin
+                    $display("  [FAIL] มี flit จ่าหน้านอกกระดาน/ไม่ตรงหัวแพกเกจ ถูกทิ้ง (node=%04b)",
+                             uut_noc_top.dest_err_node);
+                    fails++;
+                end else
+                    $display("  [PASS] ไม่มี flit จ่าหน้าผิดเลย");
+            end else begin
+                // รอบนี้เปลี่ยน tdest กลางแพกเกจเอง ธงจึง *ต้อง* ดัง
+                if (uut_noc_top.dest_err_cnt == 0) begin
+                    $display("  [FAIL] เปลี่ยน tdest กลางแพกเกจแล้วแต่ธงไม่ขึ้น = ตัวกรอง 2.3 ไม่ทำงาน");
+                    fails++;
+                end else
+                    $display("  [PASS] ตัวกรองจับ tdest ที่ไม่ตรงหัวแพกเกจได้ (cnt=%0d node=%04b)",
+                             uut_noc_top.dest_err_cnt, uut_noc_top.dest_err_node);
+            end
 
             // ---- tid ไม่ใช่ one-hot : agent ทุกตัวยิง tid ถูกอยู่แล้ว ธงจึงต้องเงียบ
             // ถ้าดังขึ้นแปลว่าตัวสร้าง tid เพี้ยน หรือตัวกรองไวเกินจนทิ้งของดี

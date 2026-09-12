@@ -1,0 +1,2 @@
+# shell scripts run inside WSL; CRLF breaks bash
+*.sh text eol=lf

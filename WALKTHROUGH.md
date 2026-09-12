@@ -220,10 +220,12 @@ Rules the design relies on, and where they are enforced:
   flit and raises `tid_err`. Before that it was only an assumption.
 - `tdest` is on the board (x ≤ 1, y ≤ 1). Enforced since 2026-09-04 at the mesh ingress;
   a violation drops the flit and raises `dest_err`.
-- `tdest` is constant across a packet. **Not enforced.** The router locks an output on
-  the head flit's route; a body flit with a different `tdest` would go out the locked port
-  regardless. The formal environment records this as an assumption
-  (`router_5port_mesh_vc.sv`, block `f_wf`). All agents in this repo honour it.
+- `tdest` is constant across a packet. Enforced since 2026-09-12 at the mesh ingress
+  (`noc_mesh_2x2_vc` section 2.3): a flit aimed at an open VC whose head went elsewhere is
+  dropped, raises `dest_err`, and the open packet is force-closed. The router itself still
+  relies on it (it locks an output on the head's route) and its standalone proof keeps the
+  assumption in `f_wf`; the mesh proof no longer assumes it and proves
+  `assert_local_dest_stable` instead.
 - Every packet ends with a `tlast`. Enforced since 2026-09-11 in the sense that if an
   ingress filter has to drop a flit, it closes any open packet itself (bug #7). A host
   that simply stops mid-packet is handled by a timeout in `packet_arbiter` (bug #5).
@@ -464,6 +466,11 @@ either is consumed (the host sees `ready` normally) but not presented to the rou
 the corresponding sticky per-node flag `dest_err[i]` / `tid_err[i]` is raised. The flag is
 raised when the bad flit is offered, not when it is accepted.
 
+Section 2.3 (2026-09-12) is the **constant-`tdest` check**: using the same tracker, a
+flit that targets an open VC with a `tdest` different from that VC's recorded head is
+rejected (dropped, `dest_err`, force-close). `dest_err` therefore means "this flit's
+destination is unacceptable", off-board or inconsistent with its packet.
+
 Section 2.2 is the **force-close** logic added for bug #7: per node and per VC,
 `pkt_open` and `pkt_dest` track whether a packet has started and where it is going. A
 rejected flit sets `close_pend` for every open VC. While any close is pending the node
@@ -476,9 +483,10 @@ Headline properties: `assert_eject_dest` (a flit ejected at node i is addressed 
 i; this is what fails if the index wiring is crossed, and what bug #7 broke),
 `assert_edge_*` (nothing drives valid off the board), `assert_bad_dest_blocked`,
 `assert_local_in_range`, `assert_local_tid_onehot`, `assert_close_pend_only_open`,
-`assert_host_held_while_closing`, plus one-hot/onehot0 checks on ejected `tid`. Since
-`de8cac3` the environment no longer assumes one-hot `tid` or in-range `tdest`; the solver
-sends anything and the filters have to cope. Covers show every node delivers, both links
+`assert_host_held_while_closing`, `assert_frame_err_blocked`, `assert_local_dest_stable`
+(what the router sees on LOCAL keeps its head's address), plus one-hot/onehot0 checks on
+ejected `tid`. The environment no longer assumes one-hot `tid`, in-range `tdest`, or
+constant `tdest` per packet; the solver sends anything and the filters have to cope. Covers show every node delivers, both links
 carry traffic, both VCs run at once, the filters fire and the mesh keeps delivering
 afterwards, and the force-close path is reached and its synthetic tail arrives.
 
@@ -1303,12 +1311,14 @@ The same session showed what a `tid=00` flit from the PC does: nothing echoes,
 `mon_stall_cnt` climbing one per cycle until the next reset. Flagged and attributed, not a
 fabric hang.
 
-### 10.13 Silicon status at `de8cac3`
+### 10.13 Silicon status
 
 Everything is on the board now: bug #7 (stress build, clean), `ECC_INJECT_DBE`
 (`ecc_dbe_cnt` 3, `node_dbe` `1111`, and 0 sequence errors because two deterministic
 flips of the same bit across the TX and RX FIFOs cancel, which is explained in the log),
 and the UART build with the `tid` guard (6/6 round-trips, `tid=00` dropped and flagged).
+The constant-`tdest` guard (branch `feature/3-dest-constant-guard`) also ran clean on the
+board the same day (0 errors, `dest_err` 0 on legal traffic, 96.8%, WNS +0.489 ns).
 Only bug #5's failure mode has no silicon observation, because the fix removes the
 trigger. Every build, program and capture on 2026-09-12 was done by the batch scripts in
 `hw_scripts/`, no GUI.
@@ -1357,6 +1367,10 @@ originals before touching the build flow.
    `formal/run_wsl.sh`.
 10. Window-buffered console output is lost when a process is killed by `timeout`;
     flush or write to a file.
+12. `release` on a `logic` variable driven by a constant leaves the forced value in
+    place forever; force the true value for a cycle first. Found writing `BAD_DEST`.
+13. Vivado 2025.2 can crash in its exit handler after `close_project` with all outputs
+    already written; the batch scripts' `SESSION_A_DONE` marker is the success signal.
 11. `final_src/` and `sources_1/new/old/` are stale; the old `.sby` files there verified
     a different project.
 
@@ -1364,8 +1378,6 @@ originals before touching the build flow.
 
 ## 13. What is still open
 
-- **`tdest` constant per packet is still an assumption.** The router misroutes silently
-  if it is broken. Recorded in `f_wf`; not enforced.
 - **`dest_err_node[3:0]` is absent from the stress build's ILA** (clock did not resolve);
   `dest_err_cnt` survives.
 - **ECC covers the payload only**, and SECDED misreports three or more flipped bits.

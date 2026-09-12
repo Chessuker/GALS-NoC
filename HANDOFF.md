@@ -1,8 +1,8 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-12. Merged to `main` as PR #2 (`9f20a94`); branch
-`feature/2-ecc-injection-and-tid-guard` carries the ECC injection register, the `tid` guard,
-and the bug #7 fix on top, all board-confirmed, not yet merged.
+Last updated: 2026-09-12. `main` is at PR #4 (`0e7525f`: ECC injector, `tid` guard, bug #7,
+all board-confirmed). Branch `feature/3-dest-constant-guard` adds the constant-`tdest`
+guard on top, board-confirmed, not yet merged.
 
 Read this first if you're picking the project up cold.
 
@@ -686,6 +686,13 @@ The same day closed two other silicon gaps:
    Also: a `tid=00` flit from the PC wedges `uart_noc_host` in `P_PUSH_NOC` (its `vc_ready`
    never comes), `mon_stall_cnt` climbs at one per cycle, and only a reset clears it. That
    is the flagged, attributed stall the guard was built for; it is not a fabric hang.
+10. **Vivado 2025.2 can crash in its exit handler after `close_project`**
+   (`EXCEPTION_ACCESS_VIOLATION`, exit 139, `hs_err_pid*.log`) with every output already on
+   disk — seen once, after a clean synth + `setup_debug.tcl`. The batch scripts print
+   `SESSION_A_DONE` as the last real line; treat that marker as success, not the exit code.
+11. **`release` on a variable does not restore the driver's value.** See the `BAD_DEST` entry
+   in section 5: a `force` on a `logic` net driven by a constant sticks forever after
+   `release`. Force the real value for a cycle, then release; or force a real wire.
 
 ---
 
@@ -701,6 +708,46 @@ The same day closed two other silicon gaps:
   `formal/packet_arbiter.sby` passes `prove`, so the lock/unlock logic bug #1 lives in is
   now under an unbounded proof — still run the full regression plus the stress tester
   before touching it again.
+- ~~**`tdest` constant per packet is an assumption, not enforced.**~~ — **enforced at the mesh
+  ingress since 2026-09-12** (`noc_mesh_2x2_vc.sv` section 2.3). The router locks an output on
+  the head flit's route, so a body flit with a different `tdest` used to go out the locked port:
+  a silent misroute, no flag, and the arbiter only let go after `STALL_MAX`. The only thing
+  saying it could not happen was an `assume` (router `f_wf`, and the mesh's own `f_host_vc`),
+  i.e. a contract the host had to keep — the same kind of contract bug #7 showed a garbling
+  host does not keep.
+
+  The bug #7 tracker already knows, per node and VC, whether a packet is open and where its
+  head was addressed (`pkt_open` / `pkt_dest`), so the check is one comparison: a flit that
+  targets an open VC with a `tdest` different from that VC's head is rejected like any other bad
+  flit — dropped, `dest_err` raised (same flag as out-of-range; "this flit's destination is
+  unacceptable", and no new ports/probes/LED wiring), open packets force-closed with a
+  synthetic tail. The cut packet reaches the *head's* destination short; the remaining flits
+  become a new packet to wherever they say they are going. Only the mesh ingress needed it:
+  `tdest` passes through `gals_node_wrapper`'s mux unchanged, so a host-side fault lands here,
+  and links between routers get the property by construction.
+
+  Proof: the mesh formal environment no longer assumes constant `tdest` (the solver changes it
+  mid-packet at will) and instead proves `assert_local_dest_stable` — everything the router
+  sees on LOCAL keeps its head's address — plus `assert_frame_err_blocked`; bmc depth 10 PASS
+  in 6m42s, `cover_frame_err_raised` reached. The router's `f_wf` `assume` stays, because in
+  the router-only proof its `s_*` are free inputs; the comment there now says who enforces it.
+
+  Measured: `tb_noc_stress_tester` `BAD_DEST=1` forces node 11's `tdest` to `0001` (in range,
+  wrong node) for 2000 NoC cycles mid-packet → `dest_err_cnt` 1 / `node` `1000`, other agents'
+  `max_gap` 65 / 55 / 136 (normal), fairness 49/51, agent_10 receives the 1514 redirected
+  flits, agent_00 sees two resync errors at the two truncation points. Clean stress run and
+  the 6/6 regression identical to baselines. Silicon: clean `PATTERN=1 VC_MODE=2` run reads 0
+  sequence errors, liveness PASS, `dest_err` 0 (no false positives), 96.8%, VC 50/50, WNS
+  +0.489 ns (worst path unchanged in kind: router 0 input buffer → crossbar → wrapper RX RAM,
+  79% routing; placement noise, not the comparator).
+  Log: `hw_logs/ila_stress_vc2_pattern1_20260912_destguard_clean.log`.
+
+  One testbench trap found on the way, worth knowing before writing the next `force`:
+  `t11_tx_tdest` is a `logic` driven by the agent's constant `DEST_ID`. `release` on a
+  *variable* leaves the forced value in place until the driver assigns again, which a constant
+  never does — so node 11 kept firing at idx2 for the rest of the window (agent_10 received
+  220k flits, node 00's fairness read 56/44). `BAD_TID` never hit this because `tid` toggles
+  every packet. The fix is to force the true value for a cycle before releasing.
 - Bug #4's fix and the liveness watchdog are both confirmed on hardware (section 3b).
 - ~~Fairness spread of 50% (48/24/27) might be arbiter unfairness~~ — **closed, it is
   topology.** `tb_noc_stress_tester` now counts transfers per input port at `idx0`'s LOCAL
