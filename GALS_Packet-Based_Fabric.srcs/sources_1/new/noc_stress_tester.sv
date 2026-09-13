@@ -55,11 +55,18 @@ module noc_stress_tester #(
     parameter int WARMUP_LOG = 10,
     parameter int DRAIN_LOG  = 12,
     parameter int STUCK_LOG  = 16,
-    parameter int GAP_W      = 24
+    parameter int GAP_W      = 24,
+    // ตัวฉีดความผิดพลาดที่ขาส่งของ agent_11 (fault_injector.sv) — ฉีดหลังรีเซ็ต
+    // 2**FAULT_FIRE_LOG ไซเคิลของ clk_h11 (บอร์ด 20 ≈ 15 ms กลาง window, ซิมตั้ง 12)
+    parameter int FAULT_FIRE_LOG = 20
 )(
     input logic clk_h00, input logic clk_h01,
     input logic clk_h10, input logic clk_h11,
-    input logic rst_n,
+    // รีเซ็ตต่อโดเมน (reset_sync ที่ top)
+    input logic rst_n_h00,
+    input logic rst_n_h01,
+    input logic rst_n_h10,
+    input logic rst_n_h11,
 
     // Node 00
     output logic [7:0] t00_tx_tdata, output logic [3:0] t00_tx_tdest, output logic [1:0] t00_tx_tid, output logic t00_tx_tlast, output logic t00_tx_tvalid, input logic [1:0] t00_tx_tready,
@@ -77,7 +84,13 @@ module noc_stress_tester #(
     // ---- สรุปผล ทุกเส้นถูก sync เข้ามาที่โดเมน clk_h00 แล้ว
     output logic pass_group1,   // 00 และ 11 จบ window โดยไม่มี error
     output logic pass_group2,   // 01 และ 10 จบ window โดยไม่มี error
-    output logic any_fail
+    output logic any_fail,
+
+    // ---- ควบคุมตัวฉีดความผิดพลาด (จาก VIO บนบอร์ด / parameter ในซิม) โดเมนอะไรก็ได้
+    input  logic [3:0] fault_mode,
+    input  logic       fault_arm,
+    output logic       fault_active,
+    output logic       fault_fired
 );
 
     logic d00, e00, d01, e01, d10, e10, d11, e11;
@@ -99,18 +112,34 @@ module noc_stress_tester #(
     traffic_node_agent #(.DEST_ID(DEST_00), .SRC_TAG(2'b00), .TX_EN(TXEN_00), .VC_MODE(VC_MODE),
         .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
         .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_00 (
-        .clk(clk_h00), .rst_n(rst_n),
+        .clk(clk_h00), .rst_n(rst_n_h00),
         .tx_tdata(t00_tx_tdata), .tx_tdest(t00_tx_tdest), .tx_tid(t00_tx_tid), .tx_tlast(t00_tx_tlast), .tx_tvalid(t00_tx_tvalid), .tx_tready(t00_tx_tready),
         .rx_tdata(t00_rx_tdata), .rx_tdest(t00_rx_tdest), .rx_tid(t00_rx_tid), .rx_tlast(t00_rx_tlast), .rx_tvalid(t00_rx_tvalid), .rx_tready(t00_rx_tready),
         .done(d00), .err(e00)
     );
 
-    // Node 11 -> h00 (ทั้งสอง pattern)
+    // Node 11 -> h00 (ทั้งสอง pattern) — ขาส่งผ่าน fault_injector ก่อนออกไป fabric
+    logic [7:0] a11_tdata; logic [3:0] a11_tdest; logic [1:0] a11_tid; logic a11_tlast, a11_tvalid; logic [1:0] a11_tready;
+
+    // mode/arm มาจากโดเมนอื่น (VIO บน clk_h00) เป็นค่า static ก่อน arm จึงข้ามด้วย 2FF ได้
+    logic [4:0] fault_ctl_s;
+    sync_2stage #(.WIDTH(5)) u_sync_fault (
+        .clk(clk_h11), .rst(~rst_n_h11), .d({fault_arm, fault_mode}), .q(fault_ctl_s)
+    );
+
+    fault_injector #(.FIRE_LOG(FAULT_FIRE_LOG)) u_fault (
+        .clk(clk_h11), .rst_n(rst_n_h11),
+        .mode(fault_ctl_s[3:0]), .arm(fault_ctl_s[4]),
+        .a_tdata(a11_tdata), .a_tdest(a11_tdest), .a_tid(a11_tid), .a_tlast(a11_tlast), .a_tvalid(a11_tvalid), .a_tready(a11_tready),
+        .f_tdata(t11_tx_tdata), .f_tdest(t11_tx_tdest), .f_tid(t11_tx_tid), .f_tlast(t11_tx_tlast), .f_tvalid(t11_tx_tvalid), .f_tready(t11_tx_tready),
+        .active(fault_active), .fired(fault_fired), .mode_dbg()
+    );
+
     traffic_node_agent #(.DEST_ID(DEST_11), .SRC_TAG(2'b11), .VC_MODE(VC_MODE),
         .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
         .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_11 (
-        .clk(clk_h11), .rst_n(rst_n),
-        .tx_tdata(t11_tx_tdata), .tx_tdest(t11_tx_tdest), .tx_tid(t11_tx_tid), .tx_tlast(t11_tx_tlast), .tx_tvalid(t11_tx_tvalid), .tx_tready(t11_tx_tready),
+        .clk(clk_h11), .rst_n(rst_n_h11),
+        .tx_tdata(a11_tdata), .tx_tdest(a11_tdest), .tx_tid(a11_tid), .tx_tlast(a11_tlast), .tx_tvalid(a11_tvalid), .tx_tready(a11_tready),
         .rx_tdata(t11_rx_tdata), .rx_tdest(t11_rx_tdest), .rx_tid(t11_rx_tid), .rx_tlast(t11_rx_tlast), .rx_tvalid(t11_rx_tvalid), .rx_tready(t11_rx_tready),
         .done(d11), .err(e11)
     );
@@ -119,7 +148,7 @@ module noc_stress_tester #(
     traffic_node_agent #(.DEST_ID(DEST_01), .SRC_TAG(2'b01), .VC_MODE(VC_MODE),
         .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
         .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_01 (
-        .clk(clk_h01), .rst_n(rst_n),
+        .clk(clk_h01), .rst_n(rst_n_h01),
         .tx_tdata(t01_tx_tdata), .tx_tdest(t01_tx_tdest), .tx_tid(t01_tx_tid), .tx_tlast(t01_tx_tlast), .tx_tvalid(t01_tx_tvalid), .tx_tready(t01_tx_tready),
         .rx_tdata(t01_rx_tdata), .rx_tdest(t01_rx_tdest), .rx_tid(t01_rx_tid), .rx_tlast(t01_rx_tlast), .rx_tvalid(t01_rx_tvalid), .rx_tready(t01_rx_tready),
         .done(d01), .err(e01)
@@ -129,7 +158,7 @@ module noc_stress_tester #(
     traffic_node_agent #(.DEST_ID(DEST_10), .SRC_TAG(2'b10), .VC_MODE(VC_MODE),
         .WINDOW_LOG(WINDOW_LOG), .WARMUP_LOG(WARMUP_LOG), .DRAIN_LOG(DRAIN_LOG),
         .STUCK_LOG(STUCK_LOG), .GAP_W(GAP_W)) agent_10 (
-        .clk(clk_h10), .rst_n(rst_n),
+        .clk(clk_h10), .rst_n(rst_n_h10),
         .tx_tdata(t10_tx_tdata), .tx_tdest(t10_tx_tdest), .tx_tid(t10_tx_tid), .tx_tlast(t10_tx_tlast), .tx_tvalid(t10_tx_tvalid), .tx_tready(t10_tx_tready),
         .rx_tdata(t10_rx_tdata), .rx_tdest(t10_rx_tdest), .rx_tid(t10_rx_tid), .rx_tlast(t10_rx_tlast), .rx_tvalid(t10_rx_tvalid), .rx_tready(t10_rx_tready),
         .done(d10), .err(e10)
@@ -143,7 +172,7 @@ module noc_stress_tester #(
     assign flags_raw = {e11, d11, e10, d10, e01, d01, e00, d00};
 
     sync_2stage #(.WIDTH(8)) u_sync_flags (
-        .clk(clk_h00), .rst(~rst_n), .d(flags_raw), .q(flags_s)
+        .clk(clk_h00), .rst(~rst_n_h00), .d(flags_raw), .q(flags_s)
     );
 
     logic s_d00, s_e00, s_d01, s_e01, s_d10, s_e10, s_d11, s_e11;

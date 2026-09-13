@@ -18,28 +18,32 @@ set_property port_width 16 [get_debug_ports u_ila_0/probe0]
 connect_debug_port u_ila_0/probe0 [get_nets [list {uut_noc_top/dest_err_cnt[0]} {uut_noc_top/dest_err_cnt[1]} {uut_noc_top/dest_err_cnt[2]} {uut_noc_top/dest_err_cnt[3]} {uut_noc_top/dest_err_cnt[4]} {uut_noc_top/dest_err_cnt[5]} {uut_noc_top/dest_err_cnt[6]} {uut_noc_top/dest_err_cnt[7]} {uut_noc_top/dest_err_cnt[8]} {uut_noc_top/dest_err_cnt[9]} {uut_noc_top/dest_err_cnt[10]} {uut_noc_top/dest_err_cnt[11]} {uut_noc_top/dest_err_cnt[12]} {uut_noc_top/dest_err_cnt[13]} {uut_noc_top/dest_err_cnt[14]} {uut_noc_top/dest_err_cnt[15]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe1]
-set_property port_width 16 [get_debug_ports u_ila_0/probe1]
-connect_debug_port u_ila_0/probe1 [get_nets [list {uut_noc_top/ecc_dbe_cnt[0]} {uut_noc_top/ecc_dbe_cnt[1]} {uut_noc_top/ecc_dbe_cnt[2]} {uut_noc_top/ecc_dbe_cnt[3]} {uut_noc_top/ecc_dbe_cnt[4]} {uut_noc_top/ecc_dbe_cnt[5]} {uut_noc_top/ecc_dbe_cnt[6]} {uut_noc_top/ecc_dbe_cnt[7]} {uut_noc_top/ecc_dbe_cnt[8]} {uut_noc_top/ecc_dbe_cnt[9]} {uut_noc_top/ecc_dbe_cnt[10]} {uut_noc_top/ecc_dbe_cnt[11]} {uut_noc_top/ecc_dbe_cnt[12]} {uut_noc_top/ecc_dbe_cnt[13]} {uut_noc_top/ecc_dbe_cnt[14]} {uut_noc_top/ecc_dbe_cnt[15]}]]
+set_property port_width 1 [get_debug_ports u_ila_0/probe1]
+connect_debug_port u_ila_0/probe1 [get_nets [list {uut_noc_top/dest_err_node[3]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe2]
-set_property port_width 4 [get_debug_ports u_ila_0/probe2]
-connect_debug_port u_ila_0/probe2 [get_nets [list {uut_noc_top/ecc_dbe_node[0]} {uut_noc_top/ecc_dbe_node[1]} {uut_noc_top/ecc_dbe_node[2]} {uut_noc_top/ecc_dbe_node[3]}]]
+set_property port_width 16 [get_debug_ports u_ila_0/probe2]
+connect_debug_port u_ila_0/probe2 [get_nets [list {uut_noc_top/ecc_dbe_cnt[0]} {uut_noc_top/ecc_dbe_cnt[1]} {uut_noc_top/ecc_dbe_cnt[2]} {uut_noc_top/ecc_dbe_cnt[3]} {uut_noc_top/ecc_dbe_cnt[4]} {uut_noc_top/ecc_dbe_cnt[5]} {uut_noc_top/ecc_dbe_cnt[6]} {uut_noc_top/ecc_dbe_cnt[7]} {uut_noc_top/ecc_dbe_cnt[8]} {uut_noc_top/ecc_dbe_cnt[9]} {uut_noc_top/ecc_dbe_cnt[10]} {uut_noc_top/ecc_dbe_cnt[11]} {uut_noc_top/ecc_dbe_cnt[12]} {uut_noc_top/ecc_dbe_cnt[13]} {uut_noc_top/ecc_dbe_cnt[14]} {uut_noc_top/ecc_dbe_cnt[15]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe3]
-set_property port_width 16 [get_debug_ports u_ila_0/probe3]
-connect_debug_port u_ila_0/probe3 [get_nets [list {uut_noc_top/ecc_sbe_cnt[0]} {uut_noc_top/ecc_sbe_cnt[1]} {uut_noc_top/ecc_sbe_cnt[2]} {uut_noc_top/ecc_sbe_cnt[3]} {uut_noc_top/ecc_sbe_cnt[4]} {uut_noc_top/ecc_sbe_cnt[5]} {uut_noc_top/ecc_sbe_cnt[6]} {uut_noc_top/ecc_sbe_cnt[7]} {uut_noc_top/ecc_sbe_cnt[8]} {uut_noc_top/ecc_sbe_cnt[9]} {uut_noc_top/ecc_sbe_cnt[10]} {uut_noc_top/ecc_sbe_cnt[11]} {uut_noc_top/ecc_sbe_cnt[12]} {uut_noc_top/ecc_sbe_cnt[13]} {uut_noc_top/ecc_sbe_cnt[14]} {uut_noc_top/ecc_sbe_cnt[15]}]]
+set_property port_width 4 [get_debug_ports u_ila_0/probe3]
+connect_debug_port u_ila_0/probe3 [get_nets [list {uut_noc_top/ecc_dbe_node[0]} {uut_noc_top/ecc_dbe_node[1]} {uut_noc_top/ecc_dbe_node[2]} {uut_noc_top/ecc_dbe_node[3]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe4]
-set_property port_width 4 [get_debug_ports u_ila_0/probe4]
-connect_debug_port u_ila_0/probe4 [get_nets [list {uut_noc_top/ecc_sbe_node[0]} {uut_noc_top/ecc_sbe_node[1]} {uut_noc_top/ecc_sbe_node[2]} {uut_noc_top/ecc_sbe_node[3]}]]
+set_property port_width 16 [get_debug_ports u_ila_0/probe4]
+connect_debug_port u_ila_0/probe4 [get_nets [list {uut_noc_top/ecc_sbe_cnt[0]} {uut_noc_top/ecc_sbe_cnt[1]} {uut_noc_top/ecc_sbe_cnt[2]} {uut_noc_top/ecc_sbe_cnt[3]} {uut_noc_top/ecc_sbe_cnt[4]} {uut_noc_top/ecc_sbe_cnt[5]} {uut_noc_top/ecc_sbe_cnt[6]} {uut_noc_top/ecc_sbe_cnt[7]} {uut_noc_top/ecc_sbe_cnt[8]} {uut_noc_top/ecc_sbe_cnt[9]} {uut_noc_top/ecc_sbe_cnt[10]} {uut_noc_top/ecc_sbe_cnt[11]} {uut_noc_top/ecc_sbe_cnt[12]} {uut_noc_top/ecc_sbe_cnt[13]} {uut_noc_top/ecc_sbe_cnt[14]} {uut_noc_top/ecc_sbe_cnt[15]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe5]
-set_property port_width 16 [get_debug_ports u_ila_0/probe5]
-connect_debug_port u_ila_0/probe5 [get_nets [list {uut_noc_top/tid_err_cnt[0]} {uut_noc_top/tid_err_cnt[1]} {uut_noc_top/tid_err_cnt[2]} {uut_noc_top/tid_err_cnt[3]} {uut_noc_top/tid_err_cnt[4]} {uut_noc_top/tid_err_cnt[5]} {uut_noc_top/tid_err_cnt[6]} {uut_noc_top/tid_err_cnt[7]} {uut_noc_top/tid_err_cnt[8]} {uut_noc_top/tid_err_cnt[9]} {uut_noc_top/tid_err_cnt[10]} {uut_noc_top/tid_err_cnt[11]} {uut_noc_top/tid_err_cnt[12]} {uut_noc_top/tid_err_cnt[13]} {uut_noc_top/tid_err_cnt[14]} {uut_noc_top/tid_err_cnt[15]}]]
+set_property port_width 4 [get_debug_ports u_ila_0/probe5]
+connect_debug_port u_ila_0/probe5 [get_nets [list {uut_noc_top/ecc_sbe_node[0]} {uut_noc_top/ecc_sbe_node[1]} {uut_noc_top/ecc_sbe_node[2]} {uut_noc_top/ecc_sbe_node[3]}]]
 create_debug_port u_ila_0 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe6]
-set_property port_width 4 [get_debug_ports u_ila_0/probe6]
-connect_debug_port u_ila_0/probe6 [get_nets [list {uut_noc_top/tid_err_node[0]} {uut_noc_top/tid_err_node[1]} {uut_noc_top/tid_err_node[2]} {uut_noc_top/tid_err_node[3]}]]
+set_property port_width 16 [get_debug_ports u_ila_0/probe6]
+connect_debug_port u_ila_0/probe6 [get_nets [list {uut_noc_top/tid_err_cnt[0]} {uut_noc_top/tid_err_cnt[1]} {uut_noc_top/tid_err_cnt[2]} {uut_noc_top/tid_err_cnt[3]} {uut_noc_top/tid_err_cnt[4]} {uut_noc_top/tid_err_cnt[5]} {uut_noc_top/tid_err_cnt[6]} {uut_noc_top/tid_err_cnt[7]} {uut_noc_top/tid_err_cnt[8]} {uut_noc_top/tid_err_cnt[9]} {uut_noc_top/tid_err_cnt[10]} {uut_noc_top/tid_err_cnt[11]} {uut_noc_top/tid_err_cnt[12]} {uut_noc_top/tid_err_cnt[13]} {uut_noc_top/tid_err_cnt[14]} {uut_noc_top/tid_err_cnt[15]}]]
+create_debug_port u_ila_0 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_0/probe7]
+set_property port_width 4 [get_debug_ports u_ila_0/probe7]
+connect_debug_port u_ila_0/probe7 [get_nets [list {uut_noc_top/tid_err_node[0]} {uut_noc_top/tid_err_node[1]} {uut_noc_top/tid_err_node[2]} {uut_noc_top/tid_err_node[3]}]]
 create_debug_core u_ila_1 ila
 set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_1]
 set_property ALL_PROBE_SAME_MU_CNT 1 [get_debug_cores u_ila_1]
@@ -122,6 +126,14 @@ create_debug_port u_ila_1 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe17]
 set_property port_width 32 [get_debug_ports u_ila_1/probe17]
 connect_debug_port u_ila_1/probe17 [get_nets [list {uut_noc_top/mon_stall_cnt[0]} {uut_noc_top/mon_stall_cnt[1]} {uut_noc_top/mon_stall_cnt[2]} {uut_noc_top/mon_stall_cnt[3]} {uut_noc_top/mon_stall_cnt[4]} {uut_noc_top/mon_stall_cnt[5]} {uut_noc_top/mon_stall_cnt[6]} {uut_noc_top/mon_stall_cnt[7]} {uut_noc_top/mon_stall_cnt[8]} {uut_noc_top/mon_stall_cnt[9]} {uut_noc_top/mon_stall_cnt[10]} {uut_noc_top/mon_stall_cnt[11]} {uut_noc_top/mon_stall_cnt[12]} {uut_noc_top/mon_stall_cnt[13]} {uut_noc_top/mon_stall_cnt[14]} {uut_noc_top/mon_stall_cnt[15]} {uut_noc_top/mon_stall_cnt[16]} {uut_noc_top/mon_stall_cnt[17]} {uut_noc_top/mon_stall_cnt[18]} {uut_noc_top/mon_stall_cnt[19]} {uut_noc_top/mon_stall_cnt[20]} {uut_noc_top/mon_stall_cnt[21]} {uut_noc_top/mon_stall_cnt[22]} {uut_noc_top/mon_stall_cnt[23]} {uut_noc_top/mon_stall_cnt[24]} {uut_noc_top/mon_stall_cnt[25]} {uut_noc_top/mon_stall_cnt[26]} {uut_noc_top/mon_stall_cnt[27]} {uut_noc_top/mon_stall_cnt[28]} {uut_noc_top/mon_stall_cnt[29]} {uut_noc_top/mon_stall_cnt[30]} {uut_noc_top/mon_stall_cnt[31]}]]
+create_debug_port u_ila_1 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe18]
+set_property port_width 8 [get_debug_ports u_ila_1/probe18]
+connect_debug_port u_ila_1/probe18 [get_nets [list {vio_in[0]} {vio_in[1]} {vio_in[2]} {vio_in[3]} {vio_in[4]} {vio_in[5]} {vio_in[6]} {vio_in[7]}]]
+create_debug_port u_ila_1 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_1/probe19]
+set_property port_width 8 [get_debug_ports u_ila_1/probe19]
+connect_debug_port u_ila_1/probe19 [get_nets [list {vio_out[0]} {vio_out[1]} {vio_out[2]} {vio_out[3]} {vio_out[4]} {vio_out[5]} {vio_out[6]} {vio_out[7]}]]
 create_debug_core u_ila_2 ila
 set_property ALL_PROBE_SAME_MU true [get_debug_cores u_ila_2]
 set_property ALL_PROBE_SAME_MU_CNT 1 [get_debug_cores u_ila_2]
@@ -272,6 +284,18 @@ create_debug_port u_ila_4 probe
 set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_4/probe9]
 set_property port_width 32 [get_debug_ports u_ila_4/probe9]
 connect_debug_port u_ila_4/probe9 [get_nets [list {u_stress/agent_11/tx_stall_cnt[0]} {u_stress/agent_11/tx_stall_cnt[1]} {u_stress/agent_11/tx_stall_cnt[2]} {u_stress/agent_11/tx_stall_cnt[3]} {u_stress/agent_11/tx_stall_cnt[4]} {u_stress/agent_11/tx_stall_cnt[5]} {u_stress/agent_11/tx_stall_cnt[6]} {u_stress/agent_11/tx_stall_cnt[7]} {u_stress/agent_11/tx_stall_cnt[8]} {u_stress/agent_11/tx_stall_cnt[9]} {u_stress/agent_11/tx_stall_cnt[10]} {u_stress/agent_11/tx_stall_cnt[11]} {u_stress/agent_11/tx_stall_cnt[12]} {u_stress/agent_11/tx_stall_cnt[13]} {u_stress/agent_11/tx_stall_cnt[14]} {u_stress/agent_11/tx_stall_cnt[15]} {u_stress/agent_11/tx_stall_cnt[16]} {u_stress/agent_11/tx_stall_cnt[17]} {u_stress/agent_11/tx_stall_cnt[18]} {u_stress/agent_11/tx_stall_cnt[19]} {u_stress/agent_11/tx_stall_cnt[20]} {u_stress/agent_11/tx_stall_cnt[21]} {u_stress/agent_11/tx_stall_cnt[22]} {u_stress/agent_11/tx_stall_cnt[23]} {u_stress/agent_11/tx_stall_cnt[24]} {u_stress/agent_11/tx_stall_cnt[25]} {u_stress/agent_11/tx_stall_cnt[26]} {u_stress/agent_11/tx_stall_cnt[27]} {u_stress/agent_11/tx_stall_cnt[28]} {u_stress/agent_11/tx_stall_cnt[29]} {u_stress/agent_11/tx_stall_cnt[30]} {u_stress/agent_11/tx_stall_cnt[31]}]]
+create_debug_port u_ila_4 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_4/probe10]
+set_property port_width 1 [get_debug_ports u_ila_4/probe10]
+connect_debug_port u_ila_4/probe10 [get_nets [list {u_stress/u_fault/active}]]
+create_debug_port u_ila_4 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_4/probe11]
+set_property port_width 1 [get_debug_ports u_ila_4/probe11]
+connect_debug_port u_ila_4/probe11 [get_nets [list {u_stress/u_fault/fired}]]
+create_debug_port u_ila_4 probe
+set_property PROBE_TYPE DATA_AND_TRIGGER [get_debug_ports u_ila_4/probe12]
+set_property port_width 4 [get_debug_ports u_ila_4/probe12]
+connect_debug_port u_ila_4/probe12 [get_nets [list {u_stress/u_fault/mode_dbg[0]} {u_stress/u_fault/mode_dbg[1]} {u_stress/u_fault/mode_dbg[2]} {u_stress/u_fault/mode_dbg[3]}]]
 
 set_property C_CLK_INPUT_FREQ_HZ 300000000 [get_debug_cores dbg_hub]
 set_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]

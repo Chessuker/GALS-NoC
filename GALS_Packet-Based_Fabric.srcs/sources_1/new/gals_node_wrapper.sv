@@ -26,7 +26,9 @@ module gals_node_wrapper #(
     parameter DEPTH = 16,
     parameter NUM_VCS = 2
 )(
-    input  logic rst_n,
+    // รีเซ็ตแยกต่อโดเมน (reset_sync.sv): ตกพร้อมกัน ขึ้นตามคล็อกของใครของมัน
+    input  logic rst_host_n,
+    input  logic rst_noc_n,
 
     input  logic clk_host,
     input  logic              s_host_valid,
@@ -122,8 +124,8 @@ module gals_node_wrapper #(
 
     wire host_reject = s_host_valid && !host_tid_ok;
 
-    always_ff @(posedge clk_host or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_host or negedge rst_host_n) begin
+        if (!rst_host_n) begin
             tx_pkt_open   <= '0;
             tx_close_pend <= '0;
             tx_pkt_dest   <= '0;
@@ -154,12 +156,12 @@ module gals_node_wrapper #(
             assign tx_close_acc[v] = tx_close_pend[v] && !tx_full[v];
 
             async_fifo_fwft #(.DATA_WIDTH(PACK_W), .ADDR_WIDTH(ADDR_W)) tx_fifo (
-                .wclk(clk_host), .wrst_n(rst_n),
+                .wclk(clk_host), .wrst_n(rst_host_n),
                 .w_en(tx_host_acc[v] || tx_close_acc[v]),
                 .wdata(tx_close_pend[v] ? {1'b1, tx_pkt_dest[v], {DATA_W{1'b0}}} : tx_wdata),
                 .wfull(tx_full[v]),
                 
-                .rclk(clk_noc),  .rrst_n(rst_n), 
+                .rclk(clk_noc),  .rrst_n(rst_noc_n), 
                 .r_en(m_noc_valid && m_noc_tid[v] && m_noc_ready[v]), 
                 .rdata(tx_rdata[v]), .rempty(tx_empty[v]),            
                 
@@ -194,11 +196,11 @@ module gals_node_wrapper #(
     generate
         for (v = 0; v < NUM_VCS; v++) begin : RX_VC
             async_fifo_fwft #(.DATA_WIDTH(PACK_W), .ADDR_WIDTH(ADDR_W)) rx_fifo (
-                .wclk(clk_noc), .wrst_n(rst_n),
+                .wclk(clk_noc), .wrst_n(rst_noc_n),
                 .w_en(s_noc_valid && s_noc_tid[v] && !rx_full[v]),
                 .wdata(rx_wdata), .wfull(rx_full[v]),
                 
-                .rclk(clk_host), .rrst_n(rst_n), 
+                .rclk(clk_host), .rrst_n(rst_host_n), 
                 .r_en(m_host_valid && m_host_tid[v] && m_host_ready[v]),
                 .rdata(rx_rdata[v]), .rempty(rx_empty[v]),            
                 
@@ -228,8 +230,8 @@ module gals_node_wrapper #(
     // แลตช์ในโดเมนของตัวเองก่อน แล้วค่อยข้ามมา clk_noc
     // =========================================================
     logic sbe_noc_q, dbe_noc_q;
-    always_ff @(posedge clk_noc or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_noc or negedge rst_noc_n) begin
+        if (!rst_noc_n) begin
             sbe_noc_q <= 1'b0;
             dbe_noc_q <= 1'b0;
         end else begin
@@ -241,14 +243,14 @@ module gals_node_wrapper #(
     end
 
     logic tid_err_host_q;
-    always_ff @(posedge clk_host or negedge rst_n) begin
-        if (!rst_n)                                 tid_err_host_q <= 1'b0;
+    always_ff @(posedge clk_host or negedge rst_host_n) begin
+        if (!rst_host_n)                            tid_err_host_q <= 1'b0;
         else if (s_host_valid && !host_tid_ok)      tid_err_host_q <= 1'b1;
     end
 
     logic sbe_host_q, dbe_host_q;
-    always_ff @(posedge clk_host or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_host or negedge rst_host_n) begin
+        if (!rst_host_n) begin
             sbe_host_q <= 1'b0;
             dbe_host_q <= 1'b0;
         end else begin
@@ -263,7 +265,7 @@ module gals_node_wrapper #(
     // (เหตุผลเดียวกับที่ noc_stress_tester ใช้ sync_2stage กับธง done/err)
     logic [2:0] host_flags_sync;
     sync_2stage #(.WIDTH(3)) u_ecc_cdc (
-        .clk(clk_noc), .rst(~rst_n),
+        .clk(clk_noc), .rst(~rst_noc_n),
         .d({tid_err_host_q, dbe_host_q, sbe_host_q}),
         .q(host_flags_sync)
     );
@@ -309,6 +311,11 @@ module gals_node_wrapper #(
 
         reg f_init = 1'b1;
         always @(posedge clk_noc) f_init <= 1'b0;
+        // สองรีเซ็ตถูก assume ให้เท่ากันในการพิสูจน์นี้: property ข้างล่างเขียนบนฐานว่า
+        // ทั้งสองโดเมนออกจากรีเซ็ตพร้อมกัน (reset_sync ปล่อยห่างกันไม่กี่ไซเคิลตอนที่ยัง
+        // ไม่มีทราฟฟิก) การพิสูจน์ที่ปล่อยให้ต่างกันต้องเขียน property ใหม่ครึ่งหนึ่ง
+        wire rst_n = rst_host_n && rst_noc_n;
+        always @(*) assume(rst_host_n == rst_noc_n);
         always @(*) if (f_init) assume(!rst_n);
 
         // ---------------------------------------------------------

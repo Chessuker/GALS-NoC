@@ -25,7 +25,12 @@ module gals_noc_top (
     // 🕒 Clock & Reset Pins
     // --------------------------------------------------------
     input  logic clk_noc,  // NoC Backbone Clock (e.g., 250MHz)
-    input  logic rst_n,    // Global Active-Low Reset
+    // รีเซ็ตต่อโดเมน (ออกจาก reset_sync ของแต่ละคล็อกที่ top) ตกพร้อมกัน ขึ้นตามคล็อกตัวเอง
+    input  logic rst_n_noc,
+    input  logic rst_n_h00,
+    input  logic rst_n_h01,
+    input  logic rst_n_h10,
+    input  logic rst_n_h11,
 
     input  logic clk_h00,  // Host 00 Clock
     input  logic clk_h01,  // Host 01 Clock
@@ -140,7 +145,7 @@ module gals_noc_top (
     // --- 1. NoC Mesh 2x2 (แกนกลางเครือข่าย) ---
     noc_mesh_2x2_vc uut_noc (
         .clk        (clk_noc),
-        .rst_n      (rst_n),
+        .rst_n      (rst_n_noc),
         .s_tdata    (noc_tx_tdata),
         .s_tdest    (noc_tx_tdest),
         .s_tid      (noc_tx_tid),
@@ -161,7 +166,7 @@ module gals_noc_top (
 
     // [Index 0] Node 00
     gals_node_wrapper wrap_00 (
-        .clk_noc(clk_noc), .clk_host(clk_h00), .rst_n(rst_n),
+        .clk_noc(clk_noc), .clk_host(clk_h00), .rst_host_n(rst_n_h00), .rst_noc_n(rst_n_noc),
         .s_host_tdata(h00_tx_tdata), .s_host_tdest(h00_tx_tdest), .s_host_tid(h00_tx_tid), 
         .s_host_tlast(h00_tx_tlast), .s_host_valid(h00_tx_tvalid), .s_host_ready(h00_tx_tready),
         .m_host_tdata(h00_rx_tdata), .m_host_tdest(h00_rx_tdest), .m_host_tid(h00_rx_tid), 
@@ -175,7 +180,7 @@ module gals_noc_top (
 
     // [Index 1] Node 01
     gals_node_wrapper wrap_01 (
-        .clk_noc(clk_noc), .clk_host(clk_h01), .rst_n(rst_n),
+        .clk_noc(clk_noc), .clk_host(clk_h01), .rst_host_n(rst_n_h01), .rst_noc_n(rst_n_noc),
         .s_host_tdata(h01_tx_tdata), .s_host_tdest(h01_tx_tdest), .s_host_tid(h01_tx_tid), 
         .s_host_tlast(h01_tx_tlast), .s_host_valid(h01_tx_tvalid), .s_host_ready(h01_tx_tready),
         .m_host_tdata(h01_rx_tdata), .m_host_tdest(h01_rx_tdest), .m_host_tid(h01_rx_tid), 
@@ -189,7 +194,7 @@ module gals_noc_top (
 
     // [Index 2] Node 10
     gals_node_wrapper wrap_10 (
-        .clk_noc(clk_noc), .clk_host(clk_h10), .rst_n(rst_n),
+        .clk_noc(clk_noc), .clk_host(clk_h10), .rst_host_n(rst_n_h10), .rst_noc_n(rst_n_noc),
         .s_host_tdata(h10_tx_tdata), .s_host_tdest(h10_tx_tdest), .s_host_tid(h10_tx_tid), 
         .s_host_tlast(h10_tx_tlast), .s_host_valid(h10_tx_tvalid), .s_host_ready(h10_tx_tready),
         .m_host_tdata(h10_rx_tdata), .m_host_tdest(h10_rx_tdest), .m_host_tid(h10_rx_tid), 
@@ -203,7 +208,7 @@ module gals_noc_top (
 
     // [Index 3] Node 11
     gals_node_wrapper wrap_11 (
-        .clk_noc(clk_noc), .clk_host(clk_h11), .rst_n(rst_n),
+        .clk_noc(clk_noc), .clk_host(clk_h11), .rst_host_n(rst_n_h11), .rst_noc_n(rst_n_noc),
         .s_host_tdata(h11_tx_tdata), .s_host_tdest(h11_tx_tdest), .s_host_tid(h11_tx_tid), 
         .s_host_tlast(h11_tx_tlast), .s_host_valid(h11_tx_tvalid), .s_host_ready(h11_tx_tready),
         .m_host_tdata(h11_rx_tdata), .m_host_tdest(h11_rx_tdest), .m_host_tid(h11_rx_tid), 
@@ -237,7 +242,7 @@ module gals_noc_top (
     // 2. เรียกใช้โมดูลและต่อสายขนานไปกับ AXI4-Stream ของ Host 00
     axis_perf_mon ingress_perf_mon (
         .clk(clk_h00),             // 🔴 แก้เป็น Clock ของ Host 00
-        .rst_n(rst_n),             // ใช้ Global Reset ปกติ
+        .rst_n(rst_n_h00),         // perf monitor อยู่บน clk_h00
         
         // 🔴 แอบดักฟังสายไฟที่วิ่งจาก Host 00 เข้าสู่เครือข่าย
         .valid(h00_tx_tvalid),
@@ -262,7 +267,7 @@ module gals_noc_top (
     //    monitor ตัวบนจึงอ่านได้ 0 ตลอด ต้องมีตัวนี้ถึงจะเห็น throughput ฝั่ง NoC
     axis_perf_mon egress_perf_mon (
         .clk(clk_h00),
-        .rst_n(rst_n),
+        .rst_n(rst_n_h00),
 
         .valid(h00_rx_tvalid),
         .ready(|(h00_rx_tid & h00_rx_tready)),
@@ -293,8 +298,8 @@ module gals_noc_top (
     // ธงเป็น level ที่ตั้งแล้วค้าง ตัวนับจึงนับ "ขอบขาขึ้น" = จำนวนโหนดที่เคยเจอ error
     // ไม่ใช่จำนวนครั้งที่เกิด error (จะได้ไม่นับซ้ำทุกไซเคิลจนล้น)
     logic [3:0] sbe_q, dbe_q;
-    always_ff @(posedge clk_noc or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_noc or negedge rst_n_noc) begin
+        if (!rst_n_noc) begin
             sbe_q <= '0; dbe_q <= '0;
             ecc_sbe_cnt <= '0; ecc_dbe_cnt <= '0;
         end else begin
@@ -323,8 +328,8 @@ module gals_noc_top (
     assign dest_err_node = noc_dest_err;
 
     logic [3:0] dest_err_q;
-    always_ff @(posedge clk_noc or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_noc or negedge rst_n_noc) begin
+        if (!rst_n_noc) begin
             dest_err_q   <= '0;
             dest_err_cnt <= '0;
         end else begin
@@ -351,8 +356,8 @@ module gals_noc_top (
     assign tid_err_node = noc_tid_err | host_tid_err;
 
     logic [3:0] tid_err_q;
-    always_ff @(posedge clk_noc or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_noc or negedge rst_n_noc) begin
+        if (!rst_n_noc) begin
             tid_err_q   <= '0;
             tid_err_cnt <= '0;
         end else begin
@@ -370,8 +375,8 @@ module gals_noc_top (
     // และ 2FF จะจับ glitch นั้นเป็นค่าจริง ธงพวกนี้ sticky จึงกลายเป็นสัญญาณเตือนหลอกได้
     // รีจิสเตอร์หนึ่งตัวปิดช่องนี้ ค่าใช้จ่าย = ช้าลงหนึ่งไซเคิลบนธงที่ตั้งแล้วค้างตลอดกาล
     logic ecc_single_err_q, ecc_double_err_q, dest_err_q_out, tid_err_q_out;
-    always_ff @(posedge clk_noc or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk_noc or negedge rst_n_noc) begin
+        if (!rst_n_noc) begin
             ecc_single_err_q <= 1'b0;
             ecc_double_err_q <= 1'b0;
             dest_err_q_out   <= 1'b0;

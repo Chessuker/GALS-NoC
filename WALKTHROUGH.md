@@ -574,6 +574,21 @@ with `stuck_seen` as the escape if the fabric is dead.
 Counters (`tx_flit_cnt`, `rx_vc0_cnt`, `rx_vc1_cnt`, `rx_err_cnt`, `max_gap`, ...) are
 `mark_debug` + `dont_touch` and are what `analyze_ila.py` reads.
 
+#### `fault_injector.sv`
+Runtime fault injector between agent_11 and the fabric (2026-09-12). Counts
+`2**FIRE_LOG` cycles from reset, waits for a non-`tlast` flit to be accepted, then applies
+the selected fault: cut `tvalid` (permanent), `tid=00`, `tid=11`, `tdest=0001`,
+`tdest=1000`; modes 2–5 for `HOLD` cycles. `tready` passes through. Driven by
+`FAULT_MODE` in the testbench and by the `vio_fault` core over JTAG on the board. Its
+presence also keeps synthesis from constant-folding agent_11's destination filters.
+
+#### `reset_sync.sv`
+Per-domain reset: asynchronous assert from the unclocked `button & pll_locked`, two-flop
+synchronous deassert, plus a separate soft-reset input (from the VIO, another domain)
+that it synchronises itself. One per clock in both tops; `gals_noc_top` and
+`gals_node_wrapper` take per-domain resets. Added when `report_cdc` showed the old single
+async reset reaching every flop with an unsynchronised deassert (CDC-7 ×572).
+
 #### `noc_stress_tester.sv` (168 lines)
 Instantiates four `traffic_node_agent`s with destinations chosen by `PATTERN`:
 
@@ -666,7 +681,7 @@ fails six of ten.
 | `noc_host.py` | PC side of the UART build: send a packet, print echoes |
 | `image_noc_test.py`, `video_noc_stream.py`, `bulk_test.py`, `vc_*_test.py`, `multi_node_stress_test.py`, `fault_recovery_test.py`, `single_probe_test.py` | UART demos and experiments; `recovered_from_fpga.png` is an image round-tripped through the fabric |
 | `formal/*.sby` | one SymbiYosys script per RTL module (eleven), plus `run_wsl.sh` to run them from Git Bash on Windows |
-| `hw_scripts/` | batch Vivado flow: `batch_stress_synth_debug.tcl` / `batch_uart_synth_debug.tcl` (synth + Set Up Debug), `batch_impl.tcl <top>` (fresh session), `batch_program_capture.tcl <dir> <top> [noprog]` (program, Trigger Immediately on every ILA, CSV export); `uart_roundtrip.py [pos\|neg]` and `read_ila_flags.py` for the UART build |
+| `hw_scripts/` | batch Vivado flow (+ `batch_fault_campaign.tcl`, `summarize_campaign.py`, `create_vio_fault.tcl`): `batch_stress_synth_debug.tcl` / `batch_uart_synth_debug.tcl` (synth + Set Up Debug), `batch_impl.tcl <top>` (fresh session), `batch_program_capture.tcl <dir> <top> [noprog]` (program, Trigger Immediately on every ILA, CSV export); `uart_roundtrip.py [pos\|neg]` and `read_ila_flags.py` for the UART build |
 | `combine_sv.py` | concatenates sources into `combined*.sv` for sharing |
 | `hw_logs/` | every ILA capture that backs a number in `HANDOFF.md` |
 | `sim_logs/` | regression logs; the `_FIXED` ones are the baselines |
@@ -1320,7 +1335,17 @@ The same session showed what a `tid=00` flit from the PC does: nothing echoes,
 `mon_stall_cnt` climbing one per cycle until the next reset. Flagged and attributed, not a
 fabric hang.
 
-### 10.13 Silicon status
+### 10.13 Fault-injection campaign
+
+One bitstream, one JTAG session, six modes, `hw_scripts/batch_fault_campaign.tcl`. Each
+mode: VIO soft reset, set mode + arm, release, wait for the window, capture every ILA.
+Result table in `hw_logs/fault_campaign_20260912.log`. The headline numbers: cutting
+agent_11 mid-packet costs the other senders a 608/611-cycle gap and nothing else (the
+bug #5 release, formerly a permanent wedge); every bad `tid`/`tdest` is dropped, flagged
+with the right node, and the other agents' gaps stay at their clean values. Modes 4/5 are
+the first time `dest_err` has been observed live on a stress bitstream.
+
+### 10.14 Silicon status
 
 Everything is on the board now: bug #7 (stress build, clean), `ECC_INJECT_DBE`
 (`ecc_dbe_cnt` 3, `node_dbe` `1111`, and 0 sequence errors because two deterministic
