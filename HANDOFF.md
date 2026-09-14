@@ -1,9 +1,10 @@
 # GALS NoC — handoff note
 
-Last updated: 2026-09-12. `main` is at PR #6 (`9838825`); `v1.0` is tagged at `f07ddca`.
-Branch `feature/4-silicon-fault-campaign` on top: a runtime fault injector driven over JTAG,
-per-domain reset synchronisers (the CDC finding it forced), and the first silicon
-fault-injection campaign — every guard exercised on the board from one bitstream.
+Last updated: 2026-09-14. `v1.0` is tagged at `f07ddca`. PR #7 (runtime fault injector
+driven over JTAG, per-domain reset synchronisers, the first silicon fault-injection campaign)
+was merged to `main` as `0154d13` on 2026-09-13; GitHub created that merge commit but left
+the PR record open and "dirty", so the branch was re-synced with `main` to let the record
+close normally. `main`'s tree and the branch head were already identical.
 
 Read this first if you're picking the project up cold.
 
