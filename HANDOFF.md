@@ -930,13 +930,21 @@ The same day closed two other silicon gaps:
   | `vc_port_arbiter` | prove | PASS | PASS |
   | `gray_counter` | prove | PASS | PASS |
   | `sync_2stage` | prove | PASS | PASS |
-  | `async_fifo` | prove | PASS | PASS |
-  | `async_fifo_fwft` | prove | PASS | PASS (cover needs depth 40) |
+  | `async_fifo` | prove | PASS **(0 assertions — see note)** | PASS |
+  | `async_fifo_fwft` | prove | PASS (gray_counter + fwft_wrapper properties only) | PASS (cover needs depth 40) |
   | `dual_port_ram_ecc` | prove | PASS | PASS |
   | `gals_node_wrapper` | prove, multiclock | PASS | PASS |
   | `vc_input_buffer` | bmc, depth 16 | PASS | PASS |
   | `router_5port_mesh_vc` | bmc, depth 16 | PASS | PASS |
   | `noc_mesh_2x2_vc` | bmc, depth 10 | PASS | PASS |
+
+  **Correction (2026-09-14):** `async_fifo.sv` has no assertions, and `async_fifo.sby` reads
+  its sub-modules with `-D FORMAL_TOP_INTEGRATION`, which disables theirs, so its "prove
+  PASS" is a proof of an empty property set (the generated model contains only `$assume`
+  cells; `grep -c '\$assert' formal/async_fifo_prove/model/design_smt2.smt2` gives 0).
+  `async_fifo_fwft.sby` has six assertions, all `gray_counter`'s and `fwft_wrapper`'s. The
+  CDC FIFO's pointer logic, full/empty and ordering are covered by simulation and silicon,
+  not by any formal property. Open item; `WALKTHROUGH.md` section 16.
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
