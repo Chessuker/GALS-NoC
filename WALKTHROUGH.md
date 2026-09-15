@@ -2174,7 +2174,7 @@ Paths under `GALS_Packet-Based_Fabric.srcs/` are abbreviated to `srcs/`.
 | file | what |
 |---|---|
 | `HANDOFF.md` | the dated working log: status, numbers, gotchas, every silicon result |
-| `WALKTHROUGH.md` | this document |
+| `WALKTHROUGH.md`, `WALKTHROUGH.th.md` | this document; the Thai translation follows it (English is the source of truth) |
 | `README.md` | four Tcl snippets (define, debug xdc, report_cdc, utilisation); not a readme |
 | `GALS_Packet-Based_Fabric.xpr` | the Vivado project |
 | `.gitignore`, `.gitattributes` | build artefacts out; `*.sh` LF |
