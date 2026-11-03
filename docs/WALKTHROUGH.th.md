@@ -419,13 +419,21 @@ metastability ความปลอดภัยเรื่อง metastability 
 first-word-fall-through (ข้อมูลใช้ได้ทุกครั้งที่ไม่ empty) ทำด้วยขั้น output สองช่อง (`out` กับ
 `skid`) รีจิสเตอร์ `data_arriving` ที่ตาม latency หนึ่งไซเคิลของ RAM และกฎ `can_read` ที่ให้มี
 คำในอากาศไม่เกินสอง Formal: prove (`assert_no_overflow`, `assert_skid_physics`,
-`assert_empty_status`, assert เรื่อง reset) รันผ่าน `async_fifo_fwft.sby`
+`assert_empty_status`, assert เรื่อง reset) รันผ่าน `async_fifo_fwft.sby` branch ที่บรรทัด 113-115
+(เติม `skid` ตอนที่ `out` ถูกอ่านและมีคำมาถึงขณะที่ `skid` เต็มอยู่แล้ว) ไปไม่ถึงเลย เพราะต้องมีคำในอากาศ
+สามคำ ซึ่ง `assert_no_overflow` กันไว้ mutation ที่จุดนั้นจึงรอด proof ไปได้ด้วยเหตุนี้
 
 #### `async_fifo_fwft.sv` (109 บรรทัด)
-`async_fifo` บวก `fwft_wrapper` ฝั่งอ่าน นี่คือตัวที่ `gals_node_wrapper` instantiate Formal:
-`async_fifo_fwft.sby` ผ่าน prove; assertion ในนั้นเป็นของ `gray_counter`, `sync_2stage` และ
-`fwft_wrapper` โดยยุบสองนาฬิกาเป็นอันเดียว (`multiclock` ปิด) property ของตัว FIFO เองพิสูจน์ใน
-`async_fifo.sby` ข้างบน
+`async_fifo` บวก `fwft_wrapper` ฝั่งอ่าน นี่คือตัวที่ `gals_node_wrapper` instantiate **Formal: prove
+แบบ unbounded `multiclock on` ตั้งแต่ 2026-11-03** จากปลายถึงปลาย สคริปต์เปิด property ทั้งชุดของ
+`async_fifo` (`FORMAL_ASYNC_FIFO_TOP`; assumption มีแค่ที่สายรีเซ็ต และบิตตัวเลือกคือ
+`prog_full_thresh[0]` ซึ่งที่นี่ก็เป็นอินพุตของ top เหมือนกัน) แล้วเพิ่ม `FORMAL_ASYNC_FIFO_FWFT_TOP`
+ที่ตาม flit ตัวเดียวกันต่อผ่าน wrapper: `assert_user_tracked_data` บอกว่าการอ่านครั้งที่ `f_k` ของผู้ใช้
+ได้ flit ตัวนั้นค่าเดิม invariant: จำนวนที่อ่านจาก core เท่ากับที่ผู้ใช้อ่านบวกคำที่ค้างใน wrapper และ
+flit ที่ติดตามเมื่อถูกดึงมาแล้วอยู่ใน `out` แล้ว `skid` แล้วคำที่กำลังมา ตามลำดับนั้น mutation ที่เปลี่ยน
+พฤติกรรมจริงของ wrapper (`can_read` หลวมขึ้น, `skid` ไม่เลื่อนไป `out`, ไม่ตาม `data_arriving`,
+`skid_data` ค้างค่าเก่าตอน stall) ล้มทุกตัว สามตัวแรกล้มใน prove ตัวเรื่องเลื่อน skid ล้มใน BMC 30 สเต็ป
+แบ่งขนาดเหมือน `async_fifo.sby`: prove ที่ `ADDR_WIDTH` 4 / `DATA_WIDTH` 13, cover ที่ `ADDR_WIDTH` 2
 
 ### 6.2 แกน router
 
@@ -1271,8 +1279,13 @@ enable เปลี่ยน `ptr_g` หนึ่งบิตพอดี ก้
 `assert_w_level_bound`, `assert_r_level_bound`, `assert_wptr_gray_step`,
 `assert_rptr_gray_step`, `assert_tracked_data` บวก invariant `inv_*` สิบตัวสำหรับ induction; cover
 `cover_full`, `cover_tracked_out`, `cover_tracked_late` (flit ที่เขียนหลังพอยน์เตอร์เลยความลึกไปแล้ว),
-`cover_ptr_wrap` รายละเอียดและการเช็คด้วย mutation อยู่ในหัวข้อ 6.1 ส่วน `async_fifo_fwft` ยังมีแค่
-property ของโมดูลย่อย
+`cover_ptr_wrap` รายละเอียดและการเช็คด้วย mutation อยู่ในหัวข้อ 6.1
+
+**`async_fifo_fwft` (prove, unbounded, `multiclock on`, ตั้งแต่ 2026-11-03)**: ทุกอย่างของ `async_fifo`
+ข้างบน บวกบล็อกของ `fwft_wrapper` และ `assert_user_tracked_data`, `inv_ucnt`,
+`inv_udone_after_fetch`, `inv_trk_not_fetched`, `inv_trk_in_wrapper`, `inv_trk_at_out`,
+`inv_trk_at_skid`, `inv_trk_arriving0/1`, `inv_u_in_reset`; cover `cover_user_tracked`,
+`cover_user_tracked_late`, `cover_skid_used` ในโมเดลมี assertion 34 ตัว
 
 #### ธรรมเนียม
 
@@ -1668,6 +1681,7 @@ batch ใน `scripts/vivado/` ไม่แตะ GUI
 | `FORMAL` | ทุกโมดูลที่มีบล็อก `FORMAL`; `async_fifo` สลับไป RAM ธรรมดา | |
 | `FORMAL_TOP_INTEGRATION` | arbiter, counter, synchronizer | ปิด property ของโมดูลย่อยเองเมื่อพิสูจน์ตัวแม่; กับดักในหัวข้อ 8.2 แถว K |
 | `FORMAL_ASYNC_FIFO_TOP` | `async_fifo` | เปิด property ของ FIFO เอง นิยามเฉพาะใน `formal/async_fifo.sby` สคริปต์ที่อ่าน FIFO เป็นโมดูลย่อยจึงไม่เห็น assumption ของมัน |
+| `FORMAL_ASYNC_FIFO_FWFT_TOP` | `async_fifo_fwft` | property แบบตาม flit จากปลายถึงปลายผ่าน `fwft_wrapper` นิยามเฉพาะใน `formal/async_fifo_fwft.sby` คู่กับ `FORMAL_ASYNC_FIFO_TOP` |
 | `FORMAL_NO_ROUTER` | `router_5port_mesh_vc` | อย่างเดียวกัน สำหรับ proof ของ mesh |
 | `DEBUG_BUILD` | ไม่มีอะไรแล้ว | เคยกั้น probe ของ UART build; ลบเพราะเคยหายไปครั้งหนึ่งแล้วและจะหายอีก |
 
@@ -1853,7 +1867,7 @@ fault mode กั้นมันแบบที่ `BAD_TID`/`FAULT_MODE` กั
 | 2026-09-12/13 | `8deb828`, `d256864`, PR #7 | fault injector + VIO, silicon campaign (หกโหมด); `reset_sync` ต่อโดเมน (CDC-7 ×572 → 0); UART build ใหม่และรันใหม่ |
 | 2026-09-14 | `671d655`, `afce6cd` | sync record ที่ค้างของ PR #7 แล้ว merge |
 | 2026-09-14 | (เอกสารนี้) | เจอว่า proof ของ `async_fifo` ไม่มี assertion (หัวข้อ 8.2 แถว K) |
-| 2026-11-03 | repository ใหม่ `GALS-NoC` | history ย้ายไป `GALS-NoC-Archive`; จัดโฟลเดอร์ใหม่; `async_fifo` ได้ proof แบบ multiclock ของตัวเอง ปิดแถว K |
+| 2026-11-03 | repository ใหม่ `GALS-NoC` | history ย้ายไป `GALS-NoC-Archive`; จัดโฟลเดอร์ใหม่; `async_fifo` ได้ proof แบบ multiclock ของตัวเอง ปิดแถว K; พิสูจน์ `async_fifo_fwft` จากปลายถึงปลายด้วย `multiclock on` |
 
 ---
 
@@ -1898,9 +1912,6 @@ fault mode กั้นมันแบบที่ `BAD_TID`/`FAULT_MODE` กั
 
 ## 16. อะไรยังค้าง
 
-- **`async_fifo_fwft` ยังพิสูจน์แบบยุบสองนาฬิกาเป็นอันเดียว** (`multiclock` ปิด) FIFO ข้างใต้มี proof
-  สองนาฬิกาจริงแล้ว (`async_fifo.sby`) และ `gals_node_wrapper` ข้างบนก็รัน multiclock เรื่องนี้จึงกระทบ
-  แค่ property ของ `fwft_wrapper` เอง
 - **`dest_err_node[2:0]` ยังเป็นค่าคงที่ใน stress build** (โหนด 0-2 มีปลายทางเป็น parameter) มีแค่
   โหนด 3 ที่ทำงาน การขยาย mux ของ injector ให้ทุก agent จะแก้ได้ แลกกับสำเนาอีกสามชุด
 - **ECC ครอบเฉพาะ payload** และ SECDED รายงานผิดเมื่อพลิกสามบิตขึ้นไป

@@ -454,13 +454,25 @@ first-word-fall-through (data valid whenever not empty). Implemented as a two-sl
 output stage (`out` and `skid`) with a `data_arriving` register tracking the one-cycle
 RAM latency, and a `can_read` rule that keeps at most two words in flight. Formal: prove
 (`assert_no_overflow`, `assert_skid_physics`, `assert_empty_status`, reset asserts), run
-through `async_fifo_fwft.sby`.
+through `async_fifo_fwft.sby`. The branch at lines 113-115 (refill `skid` while `out` is
+read and a word arrives with `skid` already full) cannot be reached: it needs three words
+in flight, which `assert_no_overflow` rules out. A mutation there survives the proof for
+that reason.
 
 #### `async_fifo_fwft.sv` (109 lines)
 `async_fifo` plus `fwft_wrapper` on the read side. This is what `gals_node_wrapper`
-instantiates. Formal: `async_fifo_fwft.sby` passes prove; its assertions are
-`gray_counter`'s, `sync_2stage`'s and `fwft_wrapper`'s, with the two clocks merged
-(`multiclock` off). The FIFO's own properties are proved in `async_fifo.sby` above.
+instantiates. **Formal: prove, unbounded, `multiclock on`, since 2026-11-03**, end to end.
+The script turns on `async_fifo`'s whole property set (`FORMAL_ASYNC_FIFO_TOP`; its only
+assumptions are on the resets and its choice bit is `prog_full_thresh[0]`, all of which
+are top-level inputs here too) and adds `FORMAL_ASYNC_FIFO_FWFT_TOP`, which follows the
+same tracked flit through the wrapper: `assert_user_tracked_data` says the user's read
+number `f_k` returns that flit with its value. Invariants: flits read from the core equal
+flits read by the user plus the words held in the wrapper, and the tracked flit, once
+fetched, sits in `out`, then `skid`, then the arriving word, in that order. Live
+mutations of the wrapper (looser `can_read`, `skid` never promoted to `out`,
+`data_arriving` not tracked, stale `skid_data` on a stall) each fail; the first three in
+prove, the skid-promotion one in a 30-step BMC. Same size split as `async_fifo.sby`:
+prove at `ADDR_WIDTH` 4 / `DATA_WIDTH` 13, cover at `ADDR_WIDTH` 2.
 
 ### 6.2 Router core
 
@@ -1397,7 +1409,14 @@ input two edges ago); `cover_data_pass`.
 `assert_rptr_gray_step`, `assert_tracked_data`, plus ten `inv_*` invariants for
 induction; covers `cover_full`, `cover_tracked_out`, `cover_tracked_late` (a flit written
 after the pointer passed the depth), `cover_ptr_wrap`. Details and the mutation check in
-section 6.1. `async_fifo_fwft` still carries only its sub-modules' properties.
+section 6.1.
+
+**`async_fifo_fwft` (prove, unbounded, `multiclock on`, since 2026-11-03)**: everything in
+`async_fifo` above plus `fwft_wrapper`'s block, and `assert_user_tracked_data`,
+`inv_ucnt`, `inv_udone_after_fetch`, `inv_trk_not_fetched`, `inv_trk_in_wrapper`,
+`inv_trk_at_out`, `inv_trk_at_skid`, `inv_trk_arriving0/1`, `inv_u_in_reset`; covers
+`cover_user_tracked`, `cover_user_tracked_late`, `cover_skid_used`. 34 assertions in the
+model.
 
 #### Conventions
 
@@ -1847,6 +1866,7 @@ powers of two.
 | `FORMAL` | every module with a `FORMAL` block; `async_fifo` swaps to a plain RAM | |
 | `FORMAL_TOP_INTEGRATION` | arbiters, counters, synchroniser | disables a sub-module's own properties when a parent is proved; the trap in section 8.2 row K |
 | `FORMAL_ASYNC_FIFO_TOP` | `async_fifo` | turns on the FIFO's own properties; defined only by `formal/async_fifo.sby`, so scripts that read the FIFO as a sub-module never see its assumptions |
+| `FORMAL_ASYNC_FIFO_FWFT_TOP` | `async_fifo_fwft` | the end-to-end tracked-flit properties through `fwft_wrapper`; defined only by `formal/async_fifo_fwft.sby`, together with `FORMAL_ASYNC_FIFO_TOP` |
 | `FORMAL_NO_ROUTER` | `router_5port_mesh_vc` | same, for the mesh proof |
 | `DEBUG_BUILD` | nothing any more | used to gate the UART build's probes; deleted because it was lost once and would be again |
 
@@ -2054,7 +2074,7 @@ gate it the way `BAD_TID`/`FAULT_MODE` are, so the clean run stays a strict pass
 | 2026-09-12/13 | `8deb828`, `d256864`, PR #7 | fault injector + VIO, silicon campaign (six modes); per-domain `reset_sync` (CDC-7 ×572 → 0); UART build rebuilt and re-run |
 | 2026-09-14 | `671d655`, `afce6cd` | PR #7's stuck record re-synced and merged |
 | 2026-09-14 | (this document) | `async_fifo` proofs found to contain no assertions (section 8.2 row K) |
-| 2026-11-03 | new repository `GALS-NoC` | history moved to `GALS-NoC-Archive`; folders reorganised; `async_fifo` given its own multiclock proof, row K closed |
+| 2026-11-03 | new repository `GALS-NoC` | history moved to `GALS-NoC-Archive`; folders reorganised; `async_fifo` given its own multiclock proof, row K closed; `async_fifo_fwft` proved end to end with `multiclock on` |
 
 ---
 
@@ -2105,9 +2125,6 @@ originals before touching the build flow.
 
 ## 16. What is still open
 
-- **`async_fifo_fwft` is still proved with its two clocks merged** (`multiclock` off). The
-  FIFO underneath now has a real two-clock proof (`async_fifo.sby`) and `gals_node_wrapper`
-  runs multiclock above it, so this only matters for `fwft_wrapper`'s own properties.
 - **`dest_err_node[2:0]` remain constant in the stress build** (nodes 0-2 have parameter
   destinations). Only node 3 is live. Extending the injector mux to every agent would fix
   it at the cost of three more copies.

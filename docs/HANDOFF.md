@@ -11,7 +11,8 @@ commit; the history above (commits, PRs, the `v1.0` tag) is in `GALS-NoC-Archive
 Folders were reorganised (`docs/`, `scripts/`, `logs/`), and the tbclk simulation regression
 was re-run afterwards, matching its baseline exactly. `async_fifo` now has its own formal
 proof, unbounded and with `multiclock on`, which closes the gap recorded on 2026-09-14
-(section 5, formal table).
+(section 5, formal table). `async_fifo_fwft` is proved the same way, end to end through
+`fwft_wrapper`.
 
 Read this first if you're picking the project up cold.
 
@@ -938,7 +939,7 @@ The same day closed two other silicon gaps:
   | `gray_counter` | prove | PASS | PASS |
   | `sync_2stage` | prove | PASS | PASS |
   | `async_fifo` | prove, multiclock | PASS (18 assertions since 2026-11-03; 0 before, see note) | PASS |
-  | `async_fifo_fwft` | prove | PASS (gray_counter + fwft_wrapper properties only) | PASS (cover needs depth 40) |
+  | `async_fifo_fwft` | prove, multiclock | PASS (34 assertions, end to end, since 2026-11-03; before that only gray_counter + fwft_wrapper) | PASS |
   | `dual_port_ram_ecc` | prove | PASS | PASS |
   | `gals_node_wrapper` | prove, multiclock | PASS | PASS |
   | `vc_input_buffer` | bmc, depth 16 | PASS | PASS |
@@ -962,8 +963,17 @@ The same day closed two other silicon gaps:
   `gals_node_wrapper` uses), cover at `ADDR_WIDTH` 2. Four mutations (full-flag bit, RAM
   write or read enable ungated, read counter ungated) each fail prove; `rempty` taken from
   the first sync stage passes, as expected, since formal does not model metastability.
-  `async_fifo_fwft.sby` is unchanged and still merges the clocks. Details in
-  `WALKTHROUGH.md` section 6.1.
+  Details in `WALKTHROUGH.md` section 6.1.
+
+  **Also 2026-11-03:** `async_fifo_fwft.sby` now runs `multiclock on` too, with
+  `async_fifo`'s whole property set enabled and a new `FORMAL_ASYNC_FIFO_FWFT_TOP` block
+  that follows the same tracked flit through `fwft_wrapper` to the user
+  (`assert_user_tracked_data`), plus invariants tying core reads, user reads and the words
+  held in the wrapper. Prove passes unbounded (34 assertions); all 8 covers reach. Live
+  wrapper mutations fail (three in prove, one in a 30-step BMC). One mutation survives
+  because it sits in a branch that cannot be reached: refilling `skid` while `out` is read
+  and a word arrives needs three words in flight, which `assert_no_overflow` forbids. The
+  depth-40 wrap cover note below applied to the old merged-clock script.
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
