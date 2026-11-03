@@ -2,14 +2,42 @@
 # async_fifo — formal
 #
 # async FIFO ข้ามโดเมน — ตัวที่ทุก flit ต้องผ่านตอนข้ามขอบ GALS
-#   หมายเหตุ: เมื่อ FORMAL ถูกนิยาม async_fifo จะใช้ dual_port_ram ธรรมดา
-#   (ไม่ใช่ dual_port_ram_ecc) ตามที่เขียนไว้ในตัวไฟล์ ECC จึงต้องพิสูจน์แยก
 #
-# เขียนใหม่ใน formal/ แทนสคริปต์เดิมใน garbage/rtl_old/ ซึ่งรันไม่ได้อยู่แล้ว:
-# มัน [files] ชื่อไฟล์แบบไม่มีพาธ แต่ซอร์สจริงอยู่ใน new/ ไม่ใช่ old/
-# (อีกเหตุผลที่ของพวกนี้ไม่เคยถูกรันเลย)
+# ประวัติ: สคริปต์รุ่นก่อน (ถึง 2026-09-14) "prove PASS" โดยไม่มี assertion ของ FIFO
+# เลยสักตัว (ซับโมดูลถูกอ่านด้วย FORMAL_TOP_INTEGRATION ซึ่งปิด property ของมัน
+# และ async_fifo.sv ไม่มีบล็อก FORMAL ของตัวเอง) — WALKTHROUGH 8.2 แถว K
+# รุ่นนี้เพิ่มบล็อก FORMAL_ASYNC_FIFO_TOP ใน async_fifo.sv ซึ่งพิสูจน์:
+#   assert_fill_le_depth / _full_when_full / _empty_when_empty
+#       - ไม่ overflow ไม่ underflow แม้ธง full/empty ดูจากพอยน์เตอร์ที่ sync มาช้า
+#   assert_w_level_bound / _r_level_bound - level ที่ส่งออกไม่เกินความจุ
+#   assert_wptr_gray_step / _rptr_gray_step - พอยน์เตอร์ที่ข้ามโดเมนขยับทีละบิต
+#   assert_tracked_data - flit ที่ solver เลือกเองออกมาค่าเดิม ตรงลำดับ
+#   inv_*  - invariant แบบ white-box (bin, sync stage แรก, mem) ให้ induction ปิด
 #
-#   cd formal && sby -f async_fifo.sby
+# ต่างจากรุ่นเดิมสองข้อที่สำคัญ:
+#   multiclock on — wclk กับ rclk เป็นอินพุตอิสระ ขอบมาเมื่อไหร่ก็ได้ ชนกันก็ได้
+#     รุ่นเดิมปล่อย multiclock off ซึ่งยุบสองนาฬิกาเป็นอันเดียว (ปัญหาง่ายกว่าของจริง)
+#   read_slang — property ต้องอ้าง w_cnt.bin, sync_w2r.q1, dp_ram.mem ข้ามโมดูล
+#     read_verilog ไม่รองรับ hierarchical reference
+#
+# ขอบเขตที่ต้องรู้:
+#   - เมื่อนิยาม FORMAL ตัว async_fifo ใช้ dual_port_ram ธรรมดาแทน dual_port_ram_ecc
+#     (ตามที่เขียนไว้ใน .sv) ส่วนพอยน์เตอร์/ธง/ลำดับเป็นโค้ดชุดเดียวกับที่ลงบอร์ด
+#     ECC พิสูจน์แยกใน dual_port_ram_ecc.sby และ tb_ecc_secded
+#   - ไม่ได้จำลอง metastability: solver เห็นค่าที่ sync จับได้เป็นค่าสะอาดเสมอ
+#     สิ่งที่ทำให้สมมติฐานนี้ถูกบนซิลิคอนคือ gray step ทีละบิต (พิสูจน์ด้านบน)
+#     และ ASYNC_REG + report_cdc (Critical 0)
+#   - รีเซ็ต: เริ่มจากรีเซ็ตทั้งสองฝั่ง ปล่อยคนละจังหวะได้ แต่ปล่อยแล้วไม่กดซ้ำ
+#   - prove ใช้ขนาดจริงตามที่ gals_node_wrapper ใช้ (ADDR_WIDTH 4 = ลึก 16,
+#     DATA_WIDTH 13 = {tlast, tdest, tdata}) ใช้เวลาไม่กี่วินาที
+#     cover ย่อเหลือ ADDR_WIDTH 2 / DATA_WIDTH 4 เพราะ cover_ptr_wrap ต้องอ่านครบ
+#     2^(ADDR_WIDTH+1) ครั้ง ขนาดจริงต้องใช้ depth หลายร้อยสเต็ป
+#   - mutation ที่ใช้ยืนยันว่า property จับของเสียได้จริง (2026-11-03, prove ล้มทุกตัว
+#     ยกเว้นข้อสุดท้าย): wfull กลับบิตผิด, RAM w_en / r_en ไม่ gate ด้วย full/empty,
+#     r_cnt ไม่ gate ด้วย empty; rempty จาก sync stage แรก (sync 1 ชั้น) ผ่าน
+#     ตามคาด เพราะ formal ไม่จำลอง metastability — ดูข้อบน
+#
+#   wsl -d Ubuntu-24.04 -- bash formal/run_wsl.sh async_fifo.sby
 # =============================================================================
 
 [tasks]
@@ -17,20 +45,22 @@ prove
 cover
 
 [options]
+multiclock on
 prove: mode prove
-prove: depth 20
+prove: depth 12
 cover: mode cover
-cover: depth 20
+cover: depth 40
 
 [engines]
-smtbmc z3
+smtbmc yices
 
 [script]
-read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION dual_port_ram.sv
-read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION gray_counter.sv
-read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION sync_2stage.sv
-read_verilog -sv -formal -D FORMAL_TOP_INTEGRATION async_fifo.sv
+plugin -i slang
+prove: read_slang -D FORMAL -D FORMAL_TOP_INTEGRATION -D FORMAL_ASYNC_FIFO_TOP --top async_fifo -G ADDR_WIDTH=4 -G DATA_WIDTH=13 dual_port_ram.sv gray_counter.sv sync_2stage.sv async_fifo.sv
+cover: read_slang -D FORMAL -D FORMAL_TOP_INTEGRATION -D FORMAL_ASYNC_FIFO_TOP --top async_fifo -G ADDR_WIDTH=2 -G DATA_WIDTH=4 dual_port_ram.sv gray_counter.sv sync_2stage.sv async_fifo.sv
 prep -top async_fifo
+memory_map
+opt -fast
 
 [files]
 ../GALS_Packet-Based_Fabric.srcs/sources_1/new/dual_port_ram.sv

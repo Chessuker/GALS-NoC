@@ -393,13 +393,26 @@ FIFO ข้ามโดเมนนาฬิกา มี `gray_counter` สอ�
 
 เมื่อนิยาม `FORMAL` RAM ที่มี ECC ถูกแทนด้วย RAM ธรรมดาและธงถูกผูกไว้ที่ 0
 
-**Formal: ไม่มีของตัวเองเลย และนี่คือช่องว่างที่ยังเปิดอยู่ (หัวข้อ 16)** `formal/async_fifo.sby`
-อ่านโมดูลย่อยด้วย `-D FORMAL_TOP_INTEGRATION` ซึ่งปิด property ของพวกมัน และ `async_fifo.sv`
-ไม่มี assertion เลย "prove PASS" ที่สคริปต์รายงานจึงเป็น proof ที่มี assertion ศูนย์ตัว (ยืนยัน
-2026-09-14: model ที่ generate ออกมามีแต่เซลล์ `$assume`) ลอจิก pointer, full/empty และลำดับ
-ของ FIFO ข้ามโดเมนถูกครอบด้วย simulation และซิลิคอน (sequence error ศูนย์บน flit หลายล้านตัว)
-แต่ไม่มี formal property ใดเลย proof แบบ shadow-FIFO ของ `vc_input_buffer` ครอบ `sync_fifo`
-ไม่ใช่โมดูลนี้
+**Formal: prove แบบ unbounded `multiclock on` ตั้งแต่ 2026-11-03** (ก่อนหน้านั้นไม่มีของตัวเองเลย
+หัวข้อ 8.2 แถว K) บล็อกอยู่ใต้ `` `ifdef FORMAL_ASYNC_FIFO_TOP `` ซึ่งมีแค่ `formal/async_fifo.sby`
+ที่นิยาม สคริปต์ที่ใช้ FIFO นี้เป็นโมดูลย่อย (`async_fifo_fwft`, `gals_node_wrapper`) จึงไม่เห็น
+assumption ของมัน `wclk` กับ `rclk` เป็นอินพุตอิสระ solver ลองขอบทุกลำดับรวมทั้งขอบชนกัน
+รีเซ็ตเริ่มที่ assert ทั้งสองฝั่ง ปล่อยคนละจังหวะได้ และไม่กดซ้ำ property: ไม่ overflow ไม่ underflow
+(`assert_fill_le_depth`, `assert_full_when_full`, `assert_empty_when_empty` วัดจากจำนวนของจริงในคิว
+ไม่ใช่มุมมองที่ sync มาช้า); `w_level`/`r_level` ไม่เกินความลึก; พอยน์เตอร์ที่ข้ามโดเมนขยับไม่เกิน
+หนึ่งบิตต่อขอบ (`assert_*ptr_gray_step`); และข้อมูลกับลำดับผ่าน flit หนึ่งตัวที่ solver เลือกเอง
+(`assert_tracked_data`: flit ที่เขียนตอนพอยน์เตอร์เต็มความกว้างเป็น `f_k` คือตัวที่ถูกอ่านตอนพอยน์เตอร์
+อ่านถึง `f_k` และค่าเท่าเดิม) induction ปิดได้ด้วย invariant แบบ white-box (`inv_*`): `bin` ของ counter
+เท่ากับ gray pointer ที่ถอดแล้ว, sync แต่ละ stage ถือพอยน์เตอร์ที่อยู่ระหว่างพอยน์เตอร์อ่านกับเขียน
+เรียงตาม stage, และ flit ที่ติดตามยังอยู่ใน RAM และอยู่ในหน้าต่างของคิว property อ้างเข้าไปในโมดูลย่อย
+(`w_cnt.bin`, `sync_w2r.q1`, `dp_ram.mem`) สคริปต์จึงใช้ `read_slang` prove รันที่ขนาดที่
+`gals_node_wrapper` ใช้จริง (`ADDR_WIDTH` 4, `DATA_WIDTH` 13) เสร็จในไม่กี่วินาที ส่วน cover รันที่
+`ADDR_WIDTH` 2 ให้การวนรอบพอยน์เตอร์ครบหนึ่งรอบอยู่ใน 40 สเต็ป mutation สี่แบบ (ธง full กลับบิตผิด,
+w_en หรือ r_en ของ RAM ไม่ gate, counter ฝั่งอ่านไม่ gate) ทำให้ prove ล้มทุกตัว แบบที่ห้าคือเอา
+`rempty` จาก sync stage แรก ผ่าน ซึ่งถูกต้องแล้ว เพราะ formal มองค่าที่จับได้ทุกค่าว่าสะอาด ไม่จำลอง
+metastability ความปลอดภัยเรื่อง metastability อาศัย property เรื่อง gray step, `ASYNC_REG` และ
+`report_cdc` เมื่อนิยาม `FORMAL` RAM เป็นตัวธรรมดา เส้นทาง ECC จึงไม่อยู่ใน proof นี้
+(`dual_port_ram_ecc.sby` กับ `tb_ecc_secded` ครอบอยู่)
 
 #### `fwft_wrapper.sv` (175 บรรทัด)
 แปลง interface อ่าน FIFO แบบมาตรฐาน (ข้อมูลใช้ได้ไซเคิลถัดจาก `r_en`) เป็น
@@ -410,8 +423,9 @@ first-word-fall-through (ข้อมูลใช้ได้ทุกครั�
 
 #### `async_fifo_fwft.sv` (109 บรรทัด)
 `async_fifo` บวก `fwft_wrapper` ฝั่งอ่าน นี่คือตัวที่ `gals_node_wrapper` instantiate Formal:
-`async_fifo_fwft.sby` ผ่าน prove แต่ assertion หกตัวใน model เป็นของ `gray_counter` กับ
-`fwft_wrapper` ไม่มีอะไรเกี่ยวกับตัว FIFO เอง (ช่องว่างเดียวกับข้างบน)
+`async_fifo_fwft.sby` ผ่าน prove; assertion ในนั้นเป็นของ `gray_counter`, `sync_2stage` และ
+`fwft_wrapper` โดยยุบสองนาฬิกาเป็นอันเดียว (`multiclock` ปิด) property ของตัว FIFO เองพิสูจน์ใน
+`async_fifo.sby` ข้างบน
 
 ### 6.2 แกน router
 
@@ -1123,7 +1137,7 @@ liveness watchdog หลัง #3, formal หลัง #4, การถอด as
 | H | `gals_noc_top`, `traffic_node_agent` | sticky flag ถูก OR / AND ใน LUT ตรงเข้า `sync_2stage` (CDC-10 ×5): glitch ของ LUT จะถูกจับเป็นสัญญาณเตือนหลอกถาวร | การรัน `report_cdc` ครั้งแรก 2026-09-12 | ผ่านรีจิสเตอร์ในโดเมนต้นทาง |
 | I | top ทั้งสอง | async reset เส้นเดียวที่ไม่ sync เข้าฟลอปทุกตัวของทุกโดเมน (CDC-7 ×572 ทันทีที่มีต้นทางที่มีคล็อกแตะสาย); รอดมาได้เพราะช่วงนอน 1024 ไซเคิล | `report_cdc` หลังเพิ่ม VIO soft reset | `reset_sync` ต่อโดเมน พอร์ต reset ต่อโดเมน |
 | J | stress build, `dest_err` | ตัวกรองปลายทางถูกพับเป็นค่าคงที่เพราะ `tdest` ของ agent เป็น parameter; ค่า `dest_err_cnt = 0` ทุกครั้งเป็นเรื่องโครงสร้าง และคำอ้างบนซิลิคอนหนึ่งข้อในเอกสารเป็น vacuous | ตามรอย probe `dest_err_node` ที่ "ไม่มีคล็อก" ไปเจอ `LUT1` ของ `GND` | mux ของ injector ทำให้โหนด 3 ทำงาน; `setup_debug.tcl` รายงานค่าคงที่; แก้เอกสาร |
-| K | `formal/async_fifo.sby`, `async_fifo_fwft.sby` | "prove PASS" โดยไม่มี assertion ของ FIFO เองเลย (โมดูลย่อยถูกอ่านโดยปิด property); FIFO ข้ามโดเมนไม่มี formal property | จัดทำ catalogue ของ label สำหรับเอกสารนี้ 2026-09-14 | **ยังเปิด** (หัวข้อ 16) |
+| K | `formal/async_fifo.sby`, `async_fifo_fwft.sby` | "prove PASS" โดยไม่มี assertion ของ FIFO เองเลย (โมดูลย่อยถูกอ่านโดยปิด property); FIFO ข้ามโดเมนไม่มี formal property | จัดทำ catalogue ของ label สำหรับเอกสารนี้ 2026-09-14 | 2026-11-03: พิสูจน์ `async_fifo` แยกตัว `multiclock on` (หัวข้อ 6.1) |
 | L | `tb_noc_stress_tester` `BAD_DEST` | `release` บน `logic` ที่ถูกขับด้วยค่าคงที่เก็บค่าที่ force ไว้ตลอดกาล; โหนด 11 ยิงไปผิดโหนดทั้ง window | fairness อ่านได้ 56/44 | force ค่าจริงหนึ่งไซเคิลก่อน |
 | M | `setup_debug.tcl` กับ flow ของ GUI | กับดัก Vivado หกอย่าง: wizard เขียนลงไฟล์ pin, `save_constraints` เรียง core ผิด, การหาคล็อกทำให้ probe แคบลงเงียบๆ, core เก่าตามมาตอนสลับ build, `debug_auto.xdc` ถูก synthesis อ่าน, core ที่ลบทิ้งคล็อกไว้, implementation ใน session เดิมไม่เห็น xdc ใหม่ | แต่ละอันโดยการจับที่พัง | จัดการหมดใน `setup_debug.tcl` / batch flow |
 | N | ฝั่งพีซี | การเปิด COM port รีเซ็ต FPGA (FTDI DTR/RTS) ล้าง sticky flag และตัวนับ | ตัวนับอ่านได้ "2 วินาที" หลังผ่านไปหนึ่งนาที | อ่าน ILA ก่อนเปิดพอร์ตครั้งถัดไป; `batch_uart_session.tcl` |
@@ -1150,7 +1164,8 @@ regression; fault mode เป็นการวัด ไม่ใช่ผ่�
 
 SymbiYosys ใต้ WSL (`Ubuntu-24.04`, OSS CAD Suite ที่ `/opt/eda/oss-cad-suite`: Yosys 0.68, SBY
 0.68, Z3 4.15.5) สคริปต์ตัวละโมดูลใน `formal/` สิบเอ็ดโมดูล 22 task เขียวหมด ณ `afce6cd` โดยมี
-ข้อแม้ในแถว K ข้างบน
+ข้อแม้ในแถว K ข้างบน แถว K ปิดแล้วเมื่อ 2026-11-03: `async_fifo.sby` พิสูจน์ property ของ FIFO เอง
+แล้ว (หัวข้อ 6.1)
 
 #### Property catalogue
 
@@ -1251,8 +1266,13 @@ enable เปลี่ยน `ptr_g` หนึ่งบิตพอดี ก้
 **`sync_2stage` (prove)**: reset ล้างทั้งสองขั้น; `assert_stage2` (output เท่ากับ input เมื่อสองขอบ
 ก่อน); `cover_data_pass`
 
-**`async_fifo`, `async_fifo_fwft`**: ดูแถว K ในหัวข้อ 8.2 สคริปต์ผ่าน แต่ไม่มี property ของ FIFO
-เองเลย
+**`async_fifo` (prove, unbounded, `multiclock on`, ตั้งแต่ 2026-11-03)**:
+`assert_fill_le_depth`, `assert_full_when_full`, `assert_empty_when_empty`,
+`assert_w_level_bound`, `assert_r_level_bound`, `assert_wptr_gray_step`,
+`assert_rptr_gray_step`, `assert_tracked_data` บวก invariant `inv_*` สิบตัวสำหรับ induction; cover
+`cover_full`, `cover_tracked_out`, `cover_tracked_late` (flit ที่เขียนหลังพอยน์เตอร์เลยความลึกไปแล้ว),
+`cover_ptr_wrap` รายละเอียดและการเช็คด้วย mutation อยู่ในหัวข้อ 6.1 ส่วน `async_fifo_fwft` ยังมีแค่
+property ของโมดูลย่อย
 
 #### ธรรมเนียม
 
@@ -1264,6 +1284,12 @@ enable เปลี่ยน `ptr_g` หนึ่งบิตพอดี ก้
 - โมดูลที่มี port แบบ unpacked array ต้องใช้ frontend slang (`plugin -i slang; read_slang`); slang
   ไม่มี `$onehot` จึงมี helper `f_onehot` และมันตั้งชื่อเซลล์ assert จาก label ดังนั้น label ใน
   `for` loop ธรรมดาต้องอยู่ในบล็อก `generate`
+- ใต้ slang ไม่มี `$anyseq`, `$anyconst`, `$initstate`, `initial assume` และไม่มี global clock
+  (`(* gclk *)` ถูกอ่านเป็นสายที่ไม่มีตัวขับ flop บนนั้นจึงค้างค่าเริ่มตลอด แล้วการรันกลายเป็น vacuous
+  โดยไม่มี error) `async_fifo` อ้อมทั้งหมด: ใช้ flop ที่ clock ด้วยขอบขาขึ้นของรีเซ็ตเป็นตัวบอกว่า
+  ปล่อยแล้ว และใช้บิตของอินพุตอิสระที่ป้อนแค่เอาต์พุต combinational (`prog_full_thresh[0]`) เป็นตัว
+  เลือก flit ที่ติดตาม flop ที่ `D = Q` ใช้แทนค่าคงที่อิสระไม่ได้: `opt` แทนมันด้วย `x` แล้วทุกจุดที่ใช้
+  กลายเป็นค่าอิสระแยกกัน
 - `memory_map` กาง array ของ FIFO; ไม่มีมัน z3 ไม่จบ
 - router กับ mesh ใช้ `abc bmc3` สำหรับ bmc; z3 ใช้กับ cover และ `prove` ทุกตัว
 - `prove` หมายถึง k-induction ผ่านและ property เป็น unbounded `bmc` หมายถึง bounded; สามโมดูล
@@ -1323,7 +1349,7 @@ monitor, โหนดและตัวนับของ ECC/`dest_err`/`tid_er
 | ECC ซ่อม/ตรวจ | `tb_ecc_secded` exhaustive | (`dual_port_ram_ecc` เฉพาะ address) | build `ECC_INJECT_SBE` / `_DBE` |
 | สัญญาณเตือน ECC ถึงตัวนับและ LED | `INJECT_ECC` | | `ecc_sbe_cnt=3` โหนด `1111`; `ecc_dbe_cnt=3` |
 | liveness watchdog | `tb_traffic_node_agent` 10/10 | | การรันบอร์ดครั้งแรกจับ bug #4 |
-| ความถูกต้องของ pointer/ลำดับใน async FIFO | ทุก regression ทางอ้อม | **ไม่มี** (แถว K) | seq error 0 บน flit หลายล้านตัว |
+| ความถูกต้องของ pointer/ลำดับใน async FIFO | ทุก regression ทางอ้อม | `async_fifo` `assert_full_when_full`, `assert_empty_when_empty`, `assert_tracked_data` (multiclock) | seq error 0 บน flit หลายล้านตัว |
 | reset deassert sync ต่อโดเมน | | | `report_cdc` Critical 0 |
 | ความถูกต้องของไบต์ผ่าน UART ทั้งสอง VC ทุกโหนด | | | `uart_roundtrip.py` 6/6 |
 
@@ -1641,6 +1667,7 @@ batch ใน `scripts/vivado/` ไม่แตะ GUI
 | `ECC_INJECT_SBE` / `ECC_INJECT_DBE` | `dual_port_ram_ecc` | พลิกบิต codeword หนึ่ง / สองบิตทุกครั้งที่เขียน; ตั้งด้วย `set_property verilog_define {...} [current_fileset]` แล้วล้างทีหลัง |
 | `FORMAL` | ทุกโมดูลที่มีบล็อก `FORMAL`; `async_fifo` สลับไป RAM ธรรมดา | |
 | `FORMAL_TOP_INTEGRATION` | arbiter, counter, synchronizer | ปิด property ของโมดูลย่อยเองเมื่อพิสูจน์ตัวแม่; กับดักในหัวข้อ 8.2 แถว K |
+| `FORMAL_ASYNC_FIFO_TOP` | `async_fifo` | เปิด property ของ FIFO เอง นิยามเฉพาะใน `formal/async_fifo.sby` สคริปต์ที่อ่าน FIFO เป็นโมดูลย่อยจึงไม่เห็น assumption ของมัน |
 | `FORMAL_NO_ROUTER` | `router_5port_mesh_vc` | อย่างเดียวกัน สำหรับ proof ของ mesh |
 | `DEBUG_BUILD` | ไม่มีอะไรแล้ว | เคยกั้น probe ของ UART build; ลบเพราะเคยหายไปครั้งหนึ่งแล้วและจะหายอีก |
 
@@ -1769,8 +1796,8 @@ generate มีเซลล์ `$assert` จริง (หัวข้อ 8.2 �
 32 บิตต้องใช้ code (39,32) และ `tb_ecc_secded` ใหม่); การแยก `[7:0]` ของ `async_fifo` เข้า RAM ที่
 มี ECC; การอัด `{SRC_TAG, seq}` ของ `traffic_node_agent` และตัวตรวจ 6 บิต; และ framing ของ UART
 (2 ไบต์/flit กลายเป็น 5) `PACK_W = 1 + 4 + DATA_W` ตามไปอัตโนมัติ พิสูจน์ `dual_port_ram_ecc`,
-`async_fifo_fwft` ใหม่ (และเขียน property ของ `async_fifo` ที่หายไปก่อน เพราะพวกมันคือตัวที่จะ
-จับบั๊กเรื่องความกว้าง) wrapper และ mesh โดยปล่อย `DATA_W` ไว้ที่ 2 เพื่อความเร็วของ solver รัน
+`async_fifo` (ตั้ง `DATA_WIDTH` ใน task prove ให้เท่า `PACK_W` ใหม่), `async_fifo_fwft`, wrapper
+และ mesh ใหม่ โดยปล่อย `DATA_W` ไว้ที่ 2 เพื่อความเร็วของ solver รัน
 simulation ทุกตัวใหม่; baseline ของ regression จะเปลี่ยนและต้องหาใหม่
 
 ### 13.5 ขยาย mesh
@@ -1826,6 +1853,7 @@ fault mode กั้นมันแบบที่ `BAD_TID`/`FAULT_MODE` กั
 | 2026-09-12/13 | `8deb828`, `d256864`, PR #7 | fault injector + VIO, silicon campaign (หกโหมด); `reset_sync` ต่อโดเมน (CDC-7 ×572 → 0); UART build ใหม่และรันใหม่ |
 | 2026-09-14 | `671d655`, `afce6cd` | sync record ที่ค้างของ PR #7 แล้ว merge |
 | 2026-09-14 | (เอกสารนี้) | เจอว่า proof ของ `async_fifo` ไม่มี assertion (หัวข้อ 8.2 แถว K) |
+| 2026-11-03 | repository ใหม่ `GALS-NoC` | history ย้ายไป `GALS-NoC-Archive`; จัดโฟลเดอร์ใหม่; `async_fifo` ได้ proof แบบ multiclock ของตัวเอง ปิดแถว K |
 
 ---
 
@@ -1870,11 +1898,9 @@ fault mode กั้นมันแบบที่ `BAD_TID`/`FAULT_MODE` กั
 
 ## 16. อะไรยังค้าง
 
-- **`async_fifo` ไม่มี formal property ของตัวเอง** (หัวข้อ 8.2 แถว K) FIFO ข้ามโดเมนคือหัวใจของ
-  ขอบ GALS และความถูกต้องของมันอาศัย simulation กับซิลิคอน model แบบ shadow-FIFO เหมือน
-  `vc_input_buffer` ใน abstraction แบบนาฬิกาเดียวที่สคริปต์ใช้อยู่แล้ว จะปิดช่องนี้ได้; header ของ
-  `async_fifo.sby` ควรเลิกอ้างว่าเป็น proof จนกว่าจะถึงตอนนั้น แถวของ `async_fifo` ในตาราง formal
-  ของ HANDOFF ผิดแบบเดียวกัน
+- **`async_fifo_fwft` ยังพิสูจน์แบบยุบสองนาฬิกาเป็นอันเดียว** (`multiclock` ปิด) FIFO ข้างใต้มี proof
+  สองนาฬิกาจริงแล้ว (`async_fifo.sby`) และ `gals_node_wrapper` ข้างบนก็รัน multiclock เรื่องนี้จึงกระทบ
+  แค่ property ของ `fwft_wrapper` เอง
 - **`dest_err_node[2:0]` ยังเป็นค่าคงที่ใน stress build** (โหนด 0-2 มีปลายทางเป็น parameter) มีแค่
   โหนด 3 ที่ทำงาน การขยาย mux ของ injector ให้ทุก agent จะแก้ได้ แลกกับสำเนาอีกสามชุด
 - **ECC ครอบเฉพาะ payload** และ SECDED รายงานผิดเมื่อพลิกสามบิตขึ้นไป

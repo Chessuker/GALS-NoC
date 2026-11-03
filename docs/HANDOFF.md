@@ -6,6 +6,13 @@ was merged to `main` as `0154d13` on 2026-09-13; GitHub created that merge commi
 the PR record open and "dirty", so the branch was re-synced with `main` to let the record
 close normally. `main`'s tree and the branch head were already identical.
 
+**2026-11-03:** the project moved to a new repository, `GALS-NoC`, starting from one
+commit; the history above (commits, PRs, the `v1.0` tag) is in `GALS-NoC-Archive`.
+Folders were reorganised (`docs/`, `scripts/`, `logs/`), and the tbclk simulation regression
+was re-run afterwards, matching its baseline exactly. `async_fifo` now has its own formal
+proof, unbounded and with `multiclock on`, which closes the gap recorded on 2026-09-14
+(section 5, formal table).
+
 Read this first if you're picking the project up cold.
 
 ---
@@ -930,7 +937,7 @@ The same day closed two other silicon gaps:
   | `vc_port_arbiter` | prove | PASS | PASS |
   | `gray_counter` | prove | PASS | PASS |
   | `sync_2stage` | prove | PASS | PASS |
-  | `async_fifo` | prove | PASS **(0 assertions — see note)** | PASS |
+  | `async_fifo` | prove, multiclock | PASS (18 assertions since 2026-11-03; 0 before, see note) | PASS |
   | `async_fifo_fwft` | prove | PASS (gray_counter + fwft_wrapper properties only) | PASS (cover needs depth 40) |
   | `dual_port_ram_ecc` | prove | PASS | PASS |
   | `gals_node_wrapper` | prove, multiclock | PASS | PASS |
@@ -945,6 +952,18 @@ The same day closed two other silicon gaps:
   `async_fifo_fwft.sby` has six assertions, all `gray_counter`'s and `fwft_wrapper`'s. The
   CDC FIFO's pointer logic, full/empty and ordering are covered by simulation and silicon,
   not by any formal property. Open item; `WALKTHROUGH.md` section 16.
+
+  **Closed (2026-11-03):** `async_fifo.sv` gained a `FORMAL_ASYNC_FIFO_TOP` block that only
+  `async_fifo.sby` defines, and the script now runs `multiclock on` through `read_slang`
+  (the properties need hierarchical references into `w_cnt`, `sync_w2r` and `dp_ram`).
+  Proved, unbounded: no overflow and no underflow on the true occupancy, level outputs
+  bounded, one bit per edge on both crossing pointers, and data and order for a
+  solver-chosen flit. Prove runs at `ADDR_WIDTH` 4 / `DATA_WIDTH` 13 (the size
+  `gals_node_wrapper` uses), cover at `ADDR_WIDTH` 2. Four mutations (full-flag bit, RAM
+  write or read enable ungated, read counter ungated) each fail prove; `rempty` taken from
+  the first sync stage passes, as expected, since formal does not model metastability.
+  `async_fifo_fwft.sby` is unchanged and still merges the clocks. Details in
+  `WALKTHROUGH.md` section 6.1.
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been

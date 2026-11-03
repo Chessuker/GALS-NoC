@@ -423,13 +423,30 @@ are one-cycle pulses; every consumer latches them sticky.
 When `FORMAL` is defined the ECC RAM is replaced by a plain RAM and the flags are tied
 to 0.
 
-**Formal: none of its own, and this is an open gap (section 16).** `formal/async_fifo.sby`
-reads the sub-modules with `-D FORMAL_TOP_INTEGRATION`, which switches their properties
-off, and `async_fifo.sv` contains no assertions, so the "prove PASS" that script reports is
-a proof with zero assertions in it (verified 2026-09-14: the generated model holds only
-`$assume` cells). The pointer logic, full/empty, and ordering of the CDC FIFO are covered
-by simulation and by silicon (zero sequence errors over millions of flits) but by no formal
-property. `vc_input_buffer`'s shadow-FIFO proof covers `sync_fifo`, not this module.
+**Formal: prove, unbounded, `multiclock on`, since 2026-11-03** (it had none of its own
+until then; section 8.2 row K). The block sits under `` `ifdef FORMAL_ASYNC_FIFO_TOP ``,
+which only `formal/async_fifo.sby` defines, so the scripts that use this FIFO as a
+sub-module (`async_fifo_fwft`, `gals_node_wrapper`) never see its assumptions. `wclk` and
+`rclk` are free, so the solver tries every interleaving of edges, including simultaneous
+ones. Resets start asserted on both sides, release independently, and are not re-asserted.
+Properties: no overflow and no underflow (`assert_fill_le_depth`, `assert_full_when_full`,
+`assert_empty_when_empty`, all on the true occupancy, not on the stale synchronised view);
+`w_level`/`r_level` bounded by the depth; each pointer that crosses a domain changes by at
+most one bit per edge (`assert_*ptr_gray_step`); and data plus order through one flit the
+solver picks (`assert_tracked_data`: the flit written at full-width pointer `f_k` is the
+one read when the read pointer reaches `f_k`, with the same value). Induction closes on
+white-box invariants (`inv_*`): counter `bin` equals the decoded gray pointer, each
+synchroniser stage holds a pointer between the read and write pointers in stage order, and
+the tracked flit is still in the RAM and inside the queue window. The properties reach
+into sub-modules (`w_cnt.bin`, `sync_w2r.q1`, `dp_ram.mem`), so the script uses
+`read_slang`. Prove runs at the size `gals_node_wrapper` uses (`ADDR_WIDTH` 4,
+`DATA_WIDTH` 13) in seconds; cover runs at `ADDR_WIDTH` 2 so a full pointer wrap fits in
+40 steps. Four RTL mutations (full-flag bit wrong, RAM write or read enable not gated,
+read counter not gated) each make prove fail. A fifth, `rempty` taken from the first
+synchroniser stage, passes, as it must: formal sees every sampled value as clean and
+does not model metastability. Metastability safety rests on the gray-step property,
+`ASYNC_REG`, and `report_cdc`. With `FORMAL` defined the RAM is the plain one, so the ECC
+path is not part of this proof (`dual_port_ram_ecc.sby` and `tb_ecc_secded` cover it).
 
 #### `fwft_wrapper.sv` (175 lines)
 Turns a standard FIFO read interface (data valid the cycle after `r_en`) into
@@ -441,9 +458,9 @@ through `async_fifo_fwft.sby`.
 
 #### `async_fifo_fwft.sv` (109 lines)
 `async_fifo` plus `fwft_wrapper` on the read side. This is what `gals_node_wrapper`
-instantiates. Formal: `async_fifo_fwft.sby` passes prove, but the six assertions in its
-model are `gray_counter`'s and `fwft_wrapper`'s; there is nothing about the FIFO itself
-(same gap as above).
+instantiates. Formal: `async_fifo_fwft.sby` passes prove; its assertions are
+`gray_counter`'s, `sync_2stage`'s and `fwft_wrapper`'s, with the two clocks merged
+(`multiclock` off). The FIFO's own properties are proved in `async_fifo.sby` above.
 
 ### 6.2 Router core
 
@@ -1242,7 +1259,7 @@ have. They are listed here so nobody rediscovers them.
 | H | `gals_noc_top`, `traffic_node_agent` | Sticky flags OR-reduced / gated in a LUT straight into a `sync_2stage` (CDC-10 ×5): a LUT glitch would be captured as a permanent false alarm | first `report_cdc` run, 2026-09-12 | registered in the source domain |
 | I | both tops | One unsynchronised async reset into every flop of every domain (CDC-7 ×572 once a clocked source touched the net); survived on the 1024-cycle warm-up idle | `report_cdc` after adding the VIO soft reset | `reset_sync` per domain, per-domain reset ports |
 | J | stress build, `dest_err` | The destination filters were constant-folded away because the agents' `tdest` is a parameter; every `dest_err_cnt = 0` reading was structural, and one silicon claim in the docs was vacuous | tracing the "unclocked" `dest_err_node` probe to a `LUT1` of `GND` | injector mux makes node 3 live; `setup_debug.tcl` reports constants; docs corrected |
-| K | `formal/async_fifo.sby`, `async_fifo_fwft.sby` | "prove PASS" with zero assertions of the FIFO's own (sub-modules read with their properties disabled); the CDC FIFO has no formal properties | cataloguing labels for this document, 2026-09-14 | **open** (section 16) |
+| K | `formal/async_fifo.sby`, `async_fifo_fwft.sby` | "prove PASS" with zero assertions of the FIFO's own (sub-modules read with their properties disabled); the CDC FIFO has no formal properties | cataloguing labels for this document, 2026-09-14 | 2026-11-03: `async_fifo` proved on its own, `multiclock on` (section 6.1) |
 | L | `tb_noc_stress_tester` `BAD_DEST` | `release` on a `logic` driven by a constant keeps the forced value forever; node 11 fired at the wrong node for the whole window | fairness reading 56/44 | force the true value for a cycle first |
 | M | `setup_debug.tcl` and the GUI flow | six separate Vivado traps: wizard writes into the pins file, `save_constraints` misorders cores, clock lookup silently narrows probes, stale cores follow a build switch, `debug_auto.xdc` read by synthesis, deleted cores leave their clocks, implementation in the same session ignores the new xdc | each by a broken capture | all handled in `setup_debug.tcl` / the batch flow |
 | N | PC side | Opening the COM port resets the FPGA (FTDI DTR/RTS), wiping sticky flags and counters | counters reading "2 seconds old" after a minute | read the ILA before the next port open; `batch_uart_session.tcl` |
@@ -1272,7 +1289,8 @@ measurements, not pass/fail.
 
 SymbiYosys under WSL (`Ubuntu-24.04`, OSS CAD Suite in `/opt/eda/oss-cad-suite`:
 Yosys 0.68, SBY 0.68, Z3 4.15.5). One script per module in `formal/`, eleven modules,
-22 tasks, all green at `afce6cd`, with the caveat in row K above.
+22 tasks, all green at `afce6cd`, with the caveat in row K above. Row K was closed on
+2026-11-03: `async_fifo.sby` now proves the FIFO's own properties (section 6.1).
 
 #### Property catalogue
 
@@ -1373,8 +1391,13 @@ the MSB flips on wrap. Cover: the wrap (depth 40).
 **`sync_2stage` (prove)**: reset clears both stages; `assert_stage2` (output equals the
 input two edges ago); `cover_data_pass`.
 
-**`async_fifo`, `async_fifo_fwft`**: see row K in section 8.2. The scripts pass; they
-contain no properties of the FIFO's own.
+**`async_fifo` (prove, unbounded, `multiclock on`, since 2026-11-03)**:
+`assert_fill_le_depth`, `assert_full_when_full`, `assert_empty_when_empty`,
+`assert_w_level_bound`, `assert_r_level_bound`, `assert_wptr_gray_step`,
+`assert_rptr_gray_step`, `assert_tracked_data`, plus ten `inv_*` invariants for
+induction; covers `cover_full`, `cover_tracked_out`, `cover_tracked_late` (a flit written
+after the pointer passed the depth), `cover_ptr_wrap`. Details and the mutation check in
+section 6.1. `async_fifo_fwft` still carries only its sub-modules' properties.
 
 #### Conventions
 
@@ -1387,6 +1410,13 @@ contain no properties of the FIFO's own.
 - Modules with unpacked-array ports need the slang frontend (`plugin -i slang;
   read_slang`); slang has no `$onehot`, hence the `f_onehot` helpers, and it names assert
   cells from labels, so labels inside plain `for` loops must be in `generate` blocks.
+- Under slang there is no `$anyseq`, `$anyconst`, `$initstate`, `initial assume` or global
+  clock (`(* gclk *)` is read as an undriven wire, so a flop on it keeps its init value
+  forever and the run goes vacuous without an error). `async_fifo` works around all of
+  it: flops clocked by the reset's rising edge mark "released", and a free input bit that
+  only feeds combinational outputs (`prog_full_thresh[0]`) picks the tracked flit. A flop
+  with `D = Q` does not work as a free constant: `opt` replaces it with `x`, and every
+  use becomes a separate free value.
 - `memory_map` flattens FIFO arrays; without it z3 does not finish.
 - Router and mesh use `abc bmc3` for bmc; z3 is used for cover and for every `prove`.
 - `prove` means k-induction passed and the property is unbounded. `bmc` means bounded;
@@ -1451,7 +1481,7 @@ fix; "formal" names the script; "silicon" names the log.
 | ECC correct/detect | `tb_ecc_secded` exhaustive | (`dual_port_ram_ecc` address only) | `ECC_INJECT_SBE` / `_DBE` builds |
 | ECC alarm reaches counters and LEDs | `INJECT_ECC` | | `ecc_sbe_cnt=3` node `1111`; `ecc_dbe_cnt=3` |
 | liveness watchdog | `tb_traffic_node_agent` 10/10 | | first board run caught bug #4 |
-| async FIFO pointer/ordering correctness | every regression, indirectly | **none** (row K) | 0 seq errors over millions of flits |
+| async FIFO pointer/ordering correctness | every regression, indirectly | `async_fifo` `assert_full_when_full`, `assert_empty_when_empty`, `assert_tracked_data` (multiclock) | 0 seq errors over millions of flits |
 | reset deassert synchronised per domain | | | `report_cdc` Critical 0 |
 | UART byte integrity, both VCs, all nodes | | | `uart_roundtrip.py` 6/6 |
 
@@ -1816,6 +1846,7 @@ powers of two.
 | `ECC_INJECT_SBE` / `ECC_INJECT_DBE` | `dual_port_ram_ecc` | flip one / two codeword bits on every write; set with `set_property verilog_define {...} [current_fileset]`, and clear it afterwards |
 | `FORMAL` | every module with a `FORMAL` block; `async_fifo` swaps to a plain RAM | |
 | `FORMAL_TOP_INTEGRATION` | arbiters, counters, synchroniser | disables a sub-module's own properties when a parent is proved; the trap in section 8.2 row K |
+| `FORMAL_ASYNC_FIFO_TOP` | `async_fifo` | turns on the FIFO's own properties; defined only by `formal/async_fifo.sby`, so scripts that read the FIFO as a sub-module never see its assumptions |
 | `FORMAL_NO_ROUTER` | `router_5port_mesh_vc` | same, for the mesh proof |
 | `DEBUG_BUILD` | nothing any more | used to gate the UART build's probes; deleted because it was lost once and would be again |
 
@@ -1961,9 +1992,9 @@ check the generated model actually contains `$assert` cells (section 8.2 row K):
 (13,8) pair (a 32-bit flit needs a (39,32) code and a new `tb_ecc_secded`); `async_fifo`'s
 split of `[7:0]` into the ECC RAM; `traffic_node_agent`'s `{SRC_TAG, seq}` packing and
 the 6-bit checker; and the UART framing (2 bytes/flit becomes 5). `PACK_W = 1 + 4 +
-DATA_W` follows automatically. Re-prove `dual_port_ram_ecc`, `async_fifo_fwft` (and write
-the missing `async_fifo` properties first, since they would be the ones to catch a width
-bug), the wrapper, and the mesh with `DATA_W` left at 2 for solver speed. Re-run every
+DATA_W` follows automatically. Re-prove `dual_port_ram_ecc`, `async_fifo` (with
+`DATA_WIDTH` set to the new `PACK_W` in its prove task), `async_fifo_fwft`, the wrapper,
+and the mesh with `DATA_W` left at 2 for solver speed. Re-run every
 simulation; the regression baselines will change and need re-deriving.
 
 ### 13.5 Grow the mesh
@@ -2023,6 +2054,7 @@ gate it the way `BAD_TID`/`FAULT_MODE` are, so the clean run stays a strict pass
 | 2026-09-12/13 | `8deb828`, `d256864`, PR #7 | fault injector + VIO, silicon campaign (six modes); per-domain `reset_sync` (CDC-7 ×572 → 0); UART build rebuilt and re-run |
 | 2026-09-14 | `671d655`, `afce6cd` | PR #7's stuck record re-synced and merged |
 | 2026-09-14 | (this document) | `async_fifo` proofs found to contain no assertions (section 8.2 row K) |
+| 2026-11-03 | new repository `GALS-NoC` | history moved to `GALS-NoC-Archive`; folders reorganised; `async_fifo` given its own multiclock proof, row K closed |
 
 ---
 
@@ -2073,12 +2105,9 @@ originals before touching the build flow.
 
 ## 16. What is still open
 
-- **`async_fifo` has no formal properties of its own** (section 8.2 row K). The CDC FIFO
-  is the heart of the GALS boundary and its correctness rests on simulation and silicon.
-  A shadow-FIFO model like `vc_input_buffer`'s, in the single-clock abstraction the
-  script already uses, would close this; the `async_fifo.sby` header should stop
-  claiming a proof until then. HANDOFF's formal table row for `async_fifo` is wrong in
-  the same way.
+- **`async_fifo_fwft` is still proved with its two clocks merged** (`multiclock` off). The
+  FIFO underneath now has a real two-clock proof (`async_fifo.sby`) and `gals_node_wrapper`
+  runs multiclock above it, so this only matters for `fwft_wrapper`'s own properties.
 - **`dest_err_node[2:0]` remain constant in the stress build** (nodes 0-2 have parameter
   destinations). Only node 3 is live. Extending the injector mux to every agent would fix
   it at the cost of three more copies.
