@@ -1,0 +1,38 @@
+Vivado Simulator v2025.2
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+Running: C:/AMDDesignTools/2025.2/Vivado/bin/unwrapped/win64.o/xelab.exe --incr --debug typical --relax --mt 2 -L xil_defaultlib -L uvm -L unisims_ver -L unimacro_ver -L secureip --snapshot tb_noc_mesh_2x2_gals_behav xil_defaultlib.tb_noc_mesh_2x2_gals xil_defaultlib.glbl -log elaborate.log 
+Using 2 slave threads.
+Starting static elaboration
+Pass Through NonSizing Optimizer
+Completed static elaboration
+Starting simulation data flow analysis
+WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 336 : Sensitivity on input argument "node_idx" of task "random_traffic_node" may never get triggered.
+WARNING: [XSIM 43-4328] File: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv Line: 338 : Sensitivity on input argument "node_idx" of task "random_traffic_node" may never get triggered.
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module xil_defaultlib.axis_perf_mon
+Compiling module xil_defaultlib.sync_fifo(DATA_WIDTH=13)
+Compiling module xil_defaultlib.vc_input_buffer_default
+Compiling module xil_defaultlib.packet_arbiter(PORTS=5)
+Compiling module xil_defaultlib.vc_port_arbiter(PORTS=5)
+Compiling module xil_defaultlib.router_5port_mesh_vc_default
+Compiling module xil_defaultlib.router_5port_mesh_vc(MY_X=2'b01)
+Compiling module xil_defaultlib.router_5port_mesh_vc(MY_Y=2'b01)
+Compiling module xil_defaultlib.router_5port_mesh_vc(MY_X=2'b01,...
+Compiling module xil_defaultlib.noc_mesh_2x2_vc_default
+Compiling module xil_defaultlib.ecc_secded_encode_8b
+Compiling module xil_defaultlib.dual_port_ram(DATA_WIDTH=13)
+Compiling module xil_defaultlib.ecc_secded_decode_8b
+Compiling module xil_defaultlib.dual_port_ram_ecc_default
+Compiling module xil_defaultlib.dual_port_ram(DATA_WIDTH=5)
+Compiling module xil_defaultlib.gray_counter
+Compiling module xil_defaultlib.sync_2stage
+Compiling module xil_defaultlib.async_fifo(DATA_WIDTH=13)
+Compiling module xil_defaultlib.fwft_wrapper(DATA_WIDTH=13)
+Compiling module xil_defaultlib.async_fifo_fwft(DATA_WIDTH=13)
+Compiling module xil_defaultlib.gals_node_wrapper_default
+Compiling module xil_defaultlib.traffic_gen
+Compiling module xil_defaultlib.tb_noc_mesh_2x2_gals
+Compiling module xil_defaultlib.glbl
+Built simulation snapshot tb_noc_mesh_2x2_gals_behav

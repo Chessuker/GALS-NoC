@@ -1,0 +1,66 @@
+===================================================
+ GALS NoC - hardware ILA run (analyze_ila.py)
+ date     : 2026-09-02
+ build    : PATTERN=1 (hot-spot 01/10/11 -> node 00), VC_MODE=2 (alternating)
+ RTL      : ECC error flags wired end to end (afb147e)
+            + liveness watchdog + max_gap + bug #4 fix
+ probes   : 1064 MARK_DEBUG nets, 5 ILA cores
+            (clk_noc นับ ECC แยก core ของตัวเอง ไม่มีคอลัมน์ agent เลย)
+ purpose  : ยืนยันบนบอร์ดว่าธง ECC ที่เพิ่งต่อสายไม่ยกเองมั่วๆ
+ csv      : GALS_Packet-Based_Fabric.runs/impl_1/ila_ecc_hw_validation_vc2_pattern1
+===================================================
+
+พบ 4 agent: agent_00, agent_01, agent_10, agent_11
+
+agent       clk MHz   mode   state   TX/cyc   stall%   RX/cyc   TX MB/s  errors  dest
+-------------------------------------------------------------------------------------
+agent_00     100.00  final     [3]   0.0000      0.0   0.7759      0.00       0   [0]
+agent_01      71.43  final     [3]   0.5416     45.8   0.0000     38.69       0   [0]
+agent_10      83.33  final     [3]   0.2327     76.7   0.0000     19.39       0   [0]
+agent_11      71.43  final     [3]   0.3089     69.1   0.0000     22.07       0   [0]
+
+  VC split ของ flit ที่รับได้:
+    agent_00: VC0  6,508,965 ( 50.0%)   VC1  6,509,104 ( 50.0%)
+    agent_01: (ไม่ได้รับ flit)
+    agent_10: (ไม่ได้รับ flit)
+    agent_11: (ไม่ได้รับ flit)
+    -> มีทั้งสอง VC : build นี้คือ VC_MODE=2 (สลับทุกแพ็กเกจ)
+-------------------------------------------------------------------------------------
+
+รวม injected :    80.1 Mflit/s =    80.1 MB/s (flit ละ 8 บิต)
+(ยอด RX รวม 77.6 MB/s เอามาเทียบกับ TX ตรงๆ ไม่ได้ เพราะแต่ละ agent ปิดหน้าต่างคนละเวลา ดูตาราง conservation ข้างล่างแทน)
+
+รูปแบบทราฟฟิก : HOT-SPOT (3 -> node 00)
+  local output port ของ node 00 : 77.6 / 80 Mflit/s = 97.0% utilisation
+
+  ความยุติธรรมของ arbiter (ยิ่งใกล้กันยิ่งแฟร์):
+    agent_01:  38.69 Mflit/s  ( 48.3% ของทั้งหมด)
+    agent_10:  19.39 Mflit/s  ( 24.2% ของทั้งหมด)
+    agent_11:  22.07 Mflit/s  ( 27.5% ของทั้งหมด)
+    spread = 49.9%   (0% = แบ่งเท่ากันเป๊ะ)
+
+sequence errors รวมทุก agent : 0   ->  PASS
+
+liveness : ทุก node (4) มี flit ขยับตลอด S_RUN   ->  PASS
+
+ECC      : single(ซ่อมได้)=0  double(ซ่อมไม่ได้)=0   node_sbe=0000 node_dbe=0000
+           ->  PASS : ไม่เจอ bit error เลย
+
+===================================================
+ RESULT
+===================================================
+  ECC          : single=0  double=0        ->  PASS (ไม่มี bit error)
+  liveness     : ทุก node 4 ตัว            ->  PASS
+  sequence err : 0                          ->  PASS
+  node00 port  : 97.0% utilisation          (เท่าเดิม)
+  injected     : 80.1 MB/s
+
+  ธง ECC เงียบสนิทบนบอร์ดจริง = ไม่มี false alarm
+  ตรงกับผลจำลอง (tb_noc_stress_tester รันสะอาด sbe_cnt=0 dbe_cnt=0)
+  ส่วนกรณีที่ควรดัง พิสูจน์ในจำลองด้วย INJECT_ECC=1 แล้ว (dbe_cnt=1)
+  บนบอร์ดยังไม่มีทางฉีดบิตเน่าเข้าไปจริง จึงยังไม่ได้ทดสอบขา "ดัง" บนฮาร์ดแวร์
+
+  หมายเหตุ: รอบแรก analyze_ila.py รายงานว่า "ไม่มีคอลัมน์ ecc_*_cnt"
+  ทั้งที่ ILA จับมาครบแล้ว สาเหตุคือ loader ทิ้งไฟล์ที่ไม่มีคอลัมน์ agent
+  ซึ่งก็คือไฟล์ของ clk_noc ที่เก็บ ECC ไว้พอดี - แก้แล้วในคอมมิตเดียวกันนี้
+===================================================

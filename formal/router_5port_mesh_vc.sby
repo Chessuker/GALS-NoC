@@ -1,0 +1,67 @@
+# =============================================================================
+# router_5port_mesh_vc — formal
+#
+# arbiter ถูกพิสูจน์ไปแล้วทั้งสองชั้น แต่ router ที่ห่อมันอยู่ยังไม่เคยถูกแตะ
+# ชิ้นที่เหลือคือตัวถอด XY กับ crossbar ซึ่งเป็นที่ที่บั๊กเส้นทางจะซ่อนอยู่
+#
+# พิสูจน์ (ดูตัวไฟล์ router_5port_mesh_vc.sv):
+#   assert_route_onehot / _route_iff_valid   - ถอด XY ได้ปลายทางเดียวเป๊ะต่อ flit
+#   assert_eject_here / _no_false_eject      - เด้งออก LOCAL เฉพาะของที่ถึงบ้าน
+#   assert_xbar_onehot                       - เงื่อนไขที่ AND-OR mux ต้องมี
+#   assert_grant_matches_route_vc0/1         - ไม่ส่งผิดทาง
+#   assert_xbar_data/dest/last/valid_vc0/1   - crossbar คายของคนที่ได้ grant เป๊ะ
+#   assert_tid_vc0 / _vc1 / _idle            - ป้าย VC ตรงกับ VC ที่ได้ grant
+#   assert_no_grant_fanout_vc0/1             - input เดียวห้ามถูก grant สองพอร์ตพร้อมกัน
+#   assert_ready_needs_grant_vc0/1           - credit ตีกลับเฉพาะตอนมีคนรับจริง
+#
+# assert_no_grant_fanout_* คือตัวที่มีน้ำหนักที่สุด: arbiter ล็อกช่องข้ามไซเคิลได้
+# ถ้าหัวคิวเปลี่ยนเส้นทางกลางแพกเกจ arbiter ตัวเก่าจะยังถือ grant ขณะที่ตัวใหม่
+# ก็ให้ grant ด้วย แต่ buf_ready ถูก OR รวมเป็นเส้นเดียว จึงอ่าน FIFO ครั้งเดียว
+# แต่คาย flit ออกสองพอร์ต = flit ถูกโคลนแบบไม่มีธงขึ้น
+#
+# ทำไมเป็น bmc ไม่ใช่ prove: property ผูก state ของ arbiter (ช่องที่ล็อกไว้) กับ
+# หัวคิวใน FIFO ของ input buffer ซึ่งไม่เป็น inductive — induction เริ่มจากคิวที่
+# มีเนื้ออะไรก็ได้ จึงสร้างสถานะ "ล็อกไว้แต่หัวคิวเปลี่ยนปลายทางแล้ว" ได้ฟรี
+# โดยไม่ต้องมี input history ที่พาไปถึงจุดนั้นจริง ข้อจำกัดนี้เหมือน
+# vc_input_buffer ไม่ใช่เพราะ property อ่อน
+# vc_input_buffer ถูกอ่านด้วย -D FORMAL_TOP_INTEGRATION เพื่อปิด shadow FIFO
+# ของมันเอง (สิบชุด) ไม่ให้ลากมาถ่วง proof นี้ — ตัวมันพิสูจน์แยกใน .sby ของมัน
+#
+# DEPTH 16 -> 2 และ DATA_W 8 -> 2 เพื่อให้ 10 FIFO + 10 packet_arbiter ไหว
+# STARVE_LIMIT ปล่อยตามค่าจริง (64) — property ในนี้ไม่ได้พึ่งเส้นทาง override
+#
+#   cd formal && sby -f router_5port_mesh_vc.sby
+# =============================================================================
+
+[tasks]
+bmc
+cover
+
+[options]
+bmc: mode bmc
+bmc: depth 16
+cover: mode cover
+cover: depth 16
+
+[engines]
+# z3 ไปได้แค่สเต็ป 8 ใน 40 นาที (10 packet_arbiter + 10 FIFO ใหญ่เกินไป)
+# abc bmc3 ทำงานบน AIG เร็วกว่าหลายสิบเท่าในดีไซน์ทรงนี้ ส่วน cover ยังใช้ z3
+# เพราะ abc ไม่รองรับโหมด cover
+bmc: abc bmc3
+cover: smtbmc z3
+
+[script]
+plugin -i slang
+read_slang -D FORMAL -D FORMAL_TOP_INTEGRATION --top router_5port_mesh_vc -G DATA_W=2 -G DEPTH=2 sync_fifo.sv vc_input_buffer.sv packet_arbiter.sv vc_port_arbiter.sv router_5port_mesh_vc.sv
+prep -top router_5port_mesh_vc
+# คิวเงา + mem ของ FIFO เป็น array ซึ่ง z3 แก้ช้ามาก (เกิน 28 นาทีที่ depth 16)
+# memory_map กาง array เป็น flip-flop ธรรมดา ขนาดจิ๋วอยู่แล้วจึงไม่มีอะไรเสีย
+memory_map
+opt -fast
+
+[files]
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/sync_fifo.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_input_buffer.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/packet_arbiter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/vc_port_arbiter.sv
+../GALS_Packet-Based_Fabric.srcs/sources_1/new/router_5port_mesh_vc.sv

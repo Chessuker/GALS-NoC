@@ -1,0 +1,1916 @@
+===================================================
+ GALS NoC - simulation regression
+ date     : 2026-08-19 15:07:28
+ clocks   : HW-matched : NoC 80 MHz, sink 100 MHz, senders 71.4/83.3/71.4 MHz
+ Test6 VC : alternating VC0/VC1 - เหมือนบอร์ด (traffic_node_agent VC_MODE=2)
+ defines  : HW_CLOCKS HS_VC_ALT SIM_DEBUG
+===================================================
+
+Time resolution is 1 ps
+
+[TB] --- Start GALS Test 1: Fire through diagonal links ---
+[SB-PRED] t=100000 src=0x0 -> Node11 (VC0) pkt_id=0 len=4
+[SB-PRED] t=100000 src=0x3 -> Node00 (VC0) pkt_id=0 len=4
+[265000 ns] Node 00 (VC0) rcv: 0x30
+[273000 ns] Node 11 (VC0) rcv: 0x00
+[275000 ns] Node 00 (VC0) rcv: 0x31
+[285000 ns] Node 00 (VC0) rcv: 0x32
+[287000 ns] Node 11 (VC0) rcv: 0x01
+[301000 ns] Node 11 (VC0) rcv: 0x02
+[SB-PASS] t=305000 Node00 (VC0) src=0x3 pkt_id=0 len=4 matches prediction
+[305000 ns] Node 00 (VC0) rcv: 0x33
+[SB-PASS] t=315000 Node11 (VC0) src=0x0 pkt_id=0 len=4 matches prediction
+[315000 ns] Node 11 (VC0) rcv: 0x03
+[TB] --- Test 1 Finished ---
+
+[TB] --- Start GALS Test 2: VC Preemption Test (Ambulance vs Truck) ---
+[SB-PRED] t=671000 src=0x0 -> Node10 (VC0) pkt_id=1 len=30
+[SB-PRED] t=671000 src=0x2 -> Node10 (VC1) pkt_id=0 len=5
+[833000 ns] Node 10 (VC0) rcv: 0x00
+[847000 ns] Node 10 (VC0) rcv: 0x01
+[861000 ns] Node 10 (VC0) rcv: 0x02
+[875000 ns] Node 10 (VC0) rcv: 0x03
+[889000 ns] Node 10 (VC1) rcv: 0x20
+[903000 ns] Node 10 (VC1) rcv: 0x21
+[917000 ns] Node 10 (VC1) rcv: 0x22
+[931000 ns] Node 10 (VC1) rcv: 0x23
+[SB-PASS] t=945000 Node10 (VC1) src=0x2 pkt_id=0 len=5 matches prediction
+[945000 ns] Node 10 (VC1) rcv: 0x24
+[959000 ns] Node 10 (VC0) rcv: 0x04
+[973000 ns] Node 10 (VC0) rcv: 0x05
+[987000 ns] Node 10 (VC0) rcv: 0x06
+[1001000 ns] Node 10 (VC0) rcv: 0x07
+[1015000 ns] Node 10 (VC0) rcv: 0x08
+[1029000 ns] Node 10 (VC0) rcv: 0x09
+[1043000 ns] Node 10 (VC0) rcv: 0x0a
+[1057000 ns] Node 10 (VC0) rcv: 0x0b
+[1071000 ns] Node 10 (VC0) rcv: 0x0c
+[1085000 ns] Node 10 (VC0) rcv: 0x0d
+[1099000 ns] Node 10 (VC0) rcv: 0x0e
+[1113000 ns] Node 10 (VC0) rcv: 0x0f
+[1127000 ns] Node 10 (VC0) rcv: 0x10
+[1141000 ns] Node 10 (VC0) rcv: 0x11
+[1155000 ns] Node 10 (VC0) rcv: 0x12
+[1169000 ns] Node 10 (VC0) rcv: 0x13
+[1183000 ns] Node 10 (VC0) rcv: 0x14
+[1197000 ns] Node 10 (VC0) rcv: 0x15
+[1211000 ns] Node 10 (VC0) rcv: 0x16
+[1225000 ns] Node 10 (VC0) rcv: 0x17
+[1239000 ns] Node 10 (VC0) rcv: 0x18
+[1253000 ns] Node 10 (VC0) rcv: 0x19
+[1267000 ns] Node 10 (VC0) rcv: 0x1a
+[1281000 ns] Node 10 (VC0) rcv: 0x1b
+[1295000 ns] Node 10 (VC0) rcv: 0x1c
+[SB-PASS] t=1309000 Node10 (VC0) src=0x0 pkt_id=1 len=30 matches prediction
+[1309000 ns] Node 10 (VC0) rcv: 0x1d
+[TB] --- Test 2 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: VC Preemption Test
+=================================================
+ [Node00 TX] Flits: 30 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 35 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 5 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 1 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 0 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 1 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=4 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 3: Random All-to-All Traffic with VCs ---
+[SB-PRED] t=1490000 src=0x2 -> Node11 (VC0) pkt_id=1 len=14
+[SB-PRED] t=1494000 src=0x3 -> Node10 (VC1) pkt_id=1 len=9
+[SB-PRED] t=1511000 src=0x1 -> Node00 (VC1) pkt_id=0 len=13
+[SB-PRED] t=1519000 src=0x0 -> Node10 (VC1) pkt_id=2 len=19
+[1645000 ns] Node 11 (VC0) rcv: 0x20
+[1659000 ns] Node 11 (VC0) rcv: 0x21
+[1665000 ns] Node 00 (VC1) rcv: 0x10
+[SB-PRED] t=1667000 src=0x3 -> Node00 (VC0) pkt_id=2 len=19
+[1673000 ns] Node 10 (VC1) rcv: 0x30
+[1673000 ns] Node 11 (VC0) rcv: 0x22
+[1675000 ns] Node 00 (VC1) rcv: 0x11
+[1685000 ns] Node 00 (VC1) rcv: 0x12
+[1687000 ns] Node 10 (VC1) rcv: 0x31
+[1687000 ns] Node 11 (VC0) rcv: 0x23
+[SB-PRED] t=1700000 src=0x2 -> Node00 (VC1) pkt_id=2 len=18
+[1701000 ns] Node 10 (VC1) rcv: 0x32
+[1701000 ns] Node 11 (VC0) rcv: 0x24
+[1705000 ns] Node 00 (VC1) rcv: 0x13
+[SB-PRED] t=1709000 src=0x1 -> Node00 (VC0) pkt_id=1 len=20
+[1715000 ns] Node 10 (VC1) rcv: 0x33
+[1715000 ns] Node 11 (VC0) rcv: 0x25
+[1715000 ns] Node 00 (VC1) rcv: 0x14
+[SB-PRED] t=1724000 src=0x0 -> Node01 (VC0) pkt_id=3 len=18
+[1725000 ns] Node 00 (VC1) rcv: 0x15
+[1729000 ns] Node 10 (VC1) rcv: 0x34
+[1729000 ns] Node 11 (VC0) rcv: 0x26
+[1735000 ns] Node 00 (VC1) rcv: 0x16
+[1743000 ns] Node 10 (VC1) rcv: 0x35
+[1743000 ns] Node 11 (VC0) rcv: 0x27
+[1755000 ns] Node 00 (VC1) rcv: 0x17
+[1757000 ns] Node 10 (VC1) rcv: 0x36
+[1757000 ns] Node 11 (VC0) rcv: 0x28
+[1771000 ns] Node 10 (VC1) rcv: 0x37
+[1771000 ns] Node 11 (VC0) rcv: 0x29
+[1775000 ns] Node 00 (VC1) rcv: 0x18
+[SB-PASS] t=1785000 Node10 (VC1) src=0x3 pkt_id=1 len=9 matches prediction
+[1785000 ns] Node 10 (VC1) rcv: 0x38
+[1785000 ns] Node 11 (VC0) rcv: 0x2a
+[1785000 ns] Node 00 (VC1) rcv: 0x19
+[1799000 ns] Node 10 (VC1) rcv: 0x00
+[1799000 ns] Node 11 (VC0) rcv: 0x2b
+[1805000 ns] Node 00 (VC1) rcv: 0x1a
+[1813000 ns] Node 10 (VC1) rcv: 0x01
+[1813000 ns] Node 11 (VC0) rcv: 0x2c
+[1815000 ns] Node 00 (VC1) rcv: 0x1b
+[SB-PASS] t=1825000 Node00 (VC1) src=0x1 pkt_id=0 len=13 matches prediction
+[1825000 ns] Node 00 (VC1) rcv: 0x1c
+[1827000 ns] Node 10 (VC1) rcv: 0x02
+[SB-PASS] t=1827000 Node11 (VC0) src=0x2 pkt_id=1 len=14 matches prediction
+[1827000 ns] Node 11 (VC0) rcv: 0x2d
+[1835000 ns] Node 00 (VC0) rcv: 0x30
+[1841000 ns] Node 10 (VC1) rcv: 0x03
+[1855000 ns] Node 10 (VC1) rcv: 0x04
+[1855000 ns] Node 00 (VC1) rcv: 0x20
+[1865000 ns] Node 00 (VC1) rcv: 0x21
+[1869000 ns] Node 10 (VC1) rcv: 0x05
+[1875000 ns] Node 00 (VC1) rcv: 0x22
+[1883000 ns] Node 10 (VC1) rcv: 0x06
+[1885000 ns] Node 00 (VC1) rcv: 0x23
+[1897000 ns] Node 10 (VC1) rcv: 0x07
+[1905000 ns] Node 00 (VC1) rcv: 0x24
+[1911000 ns] Node 10 (VC1) rcv: 0x08
+[1914000 ns] Node 01 (VC0) rcv: 0x00
+[1915000 ns] Node 00 (VC1) rcv: 0x25
+[SB-PRED] t=1925000 src=0x0 -> Node10 (VC0) pkt_id=4 len=18
+[1925000 ns] Node 10 (VC1) rcv: 0x09
+[1925000 ns] Node 00 (VC1) rcv: 0x26
+[1926000 ns] Node 01 (VC0) rcv: 0x01
+[1935000 ns] Node 00 (VC1) rcv: 0x27
+[SB-PRED] t=1936000 src=0x2 -> Node11 (VC1) pkt_id=3 len=20
+[1938000 ns] Node 01 (VC0) rcv: 0x02
+[1939000 ns] Node 10 (VC1) rcv: 0x0a
+[1950000 ns] Node 01 (VC0) rcv: 0x03
+[1953000 ns] Node 10 (VC1) rcv: 0x0b
+[1955000 ns] Node 00 (VC1) rcv: 0x28
+[1962000 ns] Node 01 (VC0) rcv: 0x04
+[1965000 ns] Node 00 (VC1) rcv: 0x29
+[1967000 ns] Node 10 (VC1) rcv: 0x0c
+[SB-PRED] t=1971000 src=0x3 -> Node00 (VC1) pkt_id=3 len=16
+[1974000 ns] Node 01 (VC0) rcv: 0x05
+[1975000 ns] Node 00 (VC1) rcv: 0x2a
+[1981000 ns] Node 10 (VC1) rcv: 0x0d
+[1985000 ns] Node 00 (VC1) rcv: 0x2b
+[1986000 ns] Node 01 (VC0) rcv: 0x06
+[1995000 ns] Node 10 (VC1) rcv: 0x0e
+[1998000 ns] Node 01 (VC0) rcv: 0x07
+[2005000 ns] Node 00 (VC1) rcv: 0x2c
+[SB-PRED] t=2007000 src=0x1 -> Node11 (VC1) pkt_id=2 len=5
+[2009000 ns] Node 10 (VC1) rcv: 0x0f
+[2010000 ns] Node 01 (VC0) rcv: 0x08
+[2015000 ns] Node 00 (VC1) rcv: 0x2d
+[2022000 ns] Node 01 (VC0) rcv: 0x09
+[2023000 ns] Node 10 (VC1) rcv: 0x10
+[2025000 ns] Node 00 (VC1) rcv: 0x2e
+[2034000 ns] Node 01 (VC0) rcv: 0x0a
+[2035000 ns] Node 00 (VC1) rcv: 0x2f
+[2037000 ns] Node 10 (VC1) rcv: 0x11
+[2046000 ns] Node 01 (VC0) rcv: 0x0b
+[SB-PASS] t=2051000 Node10 (VC1) src=0x0 pkt_id=2 len=19 matches prediction
+[2051000 ns] Node 10 (VC1) rcv: 0x12
+[2055000 ns] Node 00 (VC1) rcv: 0x30
+[2058000 ns] Node 01 (VC0) rcv: 0x0c
+[SB-PASS] t=2065000 Node00 (VC1) src=0x2 pkt_id=2 len=18 matches prediction
+[2065000 ns] Node 00 (VC1) rcv: 0x31
+[2070000 ns] Node 01 (VC0) rcv: 0x0d
+[2075000 ns] Node 00 (VC0) rcv: 0x31
+[2082000 ns] Node 01 (VC0) rcv: 0x0e
+[2085000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PRED] t=2087000 src=0x1 -> Node00 (VC1) pkt_id=3 len=9
+[2093000 ns] Node 11 (VC1) rcv: 0x20
+[2094000 ns] Node 01 (VC0) rcv: 0x0f
+[2105000 ns] Node 00 (VC0) rcv: 0x33
+[2106000 ns] Node 01 (VC0) rcv: 0x10
+[2107000 ns] Node 11 (VC1) rcv: 0x21
+[2115000 ns] Node 00 (VC0) rcv: 0x34
+[SB-PASS] t=2118000 Node01 (VC0) src=0x0 pkt_id=3 len=18 matches prediction
+[2118000 ns] Node 01 (VC0) rcv: 0x11
+[2121000 ns] Node 11 (VC1) rcv: 0x22
+[2125000 ns] Node 00 (VC0) rcv: 0x35
+[2135000 ns] Node 11 (VC1) rcv: 0x23
+[2135000 ns] Node 00 (VC1) rcv: 0x30
+[SB-PRED] t=2142000 src=0x0 -> Node01 (VC0) pkt_id=5 len=4
+[2149000 ns] Node 10 (VC0) rcv: 0x00
+[2149000 ns] Node 11 (VC1) rcv: 0x24
+[2155000 ns] Node 00 (VC1) rcv: 0x31
+[2163000 ns] Node 10 (VC0) rcv: 0x01
+[2163000 ns] Node 11 (VC1) rcv: 0x25
+[2165000 ns] Node 00 (VC1) rcv: 0x32
+[2175000 ns] Node 00 (VC1) rcv: 0x33
+[2177000 ns] Node 10 (VC0) rcv: 0x02
+[2177000 ns] Node 11 (VC1) rcv: 0x26
+[2185000 ns] Node 00 (VC1) rcv: 0x34
+[2191000 ns] Node 10 (VC0) rcv: 0x03
+[2191000 ns] Node 11 (VC1) rcv: 0x27
+[2205000 ns] Node 10 (VC0) rcv: 0x04
+[2205000 ns] Node 11 (VC1) rcv: 0x28
+[2205000 ns] Node 00 (VC1) rcv: 0x35
+[SB-PRED] t=2211000 src=0x2 -> Node10 (VC0) pkt_id=4 len=18
+[2215000 ns] Node 00 (VC1) rcv: 0x36
+[2219000 ns] Node 10 (VC0) rcv: 0x05
+[2219000 ns] Node 11 (VC1) rcv: 0x29
+[2225000 ns] Node 00 (VC1) rcv: 0x37
+[2233000 ns] Node 10 (VC0) rcv: 0x06
+[2233000 ns] Node 11 (VC1) rcv: 0x2a
+[SB-PRED] t=2236000 src=0x3 -> Node00 (VC1) pkt_id=4 len=15
+[2247000 ns] Node 10 (VC0) rcv: 0x07
+[2247000 ns] Node 11 (VC1) rcv: 0x2b
+[2255000 ns] Node 00 (VC1) rcv: 0x38
+[2261000 ns] Node 10 (VC0) rcv: 0x08
+[2261000 ns] Node 11 (VC1) rcv: 0x2c
+[2265000 ns] Node 00 (VC1) rcv: 0x39
+[2275000 ns] Node 10 (VC0) rcv: 0x09
+[2275000 ns] Node 11 (VC1) rcv: 0x2d
+[2275000 ns] Node 00 (VC1) rcv: 0x3a
+[2285000 ns] Node 00 (VC1) rcv: 0x3b
+[2289000 ns] Node 10 (VC0) rcv: 0x0a
+[2289000 ns] Node 11 (VC1) rcv: 0x2e
+[2303000 ns] Node 10 (VC0) rcv: 0x0b
+[2303000 ns] Node 11 (VC1) rcv: 0x2f
+[2305000 ns] Node 00 (VC1) rcv: 0x3c
+[2315000 ns] Node 00 (VC1) rcv: 0x3d
+[2317000 ns] Node 10 (VC0) rcv: 0x0c
+[2317000 ns] Node 11 (VC1) rcv: 0x30
+[2325000 ns] Node 00 (VC1) rcv: 0x3e
+[2331000 ns] Node 10 (VC0) rcv: 0x0d
+[2331000 ns] Node 11 (VC1) rcv: 0x31
+[SB-PASS] t=2335000 Node00 (VC1) src=0x3 pkt_id=3 len=16 matches prediction
+[2335000 ns] Node 00 (VC1) rcv: 0x3f
+[2345000 ns] Node 10 (VC0) rcv: 0x0e
+[2345000 ns] Node 11 (VC1) rcv: 0x32
+[2355000 ns] Node 00 (VC1) rcv: 0x10
+[2358000 ns] Node 01 (VC0) rcv: 0x00
+[2359000 ns] Node 10 (VC0) rcv: 0x0f
+[SB-PASS] t=2359000 Node11 (VC1) src=0x2 pkt_id=3 len=20 matches prediction
+[2359000 ns] Node 11 (VC1) rcv: 0x33
+[2365000 ns] Node 00 (VC1) rcv: 0x11
+[2370000 ns] Node 01 (VC0) rcv: 0x01
+[2373000 ns] Node 10 (VC0) rcv: 0x10
+[2373000 ns] Node 11 (VC1) rcv: 0x10
+[2375000 ns] Node 00 (VC1) rcv: 0x12
+[2382000 ns] Node 01 (VC0) rcv: 0x02
+[2385000 ns] Node 00 (VC1) rcv: 0x13
+[SB-PASS] t=2387000 Node10 (VC0) src=0x0 pkt_id=4 len=18 matches prediction
+[2387000 ns] Node 10 (VC0) rcv: 0x11
+[2387000 ns] Node 11 (VC1) rcv: 0x11
+[SB-PASS] t=2394000 Node01 (VC0) src=0x0 pkt_id=5 len=4 matches prediction
+[2394000 ns] Node 01 (VC0) rcv: 0x03
+[2401000 ns] Node 10 (VC0) rcv: 0x20
+[2401000 ns] Node 11 (VC1) rcv: 0x12
+[2405000 ns] Node 00 (VC1) rcv: 0x14
+[2415000 ns] Node 10 (VC0) rcv: 0x21
+[2415000 ns] Node 11 (VC1) rcv: 0x13
+[2415000 ns] Node 00 (VC1) rcv: 0x15
+[2425000 ns] Node 00 (VC1) rcv: 0x16
+[2429000 ns] Node 10 (VC0) rcv: 0x22
+[SB-PASS] t=2429000 Node11 (VC1) src=0x1 pkt_id=2 len=5 matches prediction
+[2429000 ns] Node 11 (VC1) rcv: 0x14
+[2435000 ns] Node 00 (VC1) rcv: 0x17
+[2443000 ns] Node 10 (VC0) rcv: 0x23
+[SB-PASS] t=2455000 Node00 (VC1) src=0x1 pkt_id=3 len=9 matches prediction
+[2455000 ns] Node 00 (VC1) rcv: 0x18
+[2457000 ns] Node 10 (VC0) rcv: 0x24
+[2465000 ns] Node 00 (VC1) rcv: 0x30
+[2471000 ns] Node 10 (VC0) rcv: 0x25
+[2475000 ns] Node 00 (VC1) rcv: 0x31
+[2485000 ns] Node 10 (VC0) rcv: 0x26
+[2485000 ns] Node 00 (VC1) rcv: 0x32
+[2499000 ns] Node 10 (VC0) rcv: 0x27
+[2505000 ns] Node 00 (VC1) rcv: 0x33
+[2513000 ns] Node 10 (VC0) rcv: 0x28
+[2515000 ns] Node 00 (VC1) rcv: 0x34
+[2525000 ns] Node 00 (VC1) rcv: 0x35
+[2527000 ns] Node 10 (VC0) rcv: 0x29
+[2535000 ns] Node 00 (VC1) rcv: 0x36
+[2541000 ns] Node 10 (VC0) rcv: 0x2a
+[2555000 ns] Node 10 (VC0) rcv: 0x2b
+[2555000 ns] Node 00 (VC1) rcv: 0x37
+[2565000 ns] Node 00 (VC1) rcv: 0x38
+[2569000 ns] Node 10 (VC0) rcv: 0x2c
+[2575000 ns] Node 00 (VC1) rcv: 0x39
+[2583000 ns] Node 10 (VC0) rcv: 0x2d
+[2585000 ns] Node 00 (VC1) rcv: 0x3a
+[2597000 ns] Node 10 (VC0) rcv: 0x2e
+[2605000 ns] Node 00 (VC1) rcv: 0x3b
+[2611000 ns] Node 10 (VC0) rcv: 0x2f
+[2615000 ns] Node 00 (VC1) rcv: 0x3c
+[2625000 ns] Node 10 (VC0) rcv: 0x30
+[2625000 ns] Node 00 (VC1) rcv: 0x3d
+[SB-PASS] t=2635000 Node00 (VC1) src=0x3 pkt_id=4 len=15 matches prediction
+[2635000 ns] Node 00 (VC1) rcv: 0x3e
+[SB-PASS] t=2639000 Node10 (VC0) src=0x2 pkt_id=4 len=18 matches prediction
+[2639000 ns] Node 10 (VC0) rcv: 0x31
+[2655000 ns] Node 00 (VC0) rcv: 0x36
+[2665000 ns] Node 00 (VC0) rcv: 0x37
+[2675000 ns] Node 00 (VC0) rcv: 0x38
+[2685000 ns] Node 00 (VC0) rcv: 0x39
+[2705000 ns] Node 00 (VC0) rcv: 0x3a
+[2715000 ns] Node 00 (VC0) rcv: 0x3b
+[2725000 ns] Node 00 (VC0) rcv: 0x3c
+[2735000 ns] Node 00 (VC0) rcv: 0x3d
+[2755000 ns] Node 00 (VC0) rcv: 0x3e
+[2765000 ns] Node 00 (VC0) rcv: 0x3f
+[2775000 ns] Node 00 (VC0) rcv: 0x40
+[2785000 ns] Node 00 (VC0) rcv: 0x41
+[SB-PASS] t=2805000 Node00 (VC0) src=0x3 pkt_id=2 len=19 matches prediction
+[2805000 ns] Node 00 (VC0) rcv: 0x42
+[2815000 ns] Node 00 (VC0) rcv: 0x10
+[2825000 ns] Node 00 (VC0) rcv: 0x11
+[2835000 ns] Node 00 (VC0) rcv: 0x12
+[2855000 ns] Node 00 (VC0) rcv: 0x13
+[2865000 ns] Node 00 (VC0) rcv: 0x14
+[2875000 ns] Node 00 (VC0) rcv: 0x15
+[2885000 ns] Node 00 (VC0) rcv: 0x16
+[2905000 ns] Node 00 (VC0) rcv: 0x17
+[2915000 ns] Node 00 (VC0) rcv: 0x18
+[2925000 ns] Node 00 (VC0) rcv: 0x19
+[2935000 ns] Node 00 (VC0) rcv: 0x1a
+[2955000 ns] Node 00 (VC0) rcv: 0x1b
+[2965000 ns] Node 00 (VC0) rcv: 0x1c
+[2975000 ns] Node 00 (VC0) rcv: 0x1d
+[2985000 ns] Node 00 (VC0) rcv: 0x1e
+[3005000 ns] Node 00 (VC0) rcv: 0x1f
+[3015000 ns] Node 00 (VC0) rcv: 0x20
+[3025000 ns] Node 00 (VC0) rcv: 0x21
+[3035000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=3055000 Node00 (VC0) src=0x1 pkt_id=1 len=20 matches prediction
+[3055000 ns] Node 00 (VC0) rcv: 0x23
+[TB] --- Test 3 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Random All-to-All Traffic
+=================================================
+ [Node00 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 110 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 47 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 64 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 70 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 22 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 39 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 6 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=20 Mismatched=0 Pending=0
+=================================================
+
+[TB] --- Test 3 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Random All-to-All Traffic
+=================================================
+ [Node00 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 110 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 47 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 64 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 70 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 22 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 59 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 39 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 6 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=20 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 4: Multi-Port Contention (Fairness Test) ---
+[SB-PRED] t=3567000 src=0x0 -> Node10 (VC0) pkt_id=6 len=20
+[SB-PRED] t=3567000 src=0x2 -> Node10 (VC0) pkt_id=5 len=20
+[SB-PRED] t=3567000 src=0x3 -> Node10 (VC0) pkt_id=5 len=20
+[3731000 ns] Node 10 (VC0) rcv: 0x00
+[3745000 ns] Node 10 (VC0) rcv: 0x01
+[3759000 ns] Node 10 (VC0) rcv: 0x02
+[3773000 ns] Node 10 (VC0) rcv: 0x03
+[3787000 ns] Node 10 (VC0) rcv: 0x04
+[3801000 ns] Node 10 (VC0) rcv: 0x05
+[3815000 ns] Node 10 (VC0) rcv: 0x06
+[3829000 ns] Node 10 (VC0) rcv: 0x07
+[3843000 ns] Node 10 (VC0) rcv: 0x08
+[3857000 ns] Node 10 (VC0) rcv: 0x09
+[3871000 ns] Node 10 (VC0) rcv: 0x0a
+[3885000 ns] Node 10 (VC0) rcv: 0x0b
+[3899000 ns] Node 10 (VC0) rcv: 0x0c
+[3913000 ns] Node 10 (VC0) rcv: 0x0d
+[3927000 ns] Node 10 (VC0) rcv: 0x0e
+[3941000 ns] Node 10 (VC0) rcv: 0x0f
+[3955000 ns] Node 10 (VC0) rcv: 0x10
+[3969000 ns] Node 10 (VC0) rcv: 0x11
+[3983000 ns] Node 10 (VC0) rcv: 0x12
+[SB-PASS] t=3997000 Node10 (VC0) src=0x0 pkt_id=6 len=20 matches prediction
+[3997000 ns] Node 10 (VC0) rcv: 0x13
+[4011000 ns] Node 10 (VC0) rcv: 0x30
+[4025000 ns] Node 10 (VC0) rcv: 0x31
+[4039000 ns] Node 10 (VC0) rcv: 0x32
+[4053000 ns] Node 10 (VC0) rcv: 0x33
+[4067000 ns] Node 10 (VC0) rcv: 0x34
+[4081000 ns] Node 10 (VC0) rcv: 0x35
+[4095000 ns] Node 10 (VC0) rcv: 0x36
+[4109000 ns] Node 10 (VC0) rcv: 0x37
+[4123000 ns] Node 10 (VC0) rcv: 0x38
+[4137000 ns] Node 10 (VC0) rcv: 0x39
+[4151000 ns] Node 10 (VC0) rcv: 0x3a
+[4165000 ns] Node 10 (VC0) rcv: 0x3b
+[4179000 ns] Node 10 (VC0) rcv: 0x3c
+[4193000 ns] Node 10 (VC0) rcv: 0x3d
+[4207000 ns] Node 10 (VC0) rcv: 0x3e
+[4221000 ns] Node 10 (VC0) rcv: 0x3f
+[4235000 ns] Node 10 (VC0) rcv: 0x40
+[4249000 ns] Node 10 (VC0) rcv: 0x41
+[4263000 ns] Node 10 (VC0) rcv: 0x42
+[SB-PASS] t=4277000 Node10 (VC0) src=0x3 pkt_id=5 len=20 matches prediction
+[4277000 ns] Node 10 (VC0) rcv: 0x43
+[4291000 ns] Node 10 (VC0) rcv: 0x20
+[4305000 ns] Node 10 (VC0) rcv: 0x21
+[4319000 ns] Node 10 (VC0) rcv: 0x22
+[4333000 ns] Node 10 (VC0) rcv: 0x23
+[4347000 ns] Node 10 (VC0) rcv: 0x24
+[4361000 ns] Node 10 (VC0) rcv: 0x25
+[4375000 ns] Node 10 (VC0) rcv: 0x26
+[4389000 ns] Node 10 (VC0) rcv: 0x27
+[4403000 ns] Node 10 (VC0) rcv: 0x28
+[4417000 ns] Node 10 (VC0) rcv: 0x29
+[4431000 ns] Node 10 (VC0) rcv: 0x2a
+[4445000 ns] Node 10 (VC0) rcv: 0x2b
+[4459000 ns] Node 10 (VC0) rcv: 0x2c
+[4473000 ns] Node 10 (VC0) rcv: 0x2d
+[4487000 ns] Node 10 (VC0) rcv: 0x2e
+[4501000 ns] Node 10 (VC0) rcv: 0x2f
+[4515000 ns] Node 10 (VC0) rcv: 0x30
+[4529000 ns] Node 10 (VC0) rcv: 0x31
+[4543000 ns] Node 10 (VC0) rcv: 0x32
+[SB-PASS] t=4557000 Node10 (VC0) src=0x2 pkt_id=5 len=20 matches prediction
+[4557000 ns] Node 10 (VC0) rcv: 0x33
+[TB] --- Test 4 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Multi-Port Contention (Fairness Test)
+=================================================
+ [Node00 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 60 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 20 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 9 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=23 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 5: Starvation Override Proof (VC1 Flood vs VC0) ---
+[SB-PRED] t=4967000 src=0x0 -> Node10 (VC0) pkt_id=7 len=50
+[SB-PRED] t=4987000 src=0x2 -> Node10 (VC1) pkt_id=6 len=15
+[5131000 ns] Node 10 (VC0) rcv: 0x00
+[5145000 ns] Node 10 (VC0) rcv: 0x01
+[5159000 ns] Node 10 (VC0) rcv: 0x02
+[5173000 ns] Node 10 (VC1) rcv: 0x20
+[SB-PRED] t=5178000 src=0x2 -> Node10 (VC1) pkt_id=7 len=15
+[5187000 ns] Node 10 (VC1) rcv: 0x21
+[5201000 ns] Node 10 (VC1) rcv: 0x22
+[5215000 ns] Node 10 (VC1) rcv: 0x23
+[5229000 ns] Node 10 (VC1) rcv: 0x24
+[5243000 ns] Node 10 (VC1) rcv: 0x25
+[5257000 ns] Node 10 (VC1) rcv: 0x26
+[5271000 ns] Node 10 (VC1) rcv: 0x27
+[5285000 ns] Node 10 (VC1) rcv: 0x28
+[5299000 ns] Node 10 (VC1) rcv: 0x29
+[5313000 ns] Node 10 (VC1) rcv: 0x2a
+[5327000 ns] Node 10 (VC1) rcv: 0x2b
+[5341000 ns] Node 10 (VC1) rcv: 0x2c
+[5355000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=5369000 Node10 (VC1) src=0x2 pkt_id=6 len=15 matches prediction
+[5369000 ns] Node 10 (VC1) rcv: 0x2e
+[SB-PRED] t=5370000 src=0x2 -> Node10 (VC1) pkt_id=8 len=15
+[5383000 ns] Node 10 (VC1) rcv: 0x20
+[5397000 ns] Node 10 (VC1) rcv: 0x21
+[5411000 ns] Node 10 (VC1) rcv: 0x22
+[5425000 ns] Node 10 (VC1) rcv: 0x23
+[5439000 ns] Node 10 (VC1) rcv: 0x24
+[5453000 ns] Node 10 (VC1) rcv: 0x25
+[5467000 ns] Node 10 (VC1) rcv: 0x26
+[5481000 ns] Node 10 (VC1) rcv: 0x27
+[5495000 ns] Node 10 (VC1) rcv: 0x28
+[5509000 ns] Node 10 (VC1) rcv: 0x29
+[5523000 ns] Node 10 (VC1) rcv: 0x2a
+[5537000 ns] Node 10 (VC1) rcv: 0x2b
+[5551000 ns] Node 10 (VC1) rcv: 0x2c
+[SB-PRED] t=5562000 src=0x2 -> Node10 (VC1) pkt_id=9 len=15
+[5565000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=5579000 Node10 (VC1) src=0x2 pkt_id=7 len=15 matches prediction
+[5579000 ns] Node 10 (VC1) rcv: 0x2e
+[5593000 ns] Node 10 (VC1) rcv: 0x20
+[5607000 ns] Node 10 (VC1) rcv: 0x21
+[5621000 ns] Node 10 (VC1) rcv: 0x22
+[5635000 ns] Node 10 (VC1) rcv: 0x23
+[5649000 ns] Node 10 (VC1) rcv: 0x24
+[5663000 ns] Node 10 (VC1) rcv: 0x25
+[5677000 ns] Node 10 (VC1) rcv: 0x26
+[5691000 ns] Node 10 (VC1) rcv: 0x27
+[5705000 ns] Node 10 (VC1) rcv: 0x28
+[5719000 ns] Node 10 (VC1) rcv: 0x29
+[5733000 ns] Node 10 (VC1) rcv: 0x2a
+[5747000 ns] Node 10 (VC1) rcv: 0x2b
+[SB-PRED] t=5754000 src=0x2 -> Node10 (VC1) pkt_id=10 len=15
+[5761000 ns] Node 10 (VC1) rcv: 0x2c
+[5775000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=5789000 Node10 (VC1) src=0x2 pkt_id=8 len=15 matches prediction
+[5789000 ns] Node 10 (VC1) rcv: 0x2e
+[5803000 ns] Node 10 (VC1) rcv: 0x20
+[5817000 ns] Node 10 (VC1) rcv: 0x21
+[5831000 ns] Node 10 (VC1) rcv: 0x22
+[5845000 ns] Node 10 (VC1) rcv: 0x23
+[5859000 ns] Node 10 (VC1) rcv: 0x24
+[5873000 ns] Node 10 (VC1) rcv: 0x25
+[5887000 ns] Node 10 (VC1) rcv: 0x26
+[5901000 ns] Node 10 (VC1) rcv: 0x27
+[5915000 ns] Node 10 (VC1) rcv: 0x28
+[5919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[5929000 ns] Node 10 (VC1) rcv: 0x29
+[5943000 ns] Node 10 (VC1) rcv: 0x2a
+[SB-PRED] t=5946000 src=0x2 -> Node10 (VC1) pkt_id=11 len=15
+[5957000 ns] Node 10 (VC1) rcv: 0x2b
+[5971000 ns] Node 10 (VC1) rcv: 0x2c
+[5985000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=5999000 Node10 (VC1) src=0x2 pkt_id=9 len=15 matches prediction
+[5999000 ns] Node 10 (VC1) rcv: 0x2e
+[6013000 ns] Node 10 (VC1) rcv: 0x20
+[6027000 ns] Node 10 (VC1) rcv: 0x21
+[6041000 ns] Node 10 (VC1) rcv: 0x22
+[6055000 ns] Node 10 (VC1) rcv: 0x23
+[6069000 ns] Node 10 (VC1) rcv: 0x24
+[6083000 ns] Node 10 (VC0) rcv: 0x03
+[6097000 ns] Node 10 (VC0) rcv: 0x04
+[6111000 ns] Node 10 (VC0) rcv: 0x05
+[6125000 ns] Node 10 (VC0) rcv: 0x06
+[SB-PRED] t=6138000 src=0x2 -> Node10 (VC1) pkt_id=12 len=15
+[6139000 ns] Node 10 (VC0) rcv: 0x07
+[6153000 ns] Node 10 (VC0) rcv: 0x08
+[6167000 ns] Node 10 (VC0) rcv: 0x09
+[6181000 ns] Node 10 (VC0) rcv: 0x0a
+[6195000 ns] Node 10 (VC0) rcv: 0x0b
+[6209000 ns] Node 10 (VC0) rcv: 0x0c
+[6223000 ns] Node 10 (VC0) rcv: 0x0d
+[6237000 ns] Node 10 (VC0) rcv: 0x0e
+[6251000 ns] Node 10 (VC0) rcv: 0x0f
+[6265000 ns] Node 10 (VC0) rcv: 0x10
+[6279000 ns] Node 10 (VC0) rcv: 0x11
+[6293000 ns] Node 10 (VC0) rcv: 0x12
+[6307000 ns] Node 10 (VC0) rcv: 0x13
+[6321000 ns] Node 10 (VC0) rcv: 0x14
+[SB-PRED] t=6330000 src=0x2 -> Node10 (VC1) pkt_id=13 len=15
+[6335000 ns] Node 10 (VC0) rcv: 0x15
+[6349000 ns] Node 10 (VC0) rcv: 0x16
+[6363000 ns] Node 10 (VC0) rcv: 0x17
+[6377000 ns] Node 10 (VC0) rcv: 0x18
+[6391000 ns] Node 10 (VC0) rcv: 0x19
+[6405000 ns] Node 10 (VC0) rcv: 0x1a
+[6419000 ns] Node 10 (VC0) rcv: 0x1b
+[6433000 ns] Node 10 (VC0) rcv: 0x1c
+[6447000 ns] Node 10 (VC0) rcv: 0x1d
+[6461000 ns] Node 10 (VC0) rcv: 0x1e
+[6475000 ns] Node 10 (VC0) rcv: 0x1f
+[6489000 ns] Node 10 (VC0) rcv: 0x20
+[6503000 ns] Node 10 (VC0) rcv: 0x21
+[6506000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[6517000 ns] Node 10 (VC0) rcv: 0x22
+[SB-PRED] t=6522000 src=0x2 -> Node10 (VC1) pkt_id=14 len=15
+[6531000 ns] Node 10 (VC0) rcv: 0x23
+[6545000 ns] Node 10 (VC0) rcv: 0x24
+[6559000 ns] Node 10 (VC0) rcv: 0x25
+[6573000 ns] Node 10 (VC0) rcv: 0x26
+[6587000 ns] Node 10 (VC1) rcv: 0x25
+[6601000 ns] Node 10 (VC1) rcv: 0x26
+[6615000 ns] Node 10 (VC1) rcv: 0x27
+[6629000 ns] Node 10 (VC1) rcv: 0x28
+[6643000 ns] Node 10 (VC1) rcv: 0x29
+[6657000 ns] Node 10 (VC1) rcv: 0x2a
+[6671000 ns] Node 10 (VC1) rcv: 0x2b
+[6685000 ns] Node 10 (VC1) rcv: 0x2c
+[6699000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=6713000 Node10 (VC1) src=0x2 pkt_id=10 len=15 matches prediction
+[6713000 ns] Node 10 (VC1) rcv: 0x2e
+[SB-PRED] t=6714000 src=0x2 -> Node10 (VC1) pkt_id=15 len=15
+[6727000 ns] Node 10 (VC1) rcv: 0x20
+[6741000 ns] Node 10 (VC1) rcv: 0x21
+[6755000 ns] Node 10 (VC1) rcv: 0x22
+[6769000 ns] Node 10 (VC1) rcv: 0x23
+[6783000 ns] Node 10 (VC1) rcv: 0x24
+[6797000 ns] Node 10 (VC1) rcv: 0x25
+[6811000 ns] Node 10 (VC1) rcv: 0x26
+[6825000 ns] Node 10 (VC1) rcv: 0x27
+[6839000 ns] Node 10 (VC1) rcv: 0x28
+[6853000 ns] Node 10 (VC1) rcv: 0x29
+[6867000 ns] Node 10 (VC1) rcv: 0x2a
+[6881000 ns] Node 10 (VC1) rcv: 0x2b
+[6895000 ns] Node 10 (VC1) rcv: 0x2c
+[6909000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=6923000 Node10 (VC1) src=0x2 pkt_id=11 len=15 matches prediction
+[6923000 ns] Node 10 (VC1) rcv: 0x2e
+[6937000 ns] Node 10 (VC1) rcv: 0x20
+[6951000 ns] Node 10 (VC1) rcv: 0x21
+[6965000 ns] Node 10 (VC1) rcv: 0x22
+[6979000 ns] Node 10 (VC1) rcv: 0x23
+[6993000 ns] Node 10 (VC1) rcv: 0x24
+[7007000 ns] Node 10 (VC1) rcv: 0x25
+[7021000 ns] Node 10 (VC1) rcv: 0x26
+[7035000 ns] Node 10 (VC1) rcv: 0x27
+[7049000 ns] Node 10 (VC1) rcv: 0x28
+[7063000 ns] Node 10 (VC1) rcv: 0x29
+[7077000 ns] Node 10 (VC1) rcv: 0x2a
+[7091000 ns] Node 10 (VC1) rcv: 0x2b
+[7105000 ns] Node 10 (VC1) rcv: 0x2c
+[7119000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=7133000 Node10 (VC1) src=0x2 pkt_id=12 len=15 matches prediction
+[7133000 ns] Node 10 (VC1) rcv: 0x2e
+[7147000 ns] Node 10 (VC1) rcv: 0x20
+[7161000 ns] Node 10 (VC1) rcv: 0x21
+[7175000 ns] Node 10 (VC1) rcv: 0x22
+[7189000 ns] Node 10 (VC1) rcv: 0x23
+[7203000 ns] Node 10 (VC1) rcv: 0x24
+[7217000 ns] Node 10 (VC1) rcv: 0x25
+[7231000 ns] Node 10 (VC1) rcv: 0x26
+[7245000 ns] Node 10 (VC1) rcv: 0x27
+[7259000 ns] Node 10 (VC1) rcv: 0x28
+[7273000 ns] Node 10 (VC1) rcv: 0x29
+[7287000 ns] Node 10 (VC1) rcv: 0x2a
+[7301000 ns] Node 10 (VC1) rcv: 0x2b
+[7315000 ns] Node 10 (VC1) rcv: 0x2c
+[7329000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=7343000 Node10 (VC1) src=0x2 pkt_id=13 len=15 matches prediction
+[7343000 ns] Node 10 (VC1) rcv: 0x2e
+[7357000 ns] Node 10 (VC1) rcv: 0x20
+[7371000 ns] Node 10 (VC1) rcv: 0x21
+[7385000 ns] Node 10 (VC1) rcv: 0x22
+[7399000 ns] Node 10 (VC1) rcv: 0x23
+[7413000 ns] Node 10 (VC1) rcv: 0x24
+[7427000 ns] Node 10 (VC1) rcv: 0x25
+[7441000 ns] Node 10 (VC1) rcv: 0x26
+[7455000 ns] Node 10 (VC1) rcv: 0x27
+[7469000 ns] Node 10 (VC1) rcv: 0x28
+[7483000 ns] Node 10 (VC1) rcv: 0x29
+[7497000 ns] Node 10 (VC1) rcv: 0x2a
+[7511000 ns] Node 10 (VC1) rcv: 0x2b
+[7525000 ns] Node 10 (VC1) rcv: 0x2c
+[7539000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=7553000 Node10 (VC1) src=0x2 pkt_id=14 len=15 matches prediction
+[7553000 ns] Node 10 (VC1) rcv: 0x2e
+[7567000 ns] Node 10 (VC1) rcv: 0x20
+[7581000 ns] Node 10 (VC1) rcv: 0x21
+[7595000 ns] Node 10 (VC1) rcv: 0x22
+[7609000 ns] Node 10 (VC1) rcv: 0x23
+[7623000 ns] Node 10 (VC1) rcv: 0x24
+[7637000 ns] Node 10 (VC1) rcv: 0x25
+[7651000 ns] Node 10 (VC1) rcv: 0x26
+[7665000 ns] Node 10 (VC1) rcv: 0x27
+[7679000 ns] Node 10 (VC1) rcv: 0x28
+[7693000 ns] Node 10 (VC1) rcv: 0x29
+[7707000 ns] Node 10 (VC1) rcv: 0x2a
+[7721000 ns] Node 10 (VC1) rcv: 0x2b
+[7735000 ns] Node 10 (VC1) rcv: 0x2c
+[7749000 ns] Node 10 (VC1) rcv: 0x2d
+[SB-PASS] t=7763000 Node10 (VC1) src=0x2 pkt_id=15 len=15 matches prediction
+[7763000 ns] Node 10 (VC1) rcv: 0x2e
+[7777000 ns] Node 10 (VC0) rcv: 0x27
+[7791000 ns] Node 10 (VC0) rcv: 0x28
+[7805000 ns] Node 10 (VC0) rcv: 0x29
+[7819000 ns] Node 10 (VC0) rcv: 0x2a
+[7833000 ns] Node 10 (VC0) rcv: 0x2b
+[7847000 ns] Node 10 (VC0) rcv: 0x2c
+[7861000 ns] Node 10 (VC0) rcv: 0x2d
+[7875000 ns] Node 10 (VC0) rcv: 0x2e
+[7889000 ns] Node 10 (VC0) rcv: 0x2f
+[7903000 ns] Node 10 (VC0) rcv: 0x30
+[SB-PASS] t=7917000 Node10 (VC0) src=0x0 pkt_id=7 len=50 matches prediction
+[7917000 ns] Node 10 (VC0) rcv: 0x31
+[TB] --- Test 5 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Starvation Override Proof
+=================================================
+ [Node00 TX] Flits: 50 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node10 RX] Flits: 200 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 150 | Stalls: 0 (0.0%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 8 | Mismatched: 0 | Pending: 0
+ [Node10] Matched: 20 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=34 Mismatched=0 Pending=0
+=================================================
+
+
+[TB] --- Start GALS Test 6: Sustained Hot-Spot Contention ---
+[TB]     VC mode: ALTERNATING VC0/VC1 ทุกแพ็กเกจ (เหมือนบอร์ด VC_MODE=2)
+[SB-PRED] t=8516000 src=0x1 -> Node00 (VC0) pkt_id=4 len=20
+[SB-PRED] t=8516000 src=0x2 -> Node00 (VC0) pkt_id=0 len=20
+[SB-PRED] t=8516000 src=0x3 -> Node00 (VC0) pkt_id=6 len=20
+[8665000 ns] Node 00 (VC0) rcv: 0x20
+[8675000 ns] Node 00 (VC0) rcv: 0x21
+[8685000 ns] Node 00 (VC0) rcv: 0x22
+[8705000 ns] Node 00 (VC0) rcv: 0x23
+[8715000 ns] Node 00 (VC0) rcv: 0x24
+[8725000 ns] Node 00 (VC0) rcv: 0x25
+[8735000 ns] Node 00 (VC0) rcv: 0x26
+[8755000 ns] Node 00 (VC0) rcv: 0x27
+[8765000 ns] Node 00 (VC0) rcv: 0x28
+[SB-PRED] t=8766000 src=0x2 -> Node00 (VC1) pkt_id=1 len=20
+[8775000 ns] Node 00 (VC0) rcv: 0x29
+[8785000 ns] Node 00 (VC0) rcv: 0x2a
+[SB-PRED] t=8799000 src=0x3 -> Node00 (VC1) pkt_id=7 len=20
+[SB-PRED] t=8799000 src=0x1 -> Node00 (VC1) pkt_id=5 len=20
+[8805000 ns] Node 00 (VC0) rcv: 0x2b
+[8815000 ns] Node 00 (VC0) rcv: 0x2c
+[8825000 ns] Node 00 (VC0) rcv: 0x2d
+[8835000 ns] Node 00 (VC0) rcv: 0x2e
+[8855000 ns] Node 00 (VC0) rcv: 0x2f
+[8865000 ns] Node 00 (VC0) rcv: 0x30
+[8875000 ns] Node 00 (VC0) rcv: 0x31
+[8885000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=8905000 Node00 (VC0) src=0x2 pkt_id=0 len=20 matches prediction
+[8905000 ns] Node 00 (VC0) rcv: 0x33
+[8915000 ns] Node 00 (VC1) rcv: 0x20
+[8925000 ns] Node 00 (VC1) rcv: 0x21
+[8935000 ns] Node 00 (VC1) rcv: 0x22
+[8955000 ns] Node 00 (VC1) rcv: 0x23
+[8965000 ns] Node 00 (VC1) rcv: 0x24
+[8975000 ns] Node 00 (VC1) rcv: 0x25
+[8985000 ns] Node 00 (VC1) rcv: 0x26
+[9005000 ns] Node 00 (VC1) rcv: 0x27
+[9015000 ns] Node 00 (VC1) rcv: 0x28
+[SB-PRED] t=9018000 src=0x2 -> Node00 (VC0) pkt_id=2 len=20
+[9025000 ns] Node 00 (VC1) rcv: 0x29
+[9035000 ns] Node 00 (VC1) rcv: 0x2a
+[9055000 ns] Node 00 (VC1) rcv: 0x2b
+[9065000 ns] Node 00 (VC1) rcv: 0x2c
+[9075000 ns] Node 00 (VC1) rcv: 0x2d
+[9085000 ns] Node 00 (VC1) rcv: 0x2e
+[SB-PRED] t=9093000 src=0x3 -> Node00 (VC0) pkt_id=8 len=20
+[SB-PRED] t=9093000 src=0x1 -> Node00 (VC0) pkt_id=6 len=20
+[9105000 ns] Node 00 (VC1) rcv: 0x2f
+[9115000 ns] Node 00 (VC1) rcv: 0x30
+[9125000 ns] Node 00 (VC1) rcv: 0x31
+[9135000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=9155000 Node00 (VC1) src=0x2 pkt_id=1 len=20 matches prediction
+[9155000 ns] Node 00 (VC1) rcv: 0x33
+[9165000 ns] Node 00 (VC1) rcv: 0x10
+[9175000 ns] Node 00 (VC1) rcv: 0x11
+[9185000 ns] Node 00 (VC1) rcv: 0x12
+[9205000 ns] Node 00 (VC1) rcv: 0x13
+[9215000 ns] Node 00 (VC1) rcv: 0x14
+[9225000 ns] Node 00 (VC1) rcv: 0x15
+[9235000 ns] Node 00 (VC1) rcv: 0x16
+[9255000 ns] Node 00 (VC1) rcv: 0x17
+[9265000 ns] Node 00 (VC1) rcv: 0x18
+[SB-PRED] t=9270000 src=0x2 -> Node00 (VC1) pkt_id=3 len=20
+[9275000 ns] Node 00 (VC1) rcv: 0x19
+[9285000 ns] Node 00 (VC1) rcv: 0x1a
+[9305000 ns] Node 00 (VC1) rcv: 0x1b
+[9315000 ns] Node 00 (VC1) rcv: 0x1c
+[9325000 ns] Node 00 (VC1) rcv: 0x1d
+[9335000 ns] Node 00 (VC1) rcv: 0x1e
+[9355000 ns] Node 00 (VC1) rcv: 0x1f
+[9365000 ns] Node 00 (VC1) rcv: 0x20
+[9375000 ns] Node 00 (VC1) rcv: 0x21
+[9385000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PRED] t=9387000 src=0x3 -> Node00 (VC1) pkt_id=9 len=20
+[SB-PRED] t=9387000 src=0x1 -> Node00 (VC1) pkt_id=7 len=20
+[SB-PASS] t=9405000 Node00 (VC1) src=0x1 pkt_id=5 len=20 matches prediction
+[9405000 ns] Node 00 (VC1) rcv: 0x23
+[9415000 ns] Node 00 (VC1) rcv: 0x30
+[9425000 ns] Node 00 (VC1) rcv: 0x31
+[9435000 ns] Node 00 (VC1) rcv: 0x32
+[9455000 ns] Node 00 (VC1) rcv: 0x33
+[9465000 ns] Node 00 (VC1) rcv: 0x34
+[9475000 ns] Node 00 (VC1) rcv: 0x35
+[9485000 ns] Node 00 (VC1) rcv: 0x36
+[9505000 ns] Node 00 (VC1) rcv: 0x37
+[9515000 ns] Node 00 (VC1) rcv: 0x38
+[SB-PRED] t=9522000 src=0x2 -> Node00 (VC0) pkt_id=4 len=20
+[9525000 ns] Node 00 (VC1) rcv: 0x39
+[9535000 ns] Node 00 (VC1) rcv: 0x3a
+[9555000 ns] Node 00 (VC1) rcv: 0x3b
+[9565000 ns] Node 00 (VC1) rcv: 0x3c
+[9575000 ns] Node 00 (VC1) rcv: 0x3d
+[9585000 ns] Node 00 (VC1) rcv: 0x3e
+[9605000 ns] Node 00 (VC1) rcv: 0x3f
+[9615000 ns] Node 00 (VC1) rcv: 0x40
+[9625000 ns] Node 00 (VC1) rcv: 0x41
+[9635000 ns] Node 00 (VC1) rcv: 0x42
+[SB-PASS] t=9655000 Node00 (VC1) src=0x3 pkt_id=7 len=20 matches prediction
+[9655000 ns] Node 00 (VC1) rcv: 0x43
+[9656000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[9665000 ns] Node 00 (VC1) rcv: 0x10
+[9669000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[9675000 ns] Node 00 (VC1) rcv: 0x11
+[SB-PRED] t=9681000 src=0x3 -> Node00 (VC0) pkt_id=10 len=20
+[SB-PRED] t=9681000 src=0x1 -> Node00 (VC0) pkt_id=8 len=20
+[9685000 ns] Node 00 (VC1) rcv: 0x12
+[9705000 ns] Node 00 (VC1) rcv: 0x13
+[9715000 ns] Node 00 (VC1) rcv: 0x14
+[9725000 ns] Node 00 (VC0) rcv: 0x10
+[9735000 ns] Node 00 (VC0) rcv: 0x11
+[9755000 ns] Node 00 (VC0) rcv: 0x12
+[9765000 ns] Node 00 (VC0) rcv: 0x13
+[9775000 ns] Node 00 (VC0) rcv: 0x14
+[9785000 ns] Node 00 (VC0) rcv: 0x15
+[9805000 ns] Node 00 (VC0) rcv: 0x16
+[9815000 ns] Node 00 (VC0) rcv: 0x17
+[9825000 ns] Node 00 (VC0) rcv: 0x18
+[9835000 ns] Node 00 (VC0) rcv: 0x19
+[9855000 ns] Node 00 (VC0) rcv: 0x1a
+[9865000 ns] Node 00 (VC0) rcv: 0x1b
+[9875000 ns] Node 00 (VC0) rcv: 0x1c
+[9885000 ns] Node 00 (VC0) rcv: 0x1d
+[9905000 ns] Node 00 (VC0) rcv: 0x1e
+[9915000 ns] Node 00 (VC0) rcv: 0x1f
+[9919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[9925000 ns] Node 00 (VC0) rcv: 0x20
+[9935000 ns] Node 00 (VC0) rcv: 0x21
+[9955000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=9965000 Node00 (VC0) src=0x1 pkt_id=4 len=20 matches prediction
+[9965000 ns] Node 00 (VC0) rcv: 0x23
+[9975000 ns] Node 00 (VC1) rcv: 0x15
+[SB-PRED] t=9975000 src=0x1 -> Node00 (VC1) pkt_id=9 len=20
+[9985000 ns] Node 00 (VC1) rcv: 0x16
+[10005000 ns] Node 00 (VC1) rcv: 0x17
+[10006000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[10015000 ns] Node 00 (VC1) rcv: 0x18
+[10025000 ns] Node 00 (VC1) rcv: 0x19
+[10035000 ns] Node 00 (VC1) rcv: 0x1a
+[10055000 ns] Node 00 (VC1) rcv: 0x1b
+[10056000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[10065000 ns] Node 00 (VC1) rcv: 0x1c
+[10075000 ns] Node 00 (VC1) rcv: 0x1d
+[10085000 ns] Node 00 (VC1) rcv: 0x1e
+[10105000 ns] Node 00 (VC1) rcv: 0x1f
+[10115000 ns] Node 00 (VC1) rcv: 0x20
+[10125000 ns] Node 00 (VC1) rcv: 0x21
+[10135000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=10155000 Node00 (VC1) src=0x1 pkt_id=7 len=20 matches prediction
+[10155000 ns] Node 00 (VC1) rcv: 0x23
+[10165000 ns] Node 00 (VC1) rcv: 0x20
+[10175000 ns] Node 00 (VC1) rcv: 0x21
+[10185000 ns] Node 00 (VC1) rcv: 0x22
+[10205000 ns] Node 00 (VC1) rcv: 0x23
+[10215000 ns] Node 00 (VC1) rcv: 0x24
+[10225000 ns] Node 00 (VC1) rcv: 0x25
+[10235000 ns] Node 00 (VC1) rcv: 0x26
+[10255000 ns] Node 00 (VC1) rcv: 0x27
+[10265000 ns] Node 00 (VC1) rcv: 0x28
+[SB-PRED] t=10269000 src=0x1 -> Node00 (VC0) pkt_id=10 len=20
+[10275000 ns] Node 00 (VC1) rcv: 0x29
+[10285000 ns] Node 00 (VC1) rcv: 0x2a
+[10305000 ns] Node 00 (VC1) rcv: 0x2b
+[10306000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[10315000 ns] Node 00 (VC1) rcv: 0x2c
+[10325000 ns] Node 00 (VC1) rcv: 0x2d
+[10335000 ns] Node 00 (VC1) rcv: 0x2e
+[10355000 ns] Node 00 (VC1) rcv: 0x2f
+[10731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[10785000 ns] Node 00 (VC0) rcv: 0x30
+[10794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[10805000 ns] Node 00 (VC0) rcv: 0x31
+[10815000 ns] Node 00 (VC0) rcv: 0x32
+[10825000 ns] Node 00 (VC0) rcv: 0x33
+[10835000 ns] Node 00 (VC0) rcv: 0x34
+[10855000 ns] Node 00 (VC0) rcv: 0x35
+[10865000 ns] Node 00 (VC0) rcv: 0x36
+[10869000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[10875000 ns] Node 00 (VC0) rcv: 0x37
+[10885000 ns] Node 00 (VC0) rcv: 0x38
+[10905000 ns] Node 00 (VC0) rcv: 0x39
+[10915000 ns] Node 00 (VC0) rcv: 0x3a
+[10925000 ns] Node 00 (VC0) rcv: 0x3b
+[10935000 ns] Node 00 (VC0) rcv: 0x3c
+[10955000 ns] Node 00 (VC0) rcv: 0x3d
+[10965000 ns] Node 00 (VC0) rcv: 0x3e
+[10975000 ns] Node 00 (VC0) rcv: 0x3f
+[10981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[10985000 ns] Node 00 (VC0) rcv: 0x40
+[SB-PRED] t=10997000 src=0x3 -> Node00 (VC1) pkt_id=11 len=20
+[11005000 ns] Node 00 (VC0) rcv: 0x41
+[11015000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=11025000 Node00 (VC0) src=0x3 pkt_id=6 len=20 matches prediction
+[11025000 ns] Node 00 (VC0) rcv: 0x43
+[11035000 ns] Node 00 (VC1) rcv: 0x30
+[11055000 ns] Node 00 (VC1) rcv: 0x31
+[11065000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=11075000 Node00 (VC1) src=0x2 pkt_id=3 len=20 matches prediction
+[11075000 ns] Node 00 (VC1) rcv: 0x33
+[11085000 ns] Node 00 (VC1) rcv: 0x10
+[11105000 ns] Node 00 (VC1) rcv: 0x11
+[11115000 ns] Node 00 (VC1) rcv: 0x12
+[11125000 ns] Node 00 (VC1) rcv: 0x13
+[11135000 ns] Node 00 (VC1) rcv: 0x14
+[11155000 ns] Node 00 (VC1) rcv: 0x15
+[11165000 ns] Node 00 (VC1) rcv: 0x16
+[11175000 ns] Node 00 (VC1) rcv: 0x17
+[11185000 ns] Node 00 (VC1) rcv: 0x18
+[11205000 ns] Node 00 (VC1) rcv: 0x19
+[11215000 ns] Node 00 (VC1) rcv: 0x1a
+[11225000 ns] Node 00 (VC1) rcv: 0x1b
+[11235000 ns] Node 00 (VC1) rcv: 0x1c
+[11255000 ns] Node 00 (VC1) rcv: 0x1d
+[11265000 ns] Node 00 (VC1) rcv: 0x1e
+[11275000 ns] Node 00 (VC1) rcv: 0x1f
+[SB-PRED] t=11291000 src=0x3 -> Node00 (VC0) pkt_id=12 len=20
+[11606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=11718000 src=0x2 -> Node00 (VC1) pkt_id=5 len=20
+[11794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[11855000 ns] Node 00 (VC0) rcv: 0x10
+[11856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[11865000 ns] Node 00 (VC0) rcv: 0x11
+[11875000 ns] Node 00 (VC0) rcv: 0x12
+[11885000 ns] Node 00 (VC0) rcv: 0x13
+[11905000 ns] Node 00 (VC0) rcv: 0x14
+[11915000 ns] Node 00 (VC0) rcv: 0x15
+[11925000 ns] Node 00 (VC0) rcv: 0x16
+[11935000 ns] Node 00 (VC0) rcv: 0x17
+[11955000 ns] Node 00 (VC0) rcv: 0x18
+[11965000 ns] Node 00 (VC0) rcv: 0x19
+[SB-PRED] t=11970000 src=0x2 -> Node00 (VC0) pkt_id=6 len=20
+[11975000 ns] Node 00 (VC0) rcv: 0x1a
+[11985000 ns] Node 00 (VC0) rcv: 0x1b
+[12005000 ns] Node 00 (VC0) rcv: 0x1c
+[12015000 ns] Node 00 (VC0) rcv: 0x1d
+[12025000 ns] Node 00 (VC0) rcv: 0x1e
+[SB-PRED] t=12033000 src=0x1 -> Node00 (VC1) pkt_id=11 len=20
+[12035000 ns] Node 00 (VC0) rcv: 0x1f
+[12044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[12055000 ns] Node 00 (VC0) rcv: 0x20
+[12065000 ns] Node 00 (VC0) rcv: 0x21
+[12075000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=12085000 Node00 (VC0) src=0x1 pkt_id=6 len=20 matches prediction
+[12085000 ns] Node 00 (VC0) rcv: 0x23
+[12105000 ns] Node 00 (VC1) rcv: 0x20
+[12115000 ns] Node 00 (VC1) rcv: 0x21
+[12125000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=12135000 Node00 (VC1) src=0x1 pkt_id=9 len=20 matches prediction
+[12135000 ns] Node 00 (VC1) rcv: 0x23
+[12155000 ns] Node 00 (VC1) rcv: 0x30
+[12165000 ns] Node 00 (VC1) rcv: 0x31
+[12175000 ns] Node 00 (VC1) rcv: 0x32
+[12185000 ns] Node 00 (VC1) rcv: 0x33
+[12205000 ns] Node 00 (VC1) rcv: 0x34
+[12215000 ns] Node 00 (VC1) rcv: 0x35
+[12225000 ns] Node 00 (VC1) rcv: 0x36
+[12235000 ns] Node 00 (VC1) rcv: 0x37
+[12255000 ns] Node 00 (VC1) rcv: 0x38
+[12265000 ns] Node 00 (VC1) rcv: 0x39
+[12275000 ns] Node 00 (VC1) rcv: 0x3a
+[12285000 ns] Node 00 (VC1) rcv: 0x3b
+[12305000 ns] Node 00 (VC1) rcv: 0x3c
+[12315000 ns] Node 00 (VC1) rcv: 0x3d
+[12325000 ns] Node 00 (VC1) rcv: 0x3e
+[SB-PRED] t=12327000 src=0x1 -> Node00 (VC0) pkt_id=12 len=20
+[12335000 ns] Node 00 (VC1) rcv: 0x3f
+[12856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[12881000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[12915000 ns] Node 00 (VC0) rcv: 0x20
+[12919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[12925000 ns] Node 00 (VC0) rcv: 0x21
+[12935000 ns] Node 00 (VC0) rcv: 0x22
+[12955000 ns] Node 00 (VC0) rcv: 0x23
+[12965000 ns] Node 00 (VC0) rcv: 0x24
+[12975000 ns] Node 00 (VC0) rcv: 0x25
+[12985000 ns] Node 00 (VC0) rcv: 0x26
+[13005000 ns] Node 00 (VC0) rcv: 0x27
+[13015000 ns] Node 00 (VC0) rcv: 0x28
+[13025000 ns] Node 00 (VC0) rcv: 0x29
+[13035000 ns] Node 00 (VC0) rcv: 0x2a
+[13055000 ns] Node 00 (VC0) rcv: 0x2b
+[13065000 ns] Node 00 (VC0) rcv: 0x2c
+[13075000 ns] Node 00 (VC0) rcv: 0x2d
+[13085000 ns] Node 00 (VC0) rcv: 0x2e
+[13105000 ns] Node 00 (VC0) rcv: 0x2f
+[13106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[13115000 ns] Node 00 (VC0) rcv: 0x30
+[13125000 ns] Node 00 (VC0) rcv: 0x31
+[13135000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=13155000 Node00 (VC0) src=0x2 pkt_id=2 len=20 matches prediction
+[13155000 ns] Node 00 (VC0) rcv: 0x33
+[13165000 ns] Node 00 (VC1) rcv: 0x40
+[13731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[13794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[13919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[13975000 ns] Node 00 (VC0) rcv: 0x10
+[13981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[13985000 ns] Node 00 (VC0) rcv: 0x11
+[14005000 ns] Node 00 (VC0) rcv: 0x12
+[14015000 ns] Node 00 (VC0) rcv: 0x13
+[14025000 ns] Node 00 (VC0) rcv: 0x14
+[14035000 ns] Node 00 (VC0) rcv: 0x15
+[14055000 ns] Node 00 (VC0) rcv: 0x16
+[14065000 ns] Node 00 (VC0) rcv: 0x17
+[14075000 ns] Node 00 (VC0) rcv: 0x18
+[14085000 ns] Node 00 (VC0) rcv: 0x19
+[14105000 ns] Node 00 (VC0) rcv: 0x1a
+[14115000 ns] Node 00 (VC0) rcv: 0x1b
+[14125000 ns] Node 00 (VC0) rcv: 0x1c
+[14135000 ns] Node 00 (VC0) rcv: 0x1d
+[14155000 ns] Node 00 (VC0) rcv: 0x1e
+[14165000 ns] Node 00 (VC0) rcv: 0x1f
+[14169000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[14175000 ns] Node 00 (VC0) rcv: 0x20
+[14185000 ns] Node 00 (VC0) rcv: 0x21
+[14205000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=14215000 Node00 (VC0) src=0x1 pkt_id=8 len=20 matches prediction
+[14215000 ns] Node 00 (VC0) rcv: 0x23
+[14606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=14735000 src=0x3 -> Node00 (VC1) pkt_id=13 len=20
+[14794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=14917000 src=0x1 -> Node00 (VC1) pkt_id=13 len=20
+[14981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=15029000 src=0x3 -> Node00 (VC0) pkt_id=14 len=20
+[15035000 ns] Node 00 (VC0) rcv: 0x30
+[15044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[15055000 ns] Node 00 (VC0) rcv: 0x31
+[15065000 ns] Node 00 (VC0) rcv: 0x32
+[15075000 ns] Node 00 (VC0) rcv: 0x33
+[15085000 ns] Node 00 (VC0) rcv: 0x34
+[15105000 ns] Node 00 (VC0) rcv: 0x35
+[15115000 ns] Node 00 (VC0) rcv: 0x36
+[15125000 ns] Node 00 (VC0) rcv: 0x37
+[15135000 ns] Node 00 (VC0) rcv: 0x38
+[15155000 ns] Node 00 (VC0) rcv: 0x39
+[15165000 ns] Node 00 (VC0) rcv: 0x3a
+[15175000 ns] Node 00 (VC0) rcv: 0x3b
+[15185000 ns] Node 00 (VC0) rcv: 0x3c
+[15205000 ns] Node 00 (VC0) rcv: 0x3d
+[SB-PRED] t=15211000 src=0x1 -> Node00 (VC0) pkt_id=14 len=20
+[15215000 ns] Node 00 (VC0) rcv: 0x3e
+[15225000 ns] Node 00 (VC0) rcv: 0x3f
+[15231000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[15235000 ns] Node 00 (VC0) rcv: 0x40
+[15255000 ns] Node 00 (VC0) rcv: 0x41
+[15265000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=15275000 Node00 (VC0) src=0x3 pkt_id=8 len=20 matches prediction
+[15275000 ns] Node 00 (VC0) rcv: 0x43
+[15285000 ns] Node 00 (VC1) rcv: 0x41
+[15305000 ns] Node 00 (VC1) rcv: 0x42
+[SB-PASS] t=15315000 Node00 (VC1) src=0x3 pkt_id=9 len=20 matches prediction
+[15315000 ns] Node 00 (VC1) rcv: 0x43
+[15325000 ns] Node 00 (VC1) rcv: 0x10
+[15335000 ns] Node 00 (VC1) rcv: 0x11
+[15355000 ns] Node 00 (VC1) rcv: 0x12
+[15365000 ns] Node 00 (VC1) rcv: 0x13
+[15375000 ns] Node 00 (VC1) rcv: 0x14
+[15385000 ns] Node 00 (VC1) rcv: 0x15
+[15405000 ns] Node 00 (VC1) rcv: 0x16
+[15415000 ns] Node 00 (VC1) rcv: 0x17
+[15425000 ns] Node 00 (VC1) rcv: 0x18
+[15435000 ns] Node 00 (VC1) rcv: 0x19
+[15455000 ns] Node 00 (VC1) rcv: 0x1a
+[15465000 ns] Node 00 (VC1) rcv: 0x1b
+[15475000 ns] Node 00 (VC1) rcv: 0x1c
+[15485000 ns] Node 00 (VC1) rcv: 0x1d
+[15505000 ns] Node 00 (VC1) rcv: 0x1e
+[15515000 ns] Node 00 (VC1) rcv: 0x1f
+[15856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=15978000 src=0x2 -> Node00 (VC1) pkt_id=7 len=20
+[16044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[16105000 ns] Node 00 (VC0) rcv: 0x10
+[16106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[16115000 ns] Node 00 (VC0) rcv: 0x11
+[16125000 ns] Node 00 (VC0) rcv: 0x12
+[16135000 ns] Node 00 (VC0) rcv: 0x13
+[16155000 ns] Node 00 (VC0) rcv: 0x14
+[16165000 ns] Node 00 (VC0) rcv: 0x15
+[16175000 ns] Node 00 (VC0) rcv: 0x16
+[16185000 ns] Node 00 (VC0) rcv: 0x17
+[16205000 ns] Node 00 (VC0) rcv: 0x18
+[16215000 ns] Node 00 (VC0) rcv: 0x19
+[16225000 ns] Node 00 (VC0) rcv: 0x1a
+[SB-PRED] t=16230000 src=0x2 -> Node00 (VC0) pkt_id=8 len=20
+[16235000 ns] Node 00 (VC0) rcv: 0x1b
+[16255000 ns] Node 00 (VC0) rcv: 0x1c
+[16265000 ns] Node 00 (VC0) rcv: 0x1d
+[16275000 ns] Node 00 (VC0) rcv: 0x1e
+[16285000 ns] Node 00 (VC0) rcv: 0x1f
+[16294000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[16305000 ns] Node 00 (VC0) rcv: 0x20
+[16315000 ns] Node 00 (VC0) rcv: 0x21
+[16325000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=16335000 Node00 (VC0) src=0x1 pkt_id=10 len=20 matches prediction
+[16335000 ns] Node 00 (VC0) rcv: 0x23
+[16355000 ns] Node 00 (VC1) rcv: 0x20
+[16365000 ns] Node 00 (VC1) rcv: 0x21
+[16375000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=16385000 Node00 (VC1) src=0x1 pkt_id=11 len=20 matches prediction
+[16385000 ns] Node 00 (VC1) rcv: 0x23
+[16405000 ns] Node 00 (VC1) rcv: 0x20
+[16415000 ns] Node 00 (VC1) rcv: 0x21
+[16425000 ns] Node 00 (VC1) rcv: 0x22
+[16435000 ns] Node 00 (VC1) rcv: 0x23
+[16455000 ns] Node 00 (VC1) rcv: 0x24
+[16465000 ns] Node 00 (VC1) rcv: 0x25
+[16475000 ns] Node 00 (VC1) rcv: 0x26
+[16485000 ns] Node 00 (VC1) rcv: 0x27
+[16505000 ns] Node 00 (VC1) rcv: 0x28
+[16515000 ns] Node 00 (VC1) rcv: 0x29
+[16525000 ns] Node 00 (VC1) rcv: 0x2a
+[16535000 ns] Node 00 (VC1) rcv: 0x2b
+[16555000 ns] Node 00 (VC1) rcv: 0x2c
+[16565000 ns] Node 00 (VC1) rcv: 0x2d
+[16575000 ns] Node 00 (VC1) rcv: 0x2e
+[16585000 ns] Node 00 (VC1) rcv: 0x2f
+[16919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=17045000 src=0x1 -> Node00 (VC1) pkt_id=15 len=20
+[17106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[17165000 ns] Node 00 (VC0) rcv: 0x20
+[17169000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[17175000 ns] Node 00 (VC0) rcv: 0x21
+[17185000 ns] Node 00 (VC0) rcv: 0x22
+[17205000 ns] Node 00 (VC0) rcv: 0x23
+[17215000 ns] Node 00 (VC0) rcv: 0x24
+[17225000 ns] Node 00 (VC0) rcv: 0x25
+[17235000 ns] Node 00 (VC0) rcv: 0x26
+[17255000 ns] Node 00 (VC0) rcv: 0x27
+[17265000 ns] Node 00 (VC0) rcv: 0x28
+[17275000 ns] Node 00 (VC0) rcv: 0x29
+[17285000 ns] Node 00 (VC0) rcv: 0x2a
+[17305000 ns] Node 00 (VC0) rcv: 0x2b
+[17315000 ns] Node 00 (VC0) rcv: 0x2c
+[17325000 ns] Node 00 (VC0) rcv: 0x2d
+[17335000 ns] Node 00 (VC0) rcv: 0x2e
+[SB-PRED] t=17339000 src=0x1 -> Node00 (VC0) pkt_id=0 len=20
+[17355000 ns] Node 00 (VC0) rcv: 0x2f
+[17356000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[17365000 ns] Node 00 (VC0) rcv: 0x30
+[17375000 ns] Node 00 (VC0) rcv: 0x31
+[17385000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=17405000 Node00 (VC0) src=0x2 pkt_id=4 len=20 matches prediction
+[17405000 ns] Node 00 (VC0) rcv: 0x33
+[17415000 ns] Node 00 (VC1) rcv: 0x30
+[17425000 ns] Node 00 (VC1) rcv: 0x31
+[17435000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=17455000 Node00 (VC1) src=0x2 pkt_id=5 len=20 matches prediction
+[17455000 ns] Node 00 (VC1) rcv: 0x33
+[17465000 ns] Node 00 (VC1) rcv: 0x10
+[17475000 ns] Node 00 (VC1) rcv: 0x11
+[17485000 ns] Node 00 (VC1) rcv: 0x12
+[17505000 ns] Node 00 (VC1) rcv: 0x13
+[17515000 ns] Node 00 (VC1) rcv: 0x14
+[17525000 ns] Node 00 (VC1) rcv: 0x15
+[17535000 ns] Node 00 (VC1) rcv: 0x16
+[17555000 ns] Node 00 (VC1) rcv: 0x17
+[17565000 ns] Node 00 (VC1) rcv: 0x18
+[17575000 ns] Node 00 (VC1) rcv: 0x19
+[17585000 ns] Node 00 (VC1) rcv: 0x1a
+[17605000 ns] Node 00 (VC1) rcv: 0x1b
+[17615000 ns] Node 00 (VC1) rcv: 0x1c
+[17625000 ns] Node 00 (VC1) rcv: 0x1d
+[17635000 ns] Node 00 (VC1) rcv: 0x1e
+[17655000 ns] Node 00 (VC1) rcv: 0x1f
+[17981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[18044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[18169000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[18225000 ns] Node 00 (VC0) rcv: 0x10
+[18231000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[18235000 ns] Node 00 (VC0) rcv: 0x11
+[18255000 ns] Node 00 (VC0) rcv: 0x12
+[18265000 ns] Node 00 (VC0) rcv: 0x13
+[18275000 ns] Node 00 (VC0) rcv: 0x14
+[18285000 ns] Node 00 (VC0) rcv: 0x15
+[18305000 ns] Node 00 (VC0) rcv: 0x16
+[18315000 ns] Node 00 (VC0) rcv: 0x17
+[18325000 ns] Node 00 (VC0) rcv: 0x18
+[18335000 ns] Node 00 (VC0) rcv: 0x19
+[18355000 ns] Node 00 (VC0) rcv: 0x1a
+[18365000 ns] Node 00 (VC0) rcv: 0x1b
+[18375000 ns] Node 00 (VC0) rcv: 0x1c
+[18385000 ns] Node 00 (VC0) rcv: 0x1d
+[18405000 ns] Node 00 (VC0) rcv: 0x1e
+[18415000 ns] Node 00 (VC0) rcv: 0x1f
+[18419000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[18425000 ns] Node 00 (VC0) rcv: 0x20
+[18435000 ns] Node 00 (VC0) rcv: 0x21
+[18455000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=18465000 Node00 (VC0) src=0x1 pkt_id=12 len=20 matches prediction
+[18465000 ns] Node 00 (VC0) rcv: 0x23
+[18475000 ns] Node 00 (VC1) rcv: 0x20
+[18485000 ns] Node 00 (VC1) rcv: 0x21
+[18505000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=18515000 Node00 (VC1) src=0x1 pkt_id=13 len=20 matches prediction
+[18515000 ns] Node 00 (VC1) rcv: 0x23
+[18525000 ns] Node 00 (VC1) rcv: 0x30
+[18535000 ns] Node 00 (VC1) rcv: 0x31
+[18555000 ns] Node 00 (VC1) rcv: 0x32
+[18565000 ns] Node 00 (VC1) rcv: 0x33
+[18575000 ns] Node 00 (VC1) rcv: 0x34
+[18585000 ns] Node 00 (VC1) rcv: 0x35
+[18605000 ns] Node 00 (VC1) rcv: 0x36
+[18615000 ns] Node 00 (VC1) rcv: 0x37
+[18625000 ns] Node 00 (VC1) rcv: 0x38
+[18635000 ns] Node 00 (VC1) rcv: 0x39
+[18655000 ns] Node 00 (VC1) rcv: 0x3a
+[18665000 ns] Node 00 (VC1) rcv: 0x3b
+[18675000 ns] Node 00 (VC1) rcv: 0x3c
+[18856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=18991000 src=0x3 -> Node00 (VC1) pkt_id=15 len=20
+[19044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=19173000 src=0x1 -> Node00 (VC1) pkt_id=1 len=20
+[19231000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[19285000 ns] Node 00 (VC0) rcv: 0x30
+[SB-PRED] t=19285000 src=0x3 -> Node00 (VC0) pkt_id=0 len=20
+[19294000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[19305000 ns] Node 00 (VC0) rcv: 0x31
+[19315000 ns] Node 00 (VC0) rcv: 0x32
+[19325000 ns] Node 00 (VC0) rcv: 0x33
+[19335000 ns] Node 00 (VC0) rcv: 0x34
+[19355000 ns] Node 00 (VC0) rcv: 0x35
+[19365000 ns] Node 00 (VC0) rcv: 0x36
+[19375000 ns] Node 00 (VC0) rcv: 0x37
+[19385000 ns] Node 00 (VC0) rcv: 0x38
+[19405000 ns] Node 00 (VC0) rcv: 0x39
+[19415000 ns] Node 00 (VC0) rcv: 0x3a
+[19425000 ns] Node 00 (VC0) rcv: 0x3b
+[19435000 ns] Node 00 (VC0) rcv: 0x3c
+[19455000 ns] Node 00 (VC0) rcv: 0x3d
+[19465000 ns] Node 00 (VC0) rcv: 0x3e
+[SB-PRED] t=19467000 src=0x1 -> Node00 (VC0) pkt_id=2 len=20
+[19475000 ns] Node 00 (VC0) rcv: 0x3f
+[19481000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[19485000 ns] Node 00 (VC0) rcv: 0x40
+[19505000 ns] Node 00 (VC0) rcv: 0x41
+[19515000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=19525000 Node00 (VC0) src=0x3 pkt_id=10 len=20 matches prediction
+[19525000 ns] Node 00 (VC0) rcv: 0x43
+[19535000 ns] Node 00 (VC1) rcv: 0x3d
+[19555000 ns] Node 00 (VC1) rcv: 0x3e
+[19565000 ns] Node 00 (VC1) rcv: 0x3f
+[19575000 ns] Node 00 (VC1) rcv: 0x40
+[19585000 ns] Node 00 (VC1) rcv: 0x41
+[19605000 ns] Node 00 (VC1) rcv: 0x42
+[SB-PASS] t=19615000 Node00 (VC1) src=0x3 pkt_id=11 len=20 matches prediction
+[19615000 ns] Node 00 (VC1) rcv: 0x43
+[19625000 ns] Node 00 (VC1) rcv: 0x10
+[19635000 ns] Node 00 (VC1) rcv: 0x11
+[19655000 ns] Node 00 (VC1) rcv: 0x12
+[19665000 ns] Node 00 (VC1) rcv: 0x13
+[19675000 ns] Node 00 (VC1) rcv: 0x14
+[19685000 ns] Node 00 (VC1) rcv: 0x15
+[19705000 ns] Node 00 (VC1) rcv: 0x16
+[19715000 ns] Node 00 (VC1) rcv: 0x17
+[19725000 ns] Node 00 (VC1) rcv: 0x18
+[19735000 ns] Node 00 (VC1) rcv: 0x19
+[19755000 ns] Node 00 (VC1) rcv: 0x1a
+[19765000 ns] Node 00 (VC1) rcv: 0x1b
+[19775000 ns] Node 00 (VC1) rcv: 0x1c
+[19785000 ns] Node 00 (VC1) rcv: 0x1d
+[19805000 ns] Node 00 (VC1) rcv: 0x1e
+[19815000 ns] Node 00 (VC1) rcv: 0x1f
+[20106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=20226000 src=0x2 -> Node00 (VC1) pkt_id=9 len=20
+[20294000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[20355000 ns] Node 00 (VC0) rcv: 0x10
+[20356000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[20365000 ns] Node 00 (VC0) rcv: 0x11
+[20375000 ns] Node 00 (VC0) rcv: 0x12
+[20385000 ns] Node 00 (VC0) rcv: 0x13
+[20405000 ns] Node 00 (VC0) rcv: 0x14
+[20415000 ns] Node 00 (VC0) rcv: 0x15
+[20425000 ns] Node 00 (VC0) rcv: 0x16
+[20435000 ns] Node 00 (VC0) rcv: 0x17
+[20455000 ns] Node 00 (VC0) rcv: 0x18
+[20465000 ns] Node 00 (VC0) rcv: 0x19
+[20475000 ns] Node 00 (VC0) rcv: 0x1a
+[SB-PRED] t=20478000 src=0x2 -> Node00 (VC0) pkt_id=10 len=20
+[20485000 ns] Node 00 (VC0) rcv: 0x1b
+[20505000 ns] Node 00 (VC0) rcv: 0x1c
+[20515000 ns] Node 00 (VC0) rcv: 0x1d
+[20525000 ns] Node 00 (VC0) rcv: 0x1e
+[20535000 ns] Node 00 (VC0) rcv: 0x1f
+[20544000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[20555000 ns] Node 00 (VC0) rcv: 0x20
+[20565000 ns] Node 00 (VC0) rcv: 0x21
+[20575000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=20585000 Node00 (VC0) src=0x1 pkt_id=14 len=20 matches prediction
+[20585000 ns] Node 00 (VC0) rcv: 0x23
+[20605000 ns] Node 00 (VC1) rcv: 0x20
+[20615000 ns] Node 00 (VC1) rcv: 0x21
+[20625000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=20635000 Node00 (VC1) src=0x1 pkt_id=15 len=20 matches prediction
+[20635000 ns] Node 00 (VC1) rcv: 0x23
+[20655000 ns] Node 00 (VC1) rcv: 0x20
+[20665000 ns] Node 00 (VC1) rcv: 0x21
+[20675000 ns] Node 00 (VC1) rcv: 0x22
+[20685000 ns] Node 00 (VC1) rcv: 0x23
+[20705000 ns] Node 00 (VC1) rcv: 0x24
+[20715000 ns] Node 00 (VC1) rcv: 0x25
+[20725000 ns] Node 00 (VC1) rcv: 0x26
+[20735000 ns] Node 00 (VC1) rcv: 0x27
+[20755000 ns] Node 00 (VC1) rcv: 0x28
+[20765000 ns] Node 00 (VC1) rcv: 0x29
+[20775000 ns] Node 00 (VC1) rcv: 0x2a
+[20785000 ns] Node 00 (VC1) rcv: 0x2b
+[20805000 ns] Node 00 (VC1) rcv: 0x2c
+[20815000 ns] Node 00 (VC1) rcv: 0x2d
+[20825000 ns] Node 00 (VC1) rcv: 0x2e
+[20835000 ns] Node 00 (VC1) rcv: 0x2f
+[21169000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=21301000 src=0x1 -> Node00 (VC1) pkt_id=3 len=20
+[21356000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[21415000 ns] Node 00 (VC0) rcv: 0x20
+[21419000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[21425000 ns] Node 00 (VC0) rcv: 0x21
+[21435000 ns] Node 00 (VC0) rcv: 0x22
+[21455000 ns] Node 00 (VC0) rcv: 0x23
+[21465000 ns] Node 00 (VC0) rcv: 0x24
+[21475000 ns] Node 00 (VC0) rcv: 0x25
+[21485000 ns] Node 00 (VC0) rcv: 0x26
+[21505000 ns] Node 00 (VC0) rcv: 0x27
+[21515000 ns] Node 00 (VC0) rcv: 0x28
+[21525000 ns] Node 00 (VC0) rcv: 0x29
+[21535000 ns] Node 00 (VC0) rcv: 0x2a
+[21555000 ns] Node 00 (VC0) rcv: 0x2b
+[21565000 ns] Node 00 (VC0) rcv: 0x2c
+[21575000 ns] Node 00 (VC0) rcv: 0x2d
+[21585000 ns] Node 00 (VC0) rcv: 0x2e
+[SB-PRED] t=21595000 src=0x1 -> Node00 (VC0) pkt_id=4 len=20
+[21605000 ns] Node 00 (VC0) rcv: 0x2f
+[21606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[21615000 ns] Node 00 (VC0) rcv: 0x30
+[21625000 ns] Node 00 (VC0) rcv: 0x31
+[21635000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=21655000 Node00 (VC0) src=0x2 pkt_id=6 len=20 matches prediction
+[21655000 ns] Node 00 (VC0) rcv: 0x33
+[21665000 ns] Node 00 (VC1) rcv: 0x30
+[21675000 ns] Node 00 (VC1) rcv: 0x31
+[21685000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=21705000 Node00 (VC1) src=0x2 pkt_id=7 len=20 matches prediction
+[21705000 ns] Node 00 (VC1) rcv: 0x33
+[21715000 ns] Node 00 (VC1) rcv: 0x10
+[21725000 ns] Node 00 (VC1) rcv: 0x11
+[21735000 ns] Node 00 (VC1) rcv: 0x12
+[21755000 ns] Node 00 (VC1) rcv: 0x13
+[21765000 ns] Node 00 (VC1) rcv: 0x14
+[21775000 ns] Node 00 (VC1) rcv: 0x15
+[21785000 ns] Node 00 (VC1) rcv: 0x16
+[21805000 ns] Node 00 (VC1) rcv: 0x17
+[21815000 ns] Node 00 (VC1) rcv: 0x18
+[21825000 ns] Node 00 (VC1) rcv: 0x19
+[21835000 ns] Node 00 (VC1) rcv: 0x1a
+[21855000 ns] Node 00 (VC1) rcv: 0x1b
+[21865000 ns] Node 00 (VC1) rcv: 0x1c
+[21875000 ns] Node 00 (VC1) rcv: 0x1d
+[21885000 ns] Node 00 (VC1) rcv: 0x1e
+[21905000 ns] Node 00 (VC1) rcv: 0x1f
+[22231000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[22294000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[22419000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[22475000 ns] Node 00 (VC0) rcv: 0x10
+[22481000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[22485000 ns] Node 00 (VC0) rcv: 0x11
+[22505000 ns] Node 00 (VC0) rcv: 0x12
+[22515000 ns] Node 00 (VC0) rcv: 0x13
+[22525000 ns] Node 00 (VC0) rcv: 0x14
+[22535000 ns] Node 00 (VC0) rcv: 0x15
+[22555000 ns] Node 00 (VC0) rcv: 0x16
+[22565000 ns] Node 00 (VC0) rcv: 0x17
+[22575000 ns] Node 00 (VC0) rcv: 0x18
+[22585000 ns] Node 00 (VC0) rcv: 0x19
+[22605000 ns] Node 00 (VC0) rcv: 0x1a
+[22615000 ns] Node 00 (VC0) rcv: 0x1b
+[22625000 ns] Node 00 (VC0) rcv: 0x1c
+[22635000 ns] Node 00 (VC0) rcv: 0x1d
+[22655000 ns] Node 00 (VC0) rcv: 0x1e
+[22665000 ns] Node 00 (VC0) rcv: 0x1f
+[22669000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[22675000 ns] Node 00 (VC0) rcv: 0x20
+[22685000 ns] Node 00 (VC0) rcv: 0x21
+[22705000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=22715000 Node00 (VC0) src=0x1 pkt_id=0 len=20 matches prediction
+[22715000 ns] Node 00 (VC0) rcv: 0x23
+[22725000 ns] Node 00 (VC1) rcv: 0x20
+[22735000 ns] Node 00 (VC1) rcv: 0x21
+[22755000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=22765000 Node00 (VC1) src=0x1 pkt_id=1 len=20 matches prediction
+[22765000 ns] Node 00 (VC1) rcv: 0x23
+[22775000 ns] Node 00 (VC1) rcv: 0x30
+[22785000 ns] Node 00 (VC1) rcv: 0x31
+[22805000 ns] Node 00 (VC1) rcv: 0x32
+[22815000 ns] Node 00 (VC1) rcv: 0x33
+[22825000 ns] Node 00 (VC1) rcv: 0x34
+[22835000 ns] Node 00 (VC1) rcv: 0x35
+[22855000 ns] Node 00 (VC1) rcv: 0x36
+[22865000 ns] Node 00 (VC1) rcv: 0x37
+[22875000 ns] Node 00 (VC1) rcv: 0x38
+[23106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=23233000 src=0x3 -> Node00 (VC1) pkt_id=1 len=20
+[23294000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=23429000 src=0x1 -> Node00 (VC1) pkt_id=5 len=20
+[23481000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[23535000 ns] Node 00 (VC0) rcv: 0x30
+[23544000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[23555000 ns] Node 00 (VC0) rcv: 0x31
+[23565000 ns] Node 00 (VC0) rcv: 0x32
+[23575000 ns] Node 00 (VC0) rcv: 0x33
+[23585000 ns] Node 00 (VC0) rcv: 0x34
+[23605000 ns] Node 00 (VC0) rcv: 0x35
+[23615000 ns] Node 00 (VC0) rcv: 0x36
+[23625000 ns] Node 00 (VC0) rcv: 0x37
+[23635000 ns] Node 00 (VC0) rcv: 0x38
+[23655000 ns] Node 00 (VC0) rcv: 0x39
+[23665000 ns] Node 00 (VC0) rcv: 0x3a
+[23675000 ns] Node 00 (VC0) rcv: 0x3b
+[23685000 ns] Node 00 (VC0) rcv: 0x3c
+[23705000 ns] Node 00 (VC0) rcv: 0x3d
+[23715000 ns] Node 00 (VC0) rcv: 0x3e
+[SB-PRED] t=23723000 src=0x1 -> Node00 (VC0) pkt_id=6 len=20
+[23725000 ns] Node 00 (VC0) rcv: 0x3f
+[23731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[23735000 ns] Node 00 (VC0) rcv: 0x40
+[23755000 ns] Node 00 (VC0) rcv: 0x41
+[23765000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=23775000 Node00 (VC0) src=0x3 pkt_id=12 len=20 matches prediction
+[23775000 ns] Node 00 (VC0) rcv: 0x43
+[23785000 ns] Node 00 (VC1) rcv: 0x39
+[23805000 ns] Node 00 (VC1) rcv: 0x3a
+[23815000 ns] Node 00 (VC1) rcv: 0x3b
+[23825000 ns] Node 00 (VC1) rcv: 0x3c
+[23835000 ns] Node 00 (VC1) rcv: 0x3d
+[23855000 ns] Node 00 (VC1) rcv: 0x3e
+[23865000 ns] Node 00 (VC1) rcv: 0x3f
+[23875000 ns] Node 00 (VC1) rcv: 0x40
+[23885000 ns] Node 00 (VC1) rcv: 0x41
+[23905000 ns] Node 00 (VC1) rcv: 0x42
+[SB-PASS] t=23915000 Node00 (VC1) src=0x3 pkt_id=13 len=20 matches prediction
+[23915000 ns] Node 00 (VC1) rcv: 0x43
+[23925000 ns] Node 00 (VC1) rcv: 0x10
+[23935000 ns] Node 00 (VC1) rcv: 0x11
+[23955000 ns] Node 00 (VC1) rcv: 0x12
+[23965000 ns] Node 00 (VC1) rcv: 0x13
+[23975000 ns] Node 00 (VC1) rcv: 0x14
+[23985000 ns] Node 00 (VC1) rcv: 0x15
+[24005000 ns] Node 00 (VC1) rcv: 0x16
+[24015000 ns] Node 00 (VC1) rcv: 0x17
+[24025000 ns] Node 00 (VC1) rcv: 0x18
+[24035000 ns] Node 00 (VC1) rcv: 0x19
+[24055000 ns] Node 00 (VC1) rcv: 0x1a
+[24065000 ns] Node 00 (VC1) rcv: 0x1b
+[24075000 ns] Node 00 (VC1) rcv: 0x1c
+[24085000 ns] Node 00 (VC1) rcv: 0x1d
+[24105000 ns] Node 00 (VC1) rcv: 0x1e
+[24115000 ns] Node 00 (VC1) rcv: 0x1f
+[24356000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=24474000 src=0x2 -> Node00 (VC1) pkt_id=11 len=20
+[24544000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[24605000 ns] Node 00 (VC0) rcv: 0x10
+[24606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[24615000 ns] Node 00 (VC0) rcv: 0x11
+[24625000 ns] Node 00 (VC0) rcv: 0x12
+[24635000 ns] Node 00 (VC0) rcv: 0x13
+[24655000 ns] Node 00 (VC0) rcv: 0x14
+[24665000 ns] Node 00 (VC0) rcv: 0x15
+[24675000 ns] Node 00 (VC0) rcv: 0x16
+[24685000 ns] Node 00 (VC0) rcv: 0x17
+[24705000 ns] Node 00 (VC0) rcv: 0x18
+[24715000 ns] Node 00 (VC0) rcv: 0x19
+[24725000 ns] Node 00 (VC0) rcv: 0x1a
+[SB-PRED] t=24726000 src=0x2 -> Node00 (VC0) pkt_id=12 len=20
+[24735000 ns] Node 00 (VC0) rcv: 0x1b
+[24755000 ns] Node 00 (VC0) rcv: 0x1c
+[24765000 ns] Node 00 (VC0) rcv: 0x1d
+[24775000 ns] Node 00 (VC0) rcv: 0x1e
+[24785000 ns] Node 00 (VC0) rcv: 0x1f
+[24794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[24805000 ns] Node 00 (VC0) rcv: 0x20
+[24815000 ns] Node 00 (VC0) rcv: 0x21
+[24825000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=24835000 Node00 (VC0) src=0x1 pkt_id=2 len=20 matches prediction
+[24835000 ns] Node 00 (VC0) rcv: 0x23
+[24855000 ns] Node 00 (VC1) rcv: 0x20
+[24865000 ns] Node 00 (VC1) rcv: 0x21
+[24875000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=24885000 Node00 (VC1) src=0x1 pkt_id=3 len=20 matches prediction
+[24885000 ns] Node 00 (VC1) rcv: 0x23
+[24905000 ns] Node 00 (VC1) rcv: 0x20
+[24915000 ns] Node 00 (VC1) rcv: 0x21
+[24925000 ns] Node 00 (VC1) rcv: 0x22
+[24935000 ns] Node 00 (VC1) rcv: 0x23
+[24955000 ns] Node 00 (VC1) rcv: 0x24
+[24965000 ns] Node 00 (VC1) rcv: 0x25
+[24975000 ns] Node 00 (VC1) rcv: 0x26
+[24985000 ns] Node 00 (VC1) rcv: 0x27
+[25005000 ns] Node 00 (VC1) rcv: 0x28
+[25015000 ns] Node 00 (VC1) rcv: 0x29
+[25025000 ns] Node 00 (VC1) rcv: 0x2a
+[25035000 ns] Node 00 (VC1) rcv: 0x2b
+[25055000 ns] Node 00 (VC1) rcv: 0x2c
+[25065000 ns] Node 00 (VC1) rcv: 0x2d
+[25075000 ns] Node 00 (VC1) rcv: 0x2e
+[25085000 ns] Node 00 (VC1) rcv: 0x2f
+[25419000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=25543000 src=0x1 -> Node00 (VC1) pkt_id=7 len=20
+[25606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[25665000 ns] Node 00 (VC0) rcv: 0x20
+[25669000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[25675000 ns] Node 00 (VC0) rcv: 0x21
+[25685000 ns] Node 00 (VC0) rcv: 0x22
+[25705000 ns] Node 00 (VC0) rcv: 0x23
+[25715000 ns] Node 00 (VC0) rcv: 0x24
+[25725000 ns] Node 00 (VC0) rcv: 0x25
+[25735000 ns] Node 00 (VC0) rcv: 0x26
+[25755000 ns] Node 00 (VC0) rcv: 0x27
+[25765000 ns] Node 00 (VC0) rcv: 0x28
+[25775000 ns] Node 00 (VC0) rcv: 0x29
+[25785000 ns] Node 00 (VC0) rcv: 0x2a
+[25805000 ns] Node 00 (VC0) rcv: 0x2b
+[25815000 ns] Node 00 (VC0) rcv: 0x2c
+[25825000 ns] Node 00 (VC0) rcv: 0x2d
+[25835000 ns] Node 00 (VC0) rcv: 0x2e
+[SB-PRED] t=25837000 src=0x1 -> Node00 (VC0) pkt_id=8 len=20
+[25855000 ns] Node 00 (VC0) rcv: 0x2f
+[25856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[25865000 ns] Node 00 (VC0) rcv: 0x30
+[25875000 ns] Node 00 (VC0) rcv: 0x31
+[25885000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=25905000 Node00 (VC0) src=0x2 pkt_id=8 len=20 matches prediction
+[25905000 ns] Node 00 (VC0) rcv: 0x33
+[25915000 ns] Node 00 (VC1) rcv: 0x30
+[25925000 ns] Node 00 (VC1) rcv: 0x31
+[25935000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=25955000 Node00 (VC1) src=0x2 pkt_id=9 len=20 matches prediction
+[25955000 ns] Node 00 (VC1) rcv: 0x33
+[25965000 ns] Node 00 (VC1) rcv: 0x10
+[25975000 ns] Node 00 (VC1) rcv: 0x11
+[25985000 ns] Node 00 (VC1) rcv: 0x12
+[26005000 ns] Node 00 (VC1) rcv: 0x13
+[26015000 ns] Node 00 (VC1) rcv: 0x14
+[26025000 ns] Node 00 (VC1) rcv: 0x15
+[26035000 ns] Node 00 (VC1) rcv: 0x16
+[26055000 ns] Node 00 (VC1) rcv: 0x17
+[26065000 ns] Node 00 (VC1) rcv: 0x18
+[26075000 ns] Node 00 (VC1) rcv: 0x19
+[26085000 ns] Node 00 (VC1) rcv: 0x1a
+[26105000 ns] Node 00 (VC1) rcv: 0x1b
+[26115000 ns] Node 00 (VC1) rcv: 0x1c
+[26125000 ns] Node 00 (VC1) rcv: 0x1d
+[26135000 ns] Node 00 (VC1) rcv: 0x1e
+[26155000 ns] Node 00 (VC1) rcv: 0x1f
+[26481000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[26544000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[SB-PRED] t=26607000 src=0x3 -> Node00 (VC0) pkt_id=2 len=20
+[26669000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[26725000 ns] Node 00 (VC0) rcv: 0x10
+[26731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[26735000 ns] Node 00 (VC0) rcv: 0x11
+[26755000 ns] Node 00 (VC0) rcv: 0x12
+[26765000 ns] Node 00 (VC0) rcv: 0x13
+[26775000 ns] Node 00 (VC0) rcv: 0x14
+[26785000 ns] Node 00 (VC0) rcv: 0x15
+[26805000 ns] Node 00 (VC0) rcv: 0x16
+[26815000 ns] Node 00 (VC0) rcv: 0x17
+[26825000 ns] Node 00 (VC0) rcv: 0x18
+[26835000 ns] Node 00 (VC0) rcv: 0x19
+[26855000 ns] Node 00 (VC0) rcv: 0x1a
+[26865000 ns] Node 00 (VC0) rcv: 0x1b
+[26875000 ns] Node 00 (VC0) rcv: 0x1c
+[26885000 ns] Node 00 (VC0) rcv: 0x1d
+[26905000 ns] Node 00 (VC0) rcv: 0x1e
+[26915000 ns] Node 00 (VC0) rcv: 0x1f
+[26919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[26925000 ns] Node 00 (VC0) rcv: 0x20
+[26935000 ns] Node 00 (VC0) rcv: 0x21
+[26955000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=26965000 Node00 (VC0) src=0x1 pkt_id=4 len=20 matches prediction
+[26965000 ns] Node 00 (VC0) rcv: 0x23
+[26975000 ns] Node 00 (VC1) rcv: 0x20
+[26985000 ns] Node 00 (VC1) rcv: 0x21
+[27005000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=27015000 Node00 (VC1) src=0x1 pkt_id=5 len=20 matches prediction
+[27015000 ns] Node 00 (VC1) rcv: 0x23
+[27025000 ns] Node 00 (VC1) rcv: 0x30
+[27035000 ns] Node 00 (VC1) rcv: 0x31
+[27055000 ns] Node 00 (VC1) rcv: 0x32
+[27065000 ns] Node 00 (VC1) rcv: 0x33
+[27075000 ns] Node 00 (VC1) rcv: 0x34
+[27356000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[27544000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=27671000 src=0x1 -> Node00 (VC1) pkt_id=9 len=20
+[27731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[27785000 ns] Node 00 (VC0) rcv: 0x30
+[27794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[27805000 ns] Node 00 (VC0) rcv: 0x31
+[27815000 ns] Node 00 (VC0) rcv: 0x32
+[27825000 ns] Node 00 (VC0) rcv: 0x33
+[27835000 ns] Node 00 (VC0) rcv: 0x34
+[27855000 ns] Node 00 (VC0) rcv: 0x35
+[27865000 ns] Node 00 (VC0) rcv: 0x36
+[27875000 ns] Node 00 (VC0) rcv: 0x37
+[27885000 ns] Node 00 (VC0) rcv: 0x38
+[27905000 ns] Node 00 (VC0) rcv: 0x39
+[27915000 ns] Node 00 (VC0) rcv: 0x3a
+[27925000 ns] Node 00 (VC0) rcv: 0x3b
+[27935000 ns] Node 00 (VC0) rcv: 0x3c
+[27955000 ns] Node 00 (VC0) rcv: 0x3d
+[27965000 ns] Node 00 (VC0) rcv: 0x3e
+[SB-PRED] t=27965000 src=0x1 -> Node00 (VC0) pkt_id=10 len=20
+[27975000 ns] Node 00 (VC0) rcv: 0x3f
+[27981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[27985000 ns] Node 00 (VC0) rcv: 0x40
+[28005000 ns] Node 00 (VC0) rcv: 0x41
+[28015000 ns] Node 00 (VC0) rcv: 0x42
+[SB-PASS] t=28025000 Node00 (VC0) src=0x3 pkt_id=14 len=20 matches prediction
+[28025000 ns] Node 00 (VC0) rcv: 0x43
+[28035000 ns] Node 00 (VC1) rcv: 0x35
+[28055000 ns] Node 00 (VC1) rcv: 0x36
+[28065000 ns] Node 00 (VC1) rcv: 0x37
+[28075000 ns] Node 00 (VC1) rcv: 0x38
+[28085000 ns] Node 00 (VC1) rcv: 0x39
+[28105000 ns] Node 00 (VC1) rcv: 0x3a
+[28115000 ns] Node 00 (VC1) rcv: 0x3b
+[28125000 ns] Node 00 (VC1) rcv: 0x3c
+[28135000 ns] Node 00 (VC1) rcv: 0x3d
+[28155000 ns] Node 00 (VC1) rcv: 0x3e
+[28165000 ns] Node 00 (VC1) rcv: 0x3f
+[28175000 ns] Node 00 (VC1) rcv: 0x40
+[28185000 ns] Node 00 (VC1) rcv: 0x41
+[28205000 ns] Node 00 (VC1) rcv: 0x42
+[SB-PASS] t=28215000 Node00 (VC1) src=0x3 pkt_id=15 len=20 matches prediction
+[28215000 ns] Node 00 (VC1) rcv: 0x43
+[28225000 ns] Node 00 (VC1) rcv: 0x10
+[28235000 ns] Node 00 (VC1) rcv: 0x11
+[28255000 ns] Node 00 (VC1) rcv: 0x12
+[28265000 ns] Node 00 (VC1) rcv: 0x13
+[28275000 ns] Node 00 (VC1) rcv: 0x14
+[28285000 ns] Node 00 (VC1) rcv: 0x15
+[28305000 ns] Node 00 (VC1) rcv: 0x16
+[28315000 ns] Node 00 (VC1) rcv: 0x17
+[28325000 ns] Node 00 (VC1) rcv: 0x18
+[28335000 ns] Node 00 (VC1) rcv: 0x19
+[28355000 ns] Node 00 (VC1) rcv: 0x1a
+[28365000 ns] Node 00 (VC1) rcv: 0x1b
+[28375000 ns] Node 00 (VC1) rcv: 0x1c
+[28385000 ns] Node 00 (VC1) rcv: 0x1d
+[28405000 ns] Node 00 (VC1) rcv: 0x1e
+[28415000 ns] Node 00 (VC1) rcv: 0x1f
+[28606000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=28722000 src=0x2 -> Node00 (VC1) pkt_id=13 len=20
+[28794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[28855000 ns] Node 00 (VC0) rcv: 0x10
+[28856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[28865000 ns] Node 00 (VC0) rcv: 0x11
+[28875000 ns] Node 00 (VC0) rcv: 0x12
+[28885000 ns] Node 00 (VC0) rcv: 0x13
+[28905000 ns] Node 00 (VC0) rcv: 0x14
+[28915000 ns] Node 00 (VC0) rcv: 0x15
+[28925000 ns] Node 00 (VC0) rcv: 0x16
+[28935000 ns] Node 00 (VC0) rcv: 0x17
+[28955000 ns] Node 00 (VC0) rcv: 0x18
+[28965000 ns] Node 00 (VC0) rcv: 0x19
+[SB-PRED] t=28974000 src=0x2 -> Node00 (VC0) pkt_id=14 len=20
+[28975000 ns] Node 00 (VC0) rcv: 0x1a
+[28985000 ns] Node 00 (VC0) rcv: 0x1b
+[29005000 ns] Node 00 (VC0) rcv: 0x1c
+[29015000 ns] Node 00 (VC0) rcv: 0x1d
+[29025000 ns] Node 00 (VC0) rcv: 0x1e
+[29035000 ns] Node 00 (VC0) rcv: 0x1f
+[29044000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[29055000 ns] Node 00 (VC0) rcv: 0x20
+[29065000 ns] Node 00 (VC0) rcv: 0x21
+[29075000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=29085000 Node00 (VC0) src=0x1 pkt_id=6 len=20 matches prediction
+[29085000 ns] Node 00 (VC0) rcv: 0x23
+[29105000 ns] Node 00 (VC1) rcv: 0x20
+[29115000 ns] Node 00 (VC1) rcv: 0x21
+[29125000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=29135000 Node00 (VC1) src=0x1 pkt_id=7 len=20 matches prediction
+[29135000 ns] Node 00 (VC1) rcv: 0x23
+[29155000 ns] Node 00 (VC1) rcv: 0x20
+[29165000 ns] Node 00 (VC1) rcv: 0x21
+[29175000 ns] Node 00 (VC1) rcv: 0x22
+[29185000 ns] Node 00 (VC1) rcv: 0x23
+[29205000 ns] Node 00 (VC1) rcv: 0x24
+[29215000 ns] Node 00 (VC1) rcv: 0x25
+[29225000 ns] Node 00 (VC1) rcv: 0x26
+[29235000 ns] Node 00 (VC1) rcv: 0x27
+[29255000 ns] Node 00 (VC1) rcv: 0x28
+[29265000 ns] Node 00 (VC1) rcv: 0x29
+[29275000 ns] Node 00 (VC1) rcv: 0x2a
+[29285000 ns] Node 00 (VC1) rcv: 0x2b
+[29305000 ns] Node 00 (VC1) rcv: 0x2c
+[29315000 ns] Node 00 (VC1) rcv: 0x2d
+[29325000 ns] Node 00 (VC1) rcv: 0x2e
+[29335000 ns] Node 00 (VC1) rcv: 0x2f
+[29669000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=29799000 src=0x1 -> Node00 (VC1) pkt_id=11 len=20
+[29856000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[29915000 ns] Node 00 (VC0) rcv: 0x20
+[29919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst finished VC0 Packet. Releasing Override.
+[29925000 ns] Node 00 (VC0) rcv: 0x21
+[29935000 ns] Node 00 (VC0) rcv: 0x22
+[29955000 ns] Node 00 (VC0) rcv: 0x23
+[29965000 ns] Node 00 (VC0) rcv: 0x24
+[29975000 ns] Node 00 (VC0) rcv: 0x25
+[29985000 ns] Node 00 (VC0) rcv: 0x26
+[30005000 ns] Node 00 (VC0) rcv: 0x27
+[30015000 ns] Node 00 (VC0) rcv: 0x28
+[30025000 ns] Node 00 (VC0) rcv: 0x29
+[30035000 ns] Node 00 (VC0) rcv: 0x2a
+[30055000 ns] Node 00 (VC0) rcv: 0x2b
+[30065000 ns] Node 00 (VC0) rcv: 0x2c
+[30075000 ns] Node 00 (VC0) rcv: 0x2d
+[30085000 ns] Node 00 (VC0) rcv: 0x2e
+[SB-PRED] t=30093000 src=0x1 -> Node00 (VC0) pkt_id=12 len=20
+[30105000 ns] Node 00 (VC0) rcv: 0x2f
+[30106000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[30115000 ns] Node 00 (VC0) rcv: 0x30
+[30125000 ns] Node 00 (VC0) rcv: 0x31
+[30135000 ns] Node 00 (VC0) rcv: 0x32
+[SB-PASS] t=30155000 Node00 (VC0) src=0x2 pkt_id=10 len=20 matches prediction
+[30155000 ns] Node 00 (VC0) rcv: 0x33
+[30165000 ns] Node 00 (VC1) rcv: 0x30
+[30175000 ns] Node 00 (VC1) rcv: 0x31
+[30185000 ns] Node 00 (VC1) rcv: 0x32
+[SB-PASS] t=30205000 Node00 (VC1) src=0x2 pkt_id=11 len=20 matches prediction
+[30205000 ns] Node 00 (VC1) rcv: 0x33
+[30215000 ns] Node 00 (VC1) rcv: 0x10
+[30225000 ns] Node 00 (VC1) rcv: 0x11
+[30235000 ns] Node 00 (VC1) rcv: 0x12
+[30255000 ns] Node 00 (VC1) rcv: 0x13
+[30265000 ns] Node 00 (VC1) rcv: 0x14
+[30275000 ns] Node 00 (VC1) rcv: 0x15
+[30285000 ns] Node 00 (VC1) rcv: 0x16
+[30305000 ns] Node 00 (VC1) rcv: 0x17
+[30315000 ns] Node 00 (VC1) rcv: 0x18
+[30325000 ns] Node 00 (VC1) rcv: 0x19
+[30335000 ns] Node 00 (VC1) rcv: 0x1a
+[30355000 ns] Node 00 (VC1) rcv: 0x1b
+[30365000 ns] Node 00 (VC1) rcv: 0x1c
+[30375000 ns] Node 00 (VC1) rcv: 0x1d
+[30385000 ns] Node 00 (VC1) rcv: 0x1e
+[30405000 ns] Node 00 (VC1) rcv: 0x1f
+[30731000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[1].COL[0].router.GEN_ARB[2].arb_inst Triggered VC0 Override! starve_cnt = 64
+[30919000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[30975000 ns] Node 00 (VC0) rcv: 0x10
+[30981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst finished VC0 Packet. Releasing Override.
+[30985000 ns] Node 00 (VC0) rcv: 0x11
+[31005000 ns] Node 00 (VC0) rcv: 0x12
+[31015000 ns] Node 00 (VC0) rcv: 0x13
+[31025000 ns] Node 00 (VC0) rcv: 0x14
+[31035000 ns] Node 00 (VC0) rcv: 0x15
+[31055000 ns] Node 00 (VC0) rcv: 0x16
+[31065000 ns] Node 00 (VC0) rcv: 0x17
+[31075000 ns] Node 00 (VC0) rcv: 0x18
+[31085000 ns] Node 00 (VC0) rcv: 0x19
+[31105000 ns] Node 00 (VC0) rcv: 0x1a
+[31115000 ns] Node 00 (VC0) rcv: 0x1b
+[31125000 ns] Node 00 (VC0) rcv: 0x1c
+[31135000 ns] Node 00 (VC0) rcv: 0x1d
+[31155000 ns] Node 00 (VC0) rcv: 0x1e
+[31165000 ns] Node 00 (VC0) rcv: 0x1f
+[31169000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst finished VC0 Packet. Releasing Override.
+[31175000 ns] Node 00 (VC0) rcv: 0x20
+[31185000 ns] Node 00 (VC0) rcv: 0x21
+[31205000 ns] Node 00 (VC0) rcv: 0x22
+[SB-PASS] t=31215000 Node00 (VC0) src=0x1 pkt_id=8 len=20 matches prediction
+[31215000 ns] Node 00 (VC0) rcv: 0x23
+[31225000 ns] Node 00 (VC1) rcv: 0x20
+[31235000 ns] Node 00 (VC1) rcv: 0x21
+[31255000 ns] Node 00 (VC1) rcv: 0x22
+[SB-PASS] t=31265000 Node00 (VC1) src=0x1 pkt_id=9 len=20 matches prediction
+[31265000 ns] Node 00 (VC1) rcv: 0x23
+[31275000 ns] Node 00 (VC1) rcv: 0x30
+[31794000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[1].router.GEN_ARB[4].arb_inst Triggered VC0 Override! starve_cnt = 64
+[SB-PRED] t=31927000 src=0x1 -> Node00 (VC1) pkt_id=13 len=20
+[31981000 ns] [ARB DEBUG] tb_noc_mesh_2x2_gals.uut_noc.ROW[0].COL[0].router.GEN_ARB[0].arb_inst Triggered VC0 Override! starve_cnt = 64
+[32035000 ns] Node 00 (VC0) rcv: 0x30
+[32055000 ns] Node 00 (VC0) rcv: 0x31
+[32065000 ns] Node 00 (VC0) rcv: 0x32
+[32075000 ns] Node 00 (VC0) rcv: 0x33
+[32085000 ns] Node 00 (VC0) rcv: 0x34
+[32105000 ns] Node 00 (VC0) rcv: 0x35
+[32115000 ns] Node 00 (VC0) rcv: 0x36
+[32125000 ns] Node 00 (VC0) rcv: 0x37
+[SB-PRED] t=32221000 src=0x1 -> Node00 (VC0) pkt_id=14 len=20
+
+[TB] --- Test 6 Finished ---
+
+
+=================================================
+ PERFORMANCE REPORT: Sustained Hot-Spot Contention
+=================================================
+ [Node00 TX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node00 RX] Flits: 889 | Stalls: 0 (0.0%)
+ [Node10 TX] Flits: 530 | Stalls: 1229 (60.3%)
+ [Node10 RX] Flits: 200 | Stalls: 0 (0.0%)
+ [Node01 TX] Flits: 288 | Stalls: 1780 (85.5%)
+ [Node01 RX] Flits: 0 | Stalls: 0 (0.0%)
+ [Node11 TX] Flits: 246 | Stalls: 1527 (74.9%)
+ [Node11 RX] Flits: 0 | Stalls: 0 (0.0%)
+=================================================
+
+
+=================================================
+ SCOREBOARD REPORT (All Nodes, transaction-level)
+=================================================
+ [Node00] Matched: 52 | Mismatched: 0 | Pending: 11
+ [Node10] Matched: 20 | Mismatched: 0 | Pending: 0
+ [Node01] Matched: 2 | Mismatched: 0 | Pending: 0
+ [Node11] Matched: 4 | Mismatched: 0 | Pending: 0
+-------------------------------------------------
+ TOTAL: Matched=78 Mismatched=0 Pending=11
+=================================================
+
+=================================================
+ FAIRNESS REPORT: share of flits injected toward Node00
+=================================================
+ [Node10] 530 flits (49%)
+ [Node01] 288 flits (27%)
+ [Node11] 246 flits (23%)
+ min share = 23%  (เกณฑ์ผ่าน >= 10%)
+-------------------------------------------------
+ node00 ingress: 889 flits / 2000 สูงสุด = 44.5% ของ NoC line rate
+                 (บนบอร์ดจริง PATTERN=1 วัดได้ 57.5%)
+=================================================
+ Test 6 PASS - ทุกแหล่งได้ส่วนแบ่งเกินเกณฑ์
+$finish called at time : 5053516 ns : File "D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.srcs/sources_1/new/tb_noc_mesh_2x2_gals.sv" Line 612
+
+
+
+===================================================
+ SIM REGRESSION RESULT
+===================================================
+  tests finished        : 6 / 6   (เทสต์ที่จบ: 1 2 3 4 5 6)
+  final scoreboard      : Matched=78  Mismatched=0  Pending=11
+  baseline              : Mismatched=0  Pending=0  (Matched แปรได้ เพราะ Test 6
+                          ยิงตามเวลา ไม่ได้ตามจำนวนแพ็กเกจคงที่)
+
+  >>> FAIL — มี mismatch/pending หรือเทสต์ไม่ครบ
+      โมดูลที่เปลี่ยนหลัง baseline และน่าสงสัยที่สุด:
+        router_5port_mesh_vc.sv  vc_port_arbiter.sv
+        packet_arbiter.sv        vc_input_buffer.sv
+  error markers in log  : 0
+===================================================
+  full log: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/GALS_Packet-Based_Fabric.sim/sim_1/behav/xsim/simulate.log
+  baseline: D:/OpalFolder/MyOwnProject/FPGA/GALS_Packet-Based_Fabric/backup_20260804/sim_baseline_20260711/simulate.log

@@ -1,0 +1,61 @@
+# hardware run: stress build, PATTERN=1 VC_MODE=2, ECC_INJECT_DBE (bits 0 and 5 of every codeword flipped on write)
+# board: Arty A7-100T (xc7a100t), Digilent 210319C088F2A
+# date: 2026-09-12
+# RTL: de8cac3 (bug #7 fix) — same sources as the clean run of the same day
+# MARK_DEBUG 1104 nets -> 5 ILA cores / 55 probes / 1100 bits
+#
+# purpose: prove the double-bit alarm path on silicon (only the single-bit path had been run
+# before, 2026-09-10). Expected and got: ecc_dbe_cnt=3, node_dbe=1111, sbe=0.
+#
+# Why sequence errors are 0 even though every word is corrupted: the injector flips
+# codeword bit 5 = data bit d2 (hamming_word[5]) in every FIFO write, and a flit crosses
+# exactly two async FIFOs (TX at the source, RX at the sink). Two deterministic flips of the
+# same bit cancel, so the payload reaching the checker is correct while both FIFOs flag
+# double_err. The alarm path is proved; end-to-end data corruption under an uncorrectable
+# error is shown by tb_noc_stress_tester INJECT_ECC=1 (single-FIFO flip, 247 sequence
+# errors), not by this build. verilog_define was cleared after this build.
+
+พบ 4 agent: agent_00, agent_01, agent_10, agent_11
+
+agent       clk MHz   mode   state   TX/cyc   stall%   RX/cyc   TX MB/s  errors  dest
+-------------------------------------------------------------------------------------
+agent_00     100.00  final     [3]   0.0000      0.0   0.7743      0.00       0   [0]
+agent_01      71.43  final     [3]   0.5407     45.9   0.0000     38.62       0   [0]
+agent_10      83.33  final     [3]   0.2322     76.8   0.0000     19.35       0   [0]
+agent_11      71.43  final     [3]   0.3084     69.2   0.0000     22.03       0   [0]
+
+  VC split ของ flit ที่รับได้:
+    agent_00: VC0  6,495,024 ( 50.0%)   VC1  6,495,152 ( 50.0%)
+    agent_01: (ไม่ได้รับ flit)
+    agent_10: (ไม่ได้รับ flit)
+    agent_11: (ไม่ได้รับ flit)
+    -> มีทั้งสอง VC : build นี้คือ VC_MODE=2 (สลับทุกแพ็กเกจ)
+-------------------------------------------------------------------------------------
+
+รวม injected :    80.0 Mflit/s =    80.0 MB/s (flit ละ 8 บิต)
+(ยอด RX รวม 77.4 MB/s เอามาเทียบกับ TX ตรงๆ ไม่ได้ เพราะแต่ละ agent ปิดหน้าต่างคนละเวลา ดูตาราง conservation ข้างล่างแทน)
+
+รูปแบบทราฟฟิก : HOT-SPOT (3 -> node 00)
+  local output port ของ node 00 : 77.4 / 80 Mflit/s = 96.8% utilisation
+
+  ความยุติธรรมของ arbiter (ยิ่งใกล้กันยิ่งแฟร์):
+    agent_01:  38.62 Mflit/s  ( 48.3% ของทั้งหมด)
+    agent_10:  19.35 Mflit/s  ( 24.2% ของทั้งหมด)
+    agent_11:  22.03 Mflit/s  ( 27.5% ของทั้งหมด)
+    spread = 49.9%   (0% = แบ่งเท่ากันเป๊ะ)
+
+sequence errors รวมทุก agent : 0   ->  PASS
+
+liveness : ทุก node (4) มี flit ขยับตลอด S_RUN   ->  PASS
+
+ECC      : single(ซ่อมได้)=0  double(ซ่อมไม่ได้)=3   node_sbe=0000 node_dbe=1111
+           ->  FAIL : มี double-bit error = ข้อมูลเสียที่ซ่อมไม่ได้
+                 บิต node_dbe บอกว่าโหนดไหน (0=00 1=01 2=10 3=11)
+
+dest_err : โหนดที่เคยยิงปลายทางนอกกระดาน=0   node=ไม่มี probe
+           ->  PASS : ทุก flit จ่าหน้าในกระดาน
+           (หมายเหตุ: dest_err_node หลุดจาก ILA รอบนี้ ตัวนับยังอ่านได้
+            จึงยังตอบได้ว่า "เกิดขึ้นไหม" แค่ไม่รู้ว่าโหนดไหน)
+
+tid_err  : โหนดที่เคยยิง tid ไม่ใช่ one-hot=0   node=0000
+           ->  PASS : tid เป็น one-hot ทุก flit

@@ -1,0 +1,50 @@
+# hardware run: stress build, PATTERN=1 (hot-spot) VC_MODE=2 (alternate)
+# board: Arty A7-100T (xc7a100t), Digilent 210319C088F2A
+# built with setup_stress_build.tcl + setup_debug.tcl (scripted Set Up Debug)
+# MARK_DEBUG 1084 nets -> 5 ILA cores / 53 probes / 1080 bits
+# date: 2026-09-04
+#
+# regression target: bug #4 (liveness) and bug #5 (arbiter lock), plus the
+# new bug #6 dest_err filter. Previous hardware run of this config showed
+# liveness FAIL on agent_01 and agent_11.
+
+พบ 4 agent: agent_00, agent_01, agent_10, agent_11
+
+agent       clk MHz   mode   state   TX/cyc   stall%   RX/cyc   TX MB/s  errors  dest
+-------------------------------------------------------------------------------------
+agent_00     100.00  final     [3]   0.0000      0.0   0.7759      0.00       0   [0]
+agent_01      71.43  final     [3]   0.5420     45.8   0.0000     38.71       0   [0]
+agent_10      83.33  final     [3]   0.2327     76.7   0.0000     19.39       0   [0]
+agent_11      71.43  final     [3]   0.3093     69.1   0.0000     22.09       0   [0]
+
+  VC split ของ flit ที่รับได้:
+    agent_00: VC0  6,508,963 ( 50.0%)   VC1  6,509,104 ( 50.0%)
+    agent_01: (ไม่ได้รับ flit)
+    agent_10: (ไม่ได้รับ flit)
+    agent_11: (ไม่ได้รับ flit)
+    -> มีทั้งสอง VC : build นี้คือ VC_MODE=2 (สลับทุกแพ็กเกจ)
+-------------------------------------------------------------------------------------
+
+รวม injected :    80.2 Mflit/s =    80.2 MB/s (flit ละ 8 บิต)
+(ยอด RX รวม 77.6 MB/s เอามาเทียบกับ TX ตรงๆ ไม่ได้ เพราะแต่ละ agent ปิดหน้าต่างคนละเวลา ดูตาราง conservation ข้างล่างแทน)
+
+รูปแบบทราฟฟิก : HOT-SPOT (3 -> node 00)
+  local output port ของ node 00 : 77.6 / 80 Mflit/s = 97.0% utilisation
+
+  ความยุติธรรมของ arbiter (ยิ่งใกล้กันยิ่งแฟร์):
+    agent_01:  38.71 Mflit/s  ( 48.3% ของทั้งหมด)
+    agent_10:  19.39 Mflit/s  ( 24.2% ของทั้งหมด)
+    agent_11:  22.09 Mflit/s  ( 27.5% ของทั้งหมด)
+    spread = 49.9%   (0% = แบ่งเท่ากันเป๊ะ)
+
+sequence errors รวมทุก agent : 0   ->  PASS
+
+liveness : ทุก node (4) มี flit ขยับตลอด S_RUN   ->  PASS
+
+ECC      : single(ซ่อมได้)=0  double(ซ่อมไม่ได้)=0   node_sbe=0000 node_dbe=0000
+           ->  PASS : ไม่เจอ bit error เลย
+
+dest_err : โหนดที่เคยยิงปลายทางนอกกระดาน=0   node=ไม่มี probe
+           ->  PASS : ทุก flit จ่าหน้าในกระดาน
+           (หมายเหตุ: dest_err_node หลุดจาก ILA รอบนี้ ตัวนับยังอ่านได้
+            จึงยังตอบได้ว่า "เกิดขึ้นไหม" แค่ไม่รู้ว่าโหนดไหน)
