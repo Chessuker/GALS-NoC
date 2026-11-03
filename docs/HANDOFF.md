@@ -6,6 +6,14 @@ was merged to `main` as `0154d13` on 2026-09-13; GitHub created that merge commi
 the PR record open and "dirty", so the branch was re-synced with `main` to let the record
 close normally. `main`'s tree and the branch head were already identical.
 
+**2026-11-03:** the project moved to a new repository, `GALS-NoC`, starting from one
+commit; the history above (commits, PRs, the `v1.0` tag) is in `GALS-NoC-Archive`.
+Folders were reorganised (`docs/`, `scripts/`, `logs/`), and the tbclk simulation regression
+was re-run afterwards, matching its baseline exactly. `async_fifo` now has its own formal
+proof, unbounded and with `multiclock on`, which closes the gap recorded on 2026-09-14
+(section 5, formal table). `async_fifo_fwft` is proved the same way, end to end through
+`fwft_wrapper`.
+
 Read this first if you're picking the project up cold.
 
 ---
@@ -930,8 +938,8 @@ The same day closed two other silicon gaps:
   | `vc_port_arbiter` | prove | PASS | PASS |
   | `gray_counter` | prove | PASS | PASS |
   | `sync_2stage` | prove | PASS | PASS |
-  | `async_fifo` | prove | PASS **(0 assertions — see note)** | PASS |
-  | `async_fifo_fwft` | prove | PASS (gray_counter + fwft_wrapper properties only) | PASS (cover needs depth 40) |
+  | `async_fifo` | prove, multiclock | PASS (18 assertions since 2026-11-03; 0 before, see note) | PASS |
+  | `async_fifo_fwft` | prove, multiclock | PASS (34 assertions, end to end, since 2026-11-03; before that only gray_counter + fwft_wrapper) | PASS |
   | `dual_port_ram_ecc` | prove | PASS | PASS |
   | `gals_node_wrapper` | prove, multiclock | PASS | PASS |
   | `vc_input_buffer` | bmc, depth 16 | PASS | PASS |
@@ -945,6 +953,37 @@ The same day closed two other silicon gaps:
   `async_fifo_fwft.sby` has six assertions, all `gray_counter`'s and `fwft_wrapper`'s. The
   CDC FIFO's pointer logic, full/empty and ordering are covered by simulation and silicon,
   not by any formal property. Open item; `WALKTHROUGH.md` section 16.
+
+  **Closed (2026-11-03):** `async_fifo.sv` gained a `FORMAL_ASYNC_FIFO_TOP` block that only
+  `async_fifo.sby` defines, and the script now runs `multiclock on` through `read_slang`
+  (the properties need hierarchical references into `w_cnt`, `sync_w2r` and `dp_ram`).
+  Proved, unbounded: no overflow and no underflow on the true occupancy, level outputs
+  bounded, one bit per edge on both crossing pointers, and data and order for a
+  solver-chosen flit. Prove runs at `ADDR_WIDTH` 4 / `DATA_WIDTH` 13 (the size
+  `gals_node_wrapper` uses), cover at `ADDR_WIDTH` 2. Four mutations (full-flag bit, RAM
+  write or read enable ungated, read counter ungated) each fail prove; `rempty` taken from
+  the first sync stage passes, as expected, since formal does not model metastability.
+  Details in `WALKTHROUGH.md` section 6.1.
+
+  **Also 2026-11-03:** `async_fifo_fwft.sby` now runs `multiclock on` too, with
+  `async_fifo`'s whole property set enabled and a new `FORMAL_ASYNC_FIFO_FWFT_TOP` block
+  that follows the same tracked flit through `fwft_wrapper` to the user
+  (`assert_user_tracked_data`), plus invariants tying core reads, user reads and the words
+  held in the wrapper. Prove passes unbounded (34 assertions); all 8 covers reach. Live
+  wrapper mutations fail (three in prove, one in a 30-step BMC). One mutation survives
+  because it sits in a branch that cannot be reached: refilling `skid` while `out` is read
+  and a word arrives needs three words in flight, which `assert_no_overflow` forbids. The
+  depth-40 wrap cover note below applied to the old merged-clock script.
+
+  **Scope of both proofs (after PR review, 2026-11-03).** They are RTL proofs from a cold
+  start: resets begin asserted, release independently and are never re-asserted. A runtime
+  soft reset is not covered. `reset_sync.srst` is synchronised per domain, so the two sides
+  of a FIFO enter reset on different edges, and with flits in flight that corrupts the
+  FIFO. The RTL does not prevent it; the fault campaign avoids it by resetting only with no
+  traffic. They also say nothing about physical CDC: `ASYNC_REG` and `report_cdc` check
+  structure, and the gray-pointer `set_bus_skew` constraints in `timing.xdc` are commented
+  out, with `report_bus_skew` never run. Both are listed as open in `WALKTHROUGH.md`
+  section 16.
 
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
