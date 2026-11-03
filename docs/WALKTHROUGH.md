@@ -428,8 +428,13 @@ until then; section 8.2 row K). The block sits under `` `ifdef FORMAL_ASYNC_FIFO
 which only `formal/async_fifo.sby` defines, so the scripts that use this FIFO as a
 sub-module (`async_fifo_fwft`, `gals_node_wrapper`) never see its assumptions. `wclk` and
 `rclk` are free, so the solver tries every interleaving of edges, including simultaneous
-ones. Resets start asserted on both sides, release independently, and are not re-asserted.
-Properties: no overflow and no underflow (`assert_fill_le_depth`, `assert_full_when_full`,
+ones. **The reset scope is cold start only:** both resets start asserted, release
+independently, and are never re-asserted. A runtime reset is not covered. The VIO soft
+reset reaches each domain through its own `reset_sync.srst` synchroniser, so the two
+sides of a FIFO enter reset on different clock edges; with flits in flight one side's
+pointer returns to 0 while the other keeps its value, and the FIFO is corrupted. Nothing
+in the RTL prevents that. The design relies on an operating rule: soft reset only when
+no traffic is in flight (section 7.3). Properties: no overflow and no underflow (`assert_fill_le_depth`, `assert_full_when_full`,
 `assert_empty_when_empty`, all on the true occupancy, not on the stale synchronised view);
 `w_level`/`r_level` bounded by the depth; each pointer that crosses a domain changes by at
 most one bit per edge (`assert_*ptr_gray_step`); and data plus order through one flit the
@@ -444,8 +449,14 @@ into sub-modules (`w_cnt.bin`, `sync_w2r.q1`, `dp_ram.mem`), so the script uses
 40 steps. Four RTL mutations (full-flag bit wrong, RAM write or read enable not gated,
 read counter not gated) each make prove fail. A fifth, `rempty` taken from the first
 synchroniser stage, passes, as it must: formal sees every sampled value as clean and
-does not model metastability. Metastability safety rests on the gray-step property,
-`ASYNC_REG`, and `report_cdc`. With `FORMAL` defined the RAM is the plain one, so the ECC
+does not model metastability. What this proof does and does not establish, layer by
+layer: (1) RTL behaviour, proved here: gray step, full/empty, data and order. (2)
+Structural CDC, checked by Vivado: `ASYNC_REG` on the synchronisers and `report_cdc`
+Critical 0, which say the crossing is built the right way. (3) Physical bus skew of the
+gray-pointer buses, not done: the `set_bus_skew` constraints in `timing.xdc` are commented
+out and `report_bus_skew` has never been run, so nothing bounds the arrival-time spread of
+the pointer bits at the first synchroniser stage. Physical CDC sign-off is outside the
+scope of this proof (section 16). With `FORMAL` defined the RAM is the plain one, so the ECC
 path is not part of this proof (`dual_port_ram_ecc.sby` and `tb_ecc_secded` cover it).
 
 #### `fwft_wrapper.sv` (175 lines)
@@ -988,7 +999,9 @@ and the router would have sent the `0001` flit out the port locked for `0000`.
 2. Each `reset_sync` synchronises `srst` through two flops of its own clock and pulls
    its `rst_n` low: five domains go into reset within a few of their own cycles, in no
    particular order. Nothing is being transferred at this point in the campaign, so the
-   order does not matter; the design does not rely on it.
+   order does not matter here. The design does rely on that: an async FIFO whose two
+   sides reset on different edges while flits are in flight is corrupted, and no RTL
+   prevents it. Soft reset is safe only under this no-traffic rule (section 16).
 3. The script writes mode and arm with the reset still held, then clears `vio_out[0]`.
    Each domain releases two of its clocks later, still in no particular order.
 4. Every `traffic_node_agent` starts in `S_WARMUP` and idles for 1024 cycles; the async
@@ -1546,7 +1559,11 @@ boundaries is not something the timing report can confirm. It comes from constru
 
 - multi-bit data crosses only inside `async_fifo`, through RAM addressed by pointers
   that are gray-coded and passed through `sync_2stage`, so a pointer sampled mid-change
-  is at worst one step stale;
+  is at worst one step stale. That last step needs one more condition: the pointer bits
+  must arrive at the first synchroniser stage within one source-clock period of each
+  other, or two successive changes can be in flight at once. The `set_bus_skew`
+  constraints that would bound this are commented out in `timing.xdc`, so it holds only
+  because the routes happen to be short, not because a tool checked it (section 16);
 - single-bit flags cross only if they are sticky (set once, never cleared), through
   `sync_2stage`;
 - `sync_2stage`'s output register carries `ASYNC_REG = "TRUE"`, which tells Vivado to
@@ -2125,6 +2142,19 @@ originals before touching the build flow.
 
 ## 16. What is still open
 
+- **Gray-pointer bus skew is neither constrained nor checked.** `timing.xdc` has the
+  `set_bus_skew` (and `set_max_delay -datapath_only`) lines for both pointer directions
+  commented out, and their cell paths predate the current hierarchy. Physical CDC sign-off
+  needs them enabled with a justified value (at most the faster source-clock period of
+  each crossing), `report_bus_skew` run on every routed design in `batch_impl.tcl`, and a
+  build that meets it. Until then the formal proofs cover RTL behaviour and `report_cdc`
+  covers structure, nothing more (section 6.1).
+- **Runtime soft reset relies on a no-traffic rule.** `reset_sync.srst` is synchronised per
+  domain, so an async FIFO's two sides enter reset on different edges. With flits in
+  flight that corrupts the FIFO, and nothing in the RTL prevents it. The fault campaign
+  follows the rule; the formal proofs cover cold start only. Closing it would mean
+  quiescing the fabric before reset, or resetting both sides of every FIFO from one
+  domain, then extending the proof to runtime reset.
 - **`dest_err_node[2:0]` remain constant in the stress build** (nodes 0-2 have parameter
   destinations). Only node 3 is live. Extending the injector mux to every agent would fix
   it at the cost of three more copies.

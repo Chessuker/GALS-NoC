@@ -24,10 +24,17 @@
 #   - เมื่อนิยาม FORMAL ตัว async_fifo ใช้ dual_port_ram ธรรมดาแทน dual_port_ram_ecc
 #     (ตามที่เขียนไว้ใน .sv) ส่วนพอยน์เตอร์/ธง/ลำดับเป็นโค้ดชุดเดียวกับที่ลงบอร์ด
 #     ECC พิสูจน์แยกใน dual_port_ram_ecc.sby และ tb_ecc_secded
-#   - ไม่ได้จำลอง metastability: solver เห็นค่าที่ sync จับได้เป็นค่าสะอาดเสมอ
-#     สิ่งที่ทำให้สมมติฐานนี้ถูกบนซิลิคอนคือ gray step ทีละบิต (พิสูจน์ด้านบน)
-#     และ ASYNC_REG + report_cdc (Critical 0)
-#   - รีเซ็ต: เริ่มจากรีเซ็ตทั้งสองฝั่ง ปล่อยคนละจังหวะได้ แต่ปล่อยแล้วไม่กดซ้ำ
+#   - พิสูจน์ระดับ RTL ดิจิทัลเท่านั้น ไม่ได้จำลอง metastability: solver เห็นค่าที่
+#     sync จับได้เป็นค่าสะอาดเสมอ แยกให้ชัดสามชั้น:
+#       1. RTL (สคริปต์นี้): พอยน์เตอร์ขยับทีละบิต, full/empty, ข้อมูล/ลำดับ
+#       2. CDC เชิงโครงสร้าง: ASYNC_REG + report_cdc (Critical 0) — บอกว่าโครงถูก
+#          ไม่ได้บอกว่าบิตของพอยน์เตอร์มาถึงปลายทางห่างกันไม่เกินหนึ่งคาบ
+#       3. bus skew ทางกายภาพของ gray pointer: ยังไม่ได้ทำ — set_bus_skew ใน
+#          timing.xdc ถูก comment ไว้ และไม่เคยรัน report_bus_skew
+#          (WALKTHROUGH หัวข้อ 16) proof นี้ไม่ได้อ้าง physical CDC sign-off
+#   - รีเซ็ต: ขอบเขต cold start — เริ่มจากรีเซ็ตทั้งสองฝั่ง ปล่อยคนละจังหวะได้
+#     แต่ปล่อยแล้วไม่กดซ้ำ runtime soft reset (เข้ารีเซ็ตคนละขอบในแต่ละโดเมน) ไม่อยู่ใน
+#     ขอบเขต ดีไซน์อาศัยข้อตกลงว่ากดตอนไม่มีทราฟฟิก (WALKTHROUGH 7.3)
 #   - prove ใช้ขนาดจริงตามที่ gals_node_wrapper ใช้ (ADDR_WIDTH 4 = ลึก 16,
 #     DATA_WIDTH 13 = {tlast, tdest, tdata}) ใช้เวลาไม่กี่วินาที
 #     cover ย่อเหลือ ADDR_WIDTH 2 / DATA_WIDTH 4 เพราะ cover_ptr_wrap ต้องอ่านครบ

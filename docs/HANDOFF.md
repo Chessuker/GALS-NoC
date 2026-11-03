@@ -975,6 +975,16 @@ The same day closed two other silicon gaps:
   and a word arrives needs three words in flight, which `assert_no_overflow` forbids. The
   depth-40 wrap cover note below applied to the old merged-clock script.
 
+  **Scope of both proofs (after PR review, 2026-11-03).** They are RTL proofs from a cold
+  start: resets begin asserted, release independently and are never re-asserted. A runtime
+  soft reset is not covered. `reset_sync.srst` is synchronised per domain, so the two sides
+  of a FIFO enter reset on different edges, and with flits in flight that corrupts the
+  FIFO. The RTL does not prevent it; the fault campaign avoids it by resetting only with no
+  traffic. They also say nothing about physical CDC: `ASYNC_REG` and `report_cdc` check
+  structure, and the gray-pointer `set_bus_skew` constraints in `timing.xdc` are commented
+  out, with `report_bus_skew` never run. Both are listed as open in `WALKTHROUGH.md`
+  section 16.
+
   `vc_port_arbiter` is the one that mattered: `assert_vc1_yields_when_stalled` and
   `assert_no_vc1_during_override` were written for the bug #3 fix and had never been
   checked by anything. They hold, so the fix running on the board is formally sound, not

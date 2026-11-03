@@ -21,7 +21,8 @@
 # (พิสูจน์แยกในสคริปต์ของตัวเอง และใช้ $onehot ซึ่ง slang ไม่รองรับ)
 #
 # ขนาด: prove ใช้ขนาดจริง (ADDR_WIDTH 4, DATA_WIDTH 13) cover ย่อเหลือ ADDR_WIDTH 2
-# ข้อจำกัดเรื่อง metastability / RAM ไม่มี ECC / รีเซ็ต เหมือน async_fifo.sby
+# ข้อจำกัดเหมือน async_fifo.sby: พิสูจน์ระดับ RTL เท่านั้น (ไม่ใช่ physical CDC / bus skew),
+# RAM ไม่มี ECC, รีเซ็ตขอบเขต cold start (ไม่ครอบ runtime soft reset)
 #
 #   wsl -d Ubuntu-24.04 -- bash formal/run_wsl.sh async_fifo_fwft.sby
 # =============================================================================
